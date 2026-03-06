@@ -1,0 +1,76 @@
+# Configuración y credenciales
+/includes/config/config.php
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+error.log
+access.log
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Uploads de usuarios
+public/uploads/*
+public/qrcodes/*
+!public/uploads/.gitkeep
+!public/qrcodes/.gitkeep
+
+# Dependencias de Composer
+/vendor/
+composer.lock
+
+# Dependencias de Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# SO
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup y exportaciones
+*.sql
+*.backup
+*.bak
+exports/
+
+# Archivos generados
+*.pdf
+*.zip
+*.tar.gz
+
+# Certificados SSL
+*.pem
+*.key
+*.crt
+*.csr
+
+# Cache
+cache/
+*.cache
+
+# Sessiones
+/sessions/
+
+# Documentación generada
+docs/generated/

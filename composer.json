@@ -1,0 +1,42 @@
+{
+    "name": "tickets/ticket-system",
+    "description": "Sistema de venta y gestión de tickets para eventos",
+    "version": "1.0.0",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Developer",
+            "email": "developer@tickets.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "ext-pdo": "*",
+        "ext-mbstring": "*",
+        "phpmailer/phpmailer": "^6.8",
+        "tecnickcom/tcpdf": "^6.6",
+        "phpqrcode/phpqrcode": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tickets\\": "src/"
+        },
+        "files": [
+            "includes/functions/functions.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "mkdir -p public/uploads public/qrcodes",
+            "chmod 777 public/uploads public/qrcodes"
+        ]
+    }
+}
