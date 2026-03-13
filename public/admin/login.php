@@ -1,7 +1,9 @@
 <?php
-require_once '../includes/config/config.php';
-require_once '../includes/functions/functions.php';
-require_once '../includes/classes/Database.php';
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+require_once '../../includes/config/config.php';
+require_once '../../includes/functions/functions.php';
+require_once '../../includes/classes/Database.php';
 
 $db = new Database();
 $error = '';

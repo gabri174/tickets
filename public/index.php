@@ -67,7 +67,7 @@ $events = $db->getActiveEvents();
                 <div class="flex items-center space-x-6">
                     <a href="#events" class="hover:text-gray-300 transition">Eventos</a>
                     <a href="#contact" class="hover:text-gray-300 transition">Contacto</a>
-                    <a href="../admin/" class="bg-white text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                    <a href="admin/" class="bg-white text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                         <i class="fas fa-user-shield mr-2"></i>Admin
                     </a>
                 </div>
