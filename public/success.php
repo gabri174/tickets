@@ -105,17 +105,37 @@ unset($_SESSION['purchase_success']);
                     </div>
                 </div>
                 
-                <!-- Ticket Codes -->
+                <!-- Ticket Codes & QRs -->
                 <div class="bg-blue-50 rounded-lg p-6 mb-8 text-left">
-                    <h3 class="text-xl font-semibold mb-4 text-primary">Tus Códigos de Ticket</h3>
-                    <p class="text-sm text-gray-600 mb-4">
-                        Guarda estos códigos. Los necesitarás para ingresar al evento.
+                    <h3 class="text-xl font-semibold mb-4 text-primary italic"><i class="fas fa-qrcode mr-2"></i>Tus Tickets de Acceso</h3>
+                    <p class="text-sm text-gray-600 mb-6">
+                        Presenta estos códigos QR en la entrada del evento. Puedes compartirlos individualmente por WhatsApp.
                     </p>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 gap-6">
                         <?php foreach ($purchase['tickets'] as $ticket): ?>
-                            <div class="bg-white border border-gray-200 rounded p-3">
-                                <code class="text-sm font-mono font-semibold"><?php echo htmlspecialchars($ticket['code']); ?></code>
+                            <div class="bg-white border rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-6">
+                                <!-- QR Visual -->
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <?php 
+                                    $qrWebPath = SITE_URL . '/' . str_replace(ROOT_PATH . '/', '', $ticket['qr_path']);
+                                    ?>
+                                    <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-32 h-32">
+                                </div>
+                                
+                                <div class="flex-1 text-center md:text-left">
+                                    <div class="text-xs text-gray-500 uppercase font-bold mb-1">Código de Acceso</div>
+                                    <div class="text-xl font-mono font-bold text-gray-800 mb-3"><?php echo htmlspecialchars($ticket['code']); ?></div>
+                                    
+                                    <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                                        <a href="ticket.php?code=<?php echo $ticket['code']; ?>" target="_blank" class="text-xs bg-gray-100 px-3 py-2 rounded-full hover:bg-gray-200 transition">
+                                            <i class="fas fa-external-link-alt mr-1"></i>Ver Ticket
+                                        </a>
+                                        <button onclick="shareIndividualTicket('<?php echo $ticket['code']; ?>', '<?php echo htmlspecialchars($purchase['event_title']); ?>')" class="text-xs bg-green-100 text-green-700 px-3 py-2 rounded-full hover:bg-green-200 transition">
+                                            <i class="fab fa-whatsapp mr-1"></i>Enviar este ticket
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -166,11 +186,22 @@ unset($_SESSION['purchase_success']);
     </main>
 
     <script>
-        // Función para compartir por WhatsApp
+        // Función para compartir por WhatsApp (General)
         function shareOnWhatsApp() {
-            const message = `¡Acabo de comprar ${<?php echo count($purchase['tickets']); ?>} tickets para "${<?php echo json_encode($purchase['event_title']); ?>}"! 🎉\n\n` +
-                          `Códigos: ${<?php echo json_encode(implode(', ', array_column($purchase['tickets'], 'code'))); ?>}\n\n` +
+            const eventTitle = <?php echo json_encode($purchase['event_title']); ?>;
+            const message = `🎉 ¡Ya tengo mis tickets para "${eventTitle}"!\n\n` +
+                          `Puedes verlos aquí:\n<?php echo SITE_URL; ?>/index.php\n\n` +
                           `¡Nos vemos allá! 🎪`;
+            
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        // Función para compartir ticket INDIVIDUAL
+        function shareIndividualTicket(code, eventTitle) {
+            const ticketUrl = `<?php echo SITE_URL; ?>/ticket.php?code=${code}`;
+            const message = `🎫 Aquí tienes tu entrada para "${eventTitle}"\n\n` +
+                          `Presenta el QR al llegar:\n${ticketUrl}`;
             
             const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
