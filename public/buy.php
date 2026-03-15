@@ -94,7 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'event_title' => $event['title'],
                 'tickets' => $tickets,
                 'total_price' => $totalPrice,
-                'email' => $email
+                'email' => $email,
+                'phone' => $phone
             ];
             
             header('Location: success.php');

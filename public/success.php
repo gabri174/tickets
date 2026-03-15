@@ -214,21 +214,24 @@ if (!$debugMode) {
         // Función para compartir por WhatsApp (General)
         function shareOnWhatsApp() {
             const eventTitle = <?php echo json_encode($purchase['event_title']); ?>;
-            const message = `🎉 ¡Ya tengo mis tickets para "${eventTitle}"!\n\n` +
-                          `Puedes verlos aquí:\n<?php echo SITE_URL; ?>/index.php\n\n` +
-                          `¡Nos vemos allá! 🎪`;
+            const phone = <?php echo json_encode(preg_replace('/[^0-9]/', '', $purchase['phone'] ?? '')); ?>;
+            const message = `🎉 ¡Hola! Aquí tienes tus entradas para "${eventTitle}"!\n\n` +
+                          `Puedes ver tus tickets aquí:\n<?php echo SITE_URL; ?>/index.php\n\n` +
+                          `¡Gracias por tu compra! 🎪`;
             
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
         }
 
         // Función para compartir ticket INDIVIDUAL
         function shareIndividualTicket(code, eventTitle) {
             const ticketUrl = `<?php echo SITE_URL; ?>/ticket.php?code=${code}`;
+            const phone = <?php echo json_encode(preg_replace('/[^0-9]/', '', $purchase['phone'] ?? '')); ?>;
             const message = `🎫 Aquí tienes tu entrada para "${eventTitle}"\n\n` +
+                          `Código: ${code}\n` +
                           `Presenta el QR al llegar:\n${ticketUrl}`;
             
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
         }
         
