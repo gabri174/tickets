@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            $errors[] = 'Error al procesar la compra. Por favor intenta nuevamente.';
+            $errors[] = 'Error al procesar la compra: ' . $e->getMessage();
         }
         }
     }

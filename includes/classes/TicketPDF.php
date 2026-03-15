@@ -1,8 +1,14 @@
 <?php
 if (!class_exists('TCPDF')) {
-    $manualPath = ROOT_PATH . '/vendor/tcpdf/tcpdf.php';
-    if (file_exists($manualPath)) {
-        require_once $manualPath;
+    $paths = [
+        ROOT_PATH . '/vendor/tecnickcom/tcpdf/tcpdf.php',
+        ROOT_PATH . '/vendor/tcpdf/tcpdf.php'
+    ];
+    foreach ($paths as $path) {
+        if (file_exists($path)) {
+            require_once $path;
+            break;
+        }
     }
 }
 

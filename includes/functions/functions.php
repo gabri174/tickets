@@ -32,9 +32,15 @@ function validateEmail($email) {
 // Generar QR Code
 function generateQRCode($data, $filename) {
     if (!class_exists('QRcode')) {
-        $manualPath = ROOT_PATH . '/vendor/phpqrcode/qrlib.php';
-        if (file_exists($manualPath)) {
-            require_once $manualPath;
+        $paths = [
+            ROOT_PATH . '/vendor/phpqrcode/phpqrcode/qrlib.php',
+            ROOT_PATH . '/vendor/phpqrcode/qrlib.php'
+        ];
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                require_once $path;
+                break;
+            }
         }
     }
     
