@@ -15,7 +15,44 @@ $eventId = isset($_GET['event_id']) ? intval($_GET['event_id']) : 0;
 
 // Obtener tickets
 $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+
+// Procesar actualización de estado
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
+    $ticketId = intval($_POST['ticket_id']);
+    $newStatus = cleanInput($_POST['status']);
+    if (in_array($newStatus, ['valid', 'used', 'cancelled'])) {
+        if ($db->updateTicketStatus($ticketId, $newStatus, $adminId)) {
+            $message = "Estado del ticket actualizado correctamente.";
+        } else {
+            $error = "No se pudo actualizar el estado del ticket.";
+        }
+    }
+}
+
+// Procesar descarga de PDF
+if (isset($_GET['action']) && $_GET['action'] === 'download_pdf' && isset($_GET['id'])) {
+    $id = intval($_GET['id']);
+    $ticket = $db->getTicketByCode($_GET['code'] ?? ''); // O buscar por ID si existiera el método, usamos el código que es seguro
+    if ($ticket) {
+        // Verificar que el admin puede ver este ticket
+        $event = $db->getEventById($ticket['event_id'], $adminId);
+        if ($event) {
+            require_once ROOT_PATH . '/includes/classes/TicketPDF.php';
+            $tickets_for_pdf = [['code' => $ticket['ticket_code'], 'qr_path' => $ticket['qr_code_path']]];
+            $pdf = new TicketPDF($event, $tickets_for_pdf, $ticket['attendee_name'], $event['price']);
+            $pdfContent = $pdf->generatePDF();
+            
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="ticket_' . $ticket['ticket_code'] . '.pdf"');
+            echo $pdfContent;
+            exit();
+        }
+    }
+}
+
 $tickets = $db->getAllTickets($adminId);
+$message = $message ?? '';
+$error = $error ?? '';
 $events = $db->getAllEvents($adminId);
 
 // Filtrar tickets
@@ -155,7 +192,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
                     <h2 class="text-2xl font-bold text-gray-800">Gestión de Tickets</h2>
                     <div class="flex space-x-3">
                         <a href="?export=true" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-                            <i class="fas fa-download mr-2"></i>Exportar CSV
+                            <i class="fas fa-file-excel mr-2"></i>Exportar CSV
                         </a>
                     </div>
                 </div>
@@ -163,6 +200,24 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
             
             <!-- Content -->
             <div class="p-8">
+                <!-- Messages -->
+                <?php if ($message): ?>
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            <?php echo htmlspecialchars($message); ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($error): ?>
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            <?php echo htmlspecialchars($error); ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <!-- Filters -->
                 <div class="card rounded-lg shadow-sm border p-6 mb-6">
                     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -314,20 +369,30 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="py-3 px-4">
-                                                    <div class="flex space-x-2">
-                                                        <a href="../public/ticket.php?code=<?php echo urlencode($ticket['ticket_code']); ?>" 
-                                                           target="_blank"
-                                                           class="text-blue-600 hover:text-blue-800 transition"
-                                                           title="Ver ticket">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                        <button onclick="copyTicketCode('<?php echo htmlspecialchars($ticket['ticket_code']); ?>')" 
-                                                                class="text-green-600 hover:text-green-800 transition"
-                                                                title="Copiar código">
-                                                            <i class="fas fa-copy"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                     <div class="flex space-x-2">
+                                                         <a href="../public/ticket.php?code=<?php echo urlencode($ticket['ticket_code']); ?>" 
+                                                            target="_blank"
+                                                            class="text-blue-600 hover:text-blue-800 transition"
+                                                            title="Ver ticket">
+                                                             <i class="fas fa-eye text-lg"></i>
+                                                         </a>
+                                                         <a href="?action=download_pdf&id=<?php echo $ticket['id']; ?>&code=<?php echo urlencode($ticket['ticket_code']); ?>" 
+                                                            class="text-red-600 hover:text-red-800 transition"
+                                                            title="Descargar PDF">
+                                                             <i class="fas fa-file-pdf text-lg"></i>
+                                                         </a>
+                                                         <button onclick="openStatusModal(<?php echo $ticket['id']; ?>, '<?php echo $ticket['status']; ?>')" 
+                                                                 class="text-yellow-600 hover:text-yellow-800 transition"
+                                                                 title="Cambiar estado">
+                                                             <i class="fas fa-edit text-lg"></i>
+                                                         </button>
+                                                         <button onclick="copyTicketCode('<?php echo htmlspecialchars($ticket['ticket_code']); ?>')" 
+                                                                 class="text-green-600 hover:text-green-800 transition"
+                                                                 title="Copiar código">
+                                                             <i class="fas fa-copy text-lg"></i>
+                                                         </button>
+                                                     </div>
+                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
@@ -378,6 +443,41 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
             </div>
         </main>
     </div>
+
+    <!-- Status Modal -->
+    <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Cambiar Estado del Ticket</h3>
+                <button onclick="closeStatusModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form method="POST">
+                <input type="hidden" name="action" value="update_status">
+                <input type="hidden" name="ticket_id" id="statusTicketId">
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Nuevo Estado</label>
+                    <select name="status" id="statusSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800">
+                        <option value="valid">Válido</option>
+                        <option value="used">Utilizado</option>
+                        <option value="cancelled">Cancelado</option>
+                    </select>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeStatusModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg hover:opacity-90">
+                        Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     
     <script>
         function copyTicketCode(code) {
@@ -385,6 +485,23 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
                 showNotification('Código copiado al portapapeles');
             });
         }
+
+        function openStatusModal(id, currentStatus) {
+            document.getElementById('statusTicketId').value = id;
+            document.getElementById('statusSelect').value = currentStatus;
+            document.getElementById('statusModal').classList.remove('hidden');
+        }
+
+        function closeStatusModal() {
+            document.getElementById('statusModal').classList.add('hidden');
+        }
+        
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('statusModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeStatusModal();
+            }
+        });
         
         function showNotification(message) {
             const notification = document.createElement('div');

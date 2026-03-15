@@ -153,6 +153,17 @@ class Database {
         return $result['total'];
     }
 
+    // Actualizar estado de ticket
+    public function updateTicketStatus($id, $status, $adminId = null) {
+        if ($adminId) {
+            $stmt = $this->pdo->prepare("UPDATE tickets t JOIN events e ON t.event_id = e.id SET t.status = ? WHERE t.id = ? AND e.admin_id = ?");
+            return $stmt->execute([$status, $id, $adminId]);
+        } else {
+            $stmt = $this->pdo->prepare("UPDATE tickets SET status = ? WHERE id = ?");
+            return $stmt->execute([$status, $id]);
+        }
+    }
+
     public function getPdo() {
         return $this->pdo;
     }
