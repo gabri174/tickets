@@ -9,9 +9,11 @@ if (!isset($_SESSION['purchase_success'])) {
 }
 
 $purchase = $_SESSION['purchase_success'];
+$emailError = $_SESSION['email_error'] ?? null;
 
 // Limpiar sesión después de mostrar
 unset($_SESSION['purchase_success']);
+unset($_SESSION['email_error']);
 ?>
 
 <!DOCTYPE html>
@@ -80,6 +82,13 @@ unset($_SESSION['purchase_success']);
                     Tus tickets para <strong><?php echo htmlspecialchars($purchase['event_title']); ?></strong> 
                     han sido generados y enviados a tu email.
                 </p>
+
+                <?php if ($emailError): ?>
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8 text-left" role="alert">
+                    <p class="font-bold"><i class="fas fa-exclamation-circle mr-2"></i>Atención</p>
+                    <p><?php echo htmlspecialchars($emailError); ?></p>
+                </div>
+                <?php endif; ?>
                 
                 <!-- Purchase Details -->
                 <div class="bg-gray-50 rounded-lg p-6 mb-8 text-left">

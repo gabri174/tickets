@@ -51,10 +51,21 @@ function generateQRCode($data, $filename) {
     $filepath = QRCODES_PATH . '/' . $filename . '.png';
     
     if (!file_exists(QRCODES_PATH)) {
-        mkdir(QRCODES_PATH, 0777, true);
+        if (!mkdir(QRCODES_PATH, 0777, true)) {
+            throw new Exception("No se pudo crear el directorio de QRs. Verifica los permisos de carpeta.");
+        }
+    }
+    
+    if (!is_writable(QRCODES_PATH)) {
+        throw new Exception("El directorio de QRs no tiene permisos de escritura.");
     }
     
     QRcode::png($data, $filepath, QR_ECLEVEL_M, 10);
+    
+    if (!file_exists($filepath)) {
+        throw new Exception("Error interno: No se pudo generar el archivo de imagen QR.");
+    }
+    
     return $filepath;
 }
 
@@ -105,6 +116,7 @@ function sendTicketEmail($to, $subject, $body, $attachment = null) {
         
         return $mail->send();
     } catch (Exception $e) {
+        error_log("Error de PHPMailer: " . $mail->ErrorInfo);
         return false;
     }
 }
