@@ -1,5 +1,6 @@
 <?php
 session_start();
+// Página de éxito de compra
 
 // Verificar si hay datos de compra
 if (!isset($_SESSION['purchase_success'])) {
