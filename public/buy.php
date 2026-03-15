@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
@@ -121,10 +122,7 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
     return $body;
 }
 
-function generateTicketPDF($event, $tickets, $name, $totalPrice) {
-    // Esta función se implementará más tarde
-    return null;
-}
+
 ?>
 
 <!DOCTYPE html>
