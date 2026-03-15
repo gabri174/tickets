@@ -109,20 +109,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function generateEmailBody($event, $tickets, $name, $totalPrice) {
-    $body = "<h2>¡Gracias por tu compra, $name!</h2>";
-    $body .= "<h3>Evento: {$event['title']}</h3>";
-    $body .= "<p><strong>Fecha:</strong> " . formatDate($event['date_event']) . "</p>";
-    $body .= "<p><strong>Lugar:</strong> {$event['location']}</p>";
-    $body .= "<p><strong>Tickets comprados:</strong> " . count($tickets) . "</p>";
-    $body .= "<p><strong>Total pagado:</strong> " . formatCurrency($totalPrice) . "</p>";
-    $body .= "<h4>Tus códigos de ticket:</h4><ul>";
+    $date = formatDate($event['date_event'], 'd/m/Y H:i');
+    $quantity = count($tickets);
+    $price = formatCurrency($totalPrice);
     
-    foreach ($tickets as $ticket) {
-        $body .= "<li><strong>{$ticket['code']}</strong></li>";
-    }
-    
-    $body .= "</ul>";
-    $body .= "<p>Presenta estos códigos en la entrada del evento.</p>";
+    $body = "
+    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; color: #333;'>
+        <div style='text-align: center; margin-bottom: 30px;'>
+            <h1 style='color: #202426; margin-bottom: 5px;'>¡Hola, $name!</h1>
+            <p style='font-size: 16px; color: #666; margin-top: 0;'>Aquí tienes tus tickets para tu próximo evento.</p>
+        </div>
+        
+        <div style='background-color: #f9f9f9; padding: 25px; border-radius: 10px; margin-bottom: 30px;'>
+            <h2 style='margin-top: 0; color: #202426; border-bottom: 2px solid #ebcf94; padding-bottom: 10px; display: inline-block;'>{$event['title']}</h2>
+            <div style='margin-top: 15px;'>
+                <p><strong>📅 Fecha:</strong> $date</p>
+                <p><strong>📍 Lugar:</strong> {$event['location']}</p>
+                <p><strong>🎟️ Cantidad:</strong> $quantity ticket(s)</p>
+                <p><strong>💰 Total pagado:</strong> $price</p>
+            </div>
+        </div>
+        
+        <div style='text-align: center; padding: 20px; background-color: #ebcf94; border-radius: 8px; color: #202426;'>
+            <p style='margin: 0; font-weight: bold; font-size: 18px;'>📄 Tus tickets están adjuntos en formato PDF</p>
+            <p style='margin: 10px 0 0 0; font-size: 14px;'>Por favor, descarga el archivo adjunto y preséntalo en la entrada.</p>
+        </div>
+        
+        <div style='margin-top: 40px; text-align: center; font-size: 12px; color: #999;'>
+            <p>Este es un correo automático, por favor no respondas a este mensaje.</p>
+            <p>&copy; " . date('Y') . " Tickets - En Su Presencia</p>
+        </div>
+    </div>";
     
     return $body;
 }
