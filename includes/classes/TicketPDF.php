@@ -65,6 +65,7 @@ class TicketPDF extends TCPDF {
         // 1. IMAGEN DEL EVENTO (Arriba con redondeo)
         $imgAreaH = 100;
         $imgMargin = 5;
+        // image_url ya contiene 'uploads/filename.ext'
         $imagePath = ROOT_PATH . '/public/' . ($this->event['image_url'] ?? '');
         
         if (!empty($this->event['image_url']) && file_exists($imagePath)) {

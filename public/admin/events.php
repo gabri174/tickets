@@ -14,6 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'create') {
+        // Asegurar que el directorio de subidas existe
+        if (!file_exists(UPLOADS_PATH)) {
+            mkdir(UPLOADS_PATH, 0777, true);
+        }
+        
         $title = cleanInput($_POST['title']);
         $description = cleanInput($_POST['description']);
         $dateEvent = cleanInput($_POST['date_event']);
@@ -28,9 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Procesar imagen
             $imageUrl = null;
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $imageUrl = uploadImage($_FILES['image'], ROOT_PATH . '/assets/images');
-                if ($imageUrl) {
-                    $imageUrl = 'assets/images/' . $imageUrl;
+                $imageName = uploadImage($_FILES['image'], UPLOADS_PATH);
+                if ($imageName) {
+                    $imageUrl = 'uploads/' . $imageName;
                 }
             }
             
@@ -53,12 +58,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($title) || empty($dateEvent) || empty($location) || $price < 0 || $maxTickets <= 0) {
             $error = 'Por favor completa todos los campos requeridos correctamente';
         } else {
+            // Obtener evento actual para preservar la imagen si no se sube una nueva
+            $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+            $currentEvent = $db->getEventById($id, $adminId);
+            $imageUrl = $currentEvent ? $currentEvent['image_url'] : null;
+
             // Procesar imagen si se sube una nueva
-            $imageUrl = null;
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $imageUrl = uploadImage($_FILES['image'], ROOT_PATH . '/assets/images');
-                if ($imageUrl) {
-                    $imageUrl = 'assets/images/' . $imageUrl;
+                $imageName = uploadImage($_FILES['image'], UPLOADS_PATH);
+                if ($imageName) {
+                    $imageUrl = 'uploads/' . $imageName;
                 }
             }
             
@@ -361,6 +370,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                         
                         <div class="md:col-span-2">
                             <label class="block text-gray-700 font-medium mb-2">Imagen del Evento</label>
+                            <?php if (isset($editEvent) && $editEvent['image_url']): ?>
+                                <div class="mb-2" id="currentImageContainer">
+                                    <p class="text-xs text-gray-500 mb-1">Imagen actual:</p>
+                                    <img src="<?php echo SITE_URL . '/' . $editEvent['image_url']; ?>" id="currentImagePreview" class="h-20 w-auto rounded border">
+                                </div>
+                            <?php endif; ?>
+                            <div class="hidden mb-2" id="editImagePreviewContainer">
+                                <p class="text-xs text-gray-500 mb-1">Imagen actual:</p>
+                                <img src="" id="editImagePreview" class="h-20 w-auto rounded border">
+                            </div>
                             <input type="file" name="image" accept="image/*"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800">
                             <p class="text-sm text-gray-500 mt-1">Formatos: JPG, PNG, GIF. Máximo 2MB.</p>
@@ -388,6 +407,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
         function showCreateModal() {
             document.getElementById('modalTitle').textContent = 'Crear Evento';
             document.getElementById('formAction').value = 'create';
+            document.getElementById('editImagePreviewContainer').classList.add('hidden');
+            if (document.getElementById('currentImageContainer')) {
+                document.getElementById('currentImageContainer').classList.add('hidden');
+            }
             document.getElementById('eventForm').reset();
             document.getElementById('eventModal').classList.remove('hidden');
         }
@@ -405,6 +428,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
             document.getElementById('eventLocation').value = event.location;
             document.getElementById('eventPrice').value = event.price;
             document.getElementById('eventMaxTickets').value = event.max_tickets;
+            
+            if (event.image_url) {
+                document.getElementById('editImagePreview').src = '<?php echo SITE_URL; ?>/' + event.image_url;
+                document.getElementById('editImagePreviewContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('editImagePreviewContainer').classList.add('hidden');
+            }
+            
+            if (document.getElementById('currentImageContainer')) {
+                document.getElementById('currentImageContainer').classList.add('hidden');
+            }
             
             document.getElementById('eventModal').classList.remove('hidden');
         }
