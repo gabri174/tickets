@@ -19,15 +19,13 @@ if (!class_exists('TCPDF')) {
 class TicketPDF extends TCPDF {
     private $event;
     private $tickets;
-    private $attendeeName;
     private $totalPrice;
     
-    public function __construct($event, $tickets, $attendeeName, $totalPrice) {
+    public function __construct($event, $tickets, $totalPrice) {
         parent::__construct('P', 'mm', 'A4', true, 'UTF-8', false);
         
         $this->event = $event;
         $this->tickets = $tickets;
-        $this->attendeeName = $attendeeName;
         $this->totalPrice = $totalPrice;
         
         $this->SetCreator('Tickets System');
@@ -42,12 +40,14 @@ class TicketPDF extends TCPDF {
     public function generatePDF() {
         foreach ($this->tickets as $ticket) {
             $this->AddPage();
-            $this->drawTicket($ticket);
+            // El nombre del asistente ahora viene en el array de cada ticket
+            $attendeeName = $ticket['name'] ?? 'ASISTENTE';
+            $this->drawTicket($ticket, $attendeeName);
         }
         return $this->Output('tickets_' . date('Ymd_His') . '.pdf', 'S');
     }
     
-    private function drawTicket($ticket) {
+    private function drawTicket($ticket, $attendeeName) {
         $w = 90; // Ancho del ticket
         $h = 240; // Alto del ticket
         $x = ($this->getPageWidth() - $w) / 2;
@@ -128,7 +128,7 @@ class TicketPDF extends TCPDF {
         // Nombre del asistente
         $this->SetXY($x + 8, $stubY + 15);
         $this->SetFont('helvetica', '', 7);
-        $this->MultiCell($w/2, 3, "ESTE TICKET PERTENECE A:\n" . strtoupper($this->attendeeName), 0, 'L');
+        $this->MultiCell($w/2, 3, "ESTE TICKET PERTENECE A:\n" . strtoupper($attendeeName), 0, 'L');
         
         // QR CODE (Sustituyendo el barcode de la imagen)
         if ($ticket['qr_path'] && file_exists($ticket['qr_path'])) {

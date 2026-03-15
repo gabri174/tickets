@@ -142,6 +142,9 @@ if (!$debugMode) {
                                 </div>
                                 
                                 <div class="flex-1 text-center md:text-left">
+                                    <div class="mb-2">
+                                        <span class="text-sm font-bold text-gray-800"><?php echo htmlspecialchars($ticket['name']); ?></span>
+                                    </div>
                                     <div class="text-xs text-gray-500 uppercase font-bold mb-1">Código de Acceso</div>
                                     <div class="text-xl font-mono font-bold text-gray-800 mb-3"><?php echo htmlspecialchars($ticket['code']); ?></div>
                                     

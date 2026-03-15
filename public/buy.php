@@ -22,19 +22,29 @@ if (!$event) {
 
 // Procesar formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = cleanInput($_POST['name']);
-    $email = cleanInput($_POST['email']);
-    $phone = cleanInput($_POST['phone']);
     $quantity = (int) cleanInput($_POST['quantity']);
+    $attendees = isset($_POST['attendees']) ? $_POST['attendees'] : [];
+    $phone = cleanInput($_POST['phone']);
     
     // Validaciones
     $errors = [];
     
-    if (empty($name)) $errors[] = 'El nombre es requerido';
-    if (empty($email) || !validateEmail($email)) $errors[] = 'Email inválido';
-    if (empty($phone)) $errors[] = 'El teléfono es requerido';
-    if ($quantity < 1 || $quantity > 5) $errors[] = 'Cantidad inválida (máximo 5 tickets)';
-    if ($quantity > $event['available_tickets']) $errors[] = 'No hay suficientes tickets disponibles';
+    if (empty($phone)) $errors[] = 'El teléfono de contacto es requerido';
+    if ($quantity < 1 || $quantity > $event['available_tickets']) $errors[] = 'Cantidad de tickets inválida';
+    
+    // Validar cada asistente
+    if (count($attendees) !== $quantity) {
+        $errors[] = 'Debes completar los datos de todos los asistentes';
+    } else {
+        foreach ($attendees as $index => $attendee) {
+            $num = $index + 1;
+            if (empty(cleanInput($attendee['name']))) $errors[] = "El nombre del asistente $num es requerido";
+            if (empty(cleanInput($attendee['surname']))) $errors[] = "Los apellidos del asistente $num son requeridos";
+            if (empty(cleanInput($attendee['email'])) || !validateEmail($attendee['email'])) {
+                $errors[] = "El email del asistente $num es inválido";
+            }
+        }
+    }
     
     if (empty($errors)) {
         // Lógica de Pago
@@ -59,16 +69,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = $db->getPdo();
             $pdo->beginTransaction();
             
-            for ($i = 0; $i < $quantity; $i++) {
+            $primary_email = cleanInput($attendees[0]['email']); // Usamos el primer email como principal para el envío
+            $primary_name = cleanInput($attendees[0]['name']) . ' ' . cleanInput($attendees[0]['surname']);
+
+            foreach ($attendees as $attendee) {
+                $a_name = cleanInput($attendee['name']) . ' ' . cleanInput($attendee['surname']);
+                $a_email = cleanInput($attendee['email']);
+                
                 $ticketCode = generateTicketCode();
                 $qrFilename = $ticketCode;
                 $qrData = SITE_URL . "/ticket.php?code=" . $ticketCode;
                 $qrPath = generateQRCode($qrData, $qrFilename);
                 
-                $db->createTicket($eventId, $ticketCode, $name, $email, $phone, $qrPath);
+                $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath);
                 $tickets[] = [
                     'code' => $ticketCode,
-                    'qr_path' => $qrPath
+                    'qr_path' => $qrPath,
+                    'name' => $a_name,
+                    'email' => $a_email
                 ];
             }
             
@@ -79,12 +97,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Enviar email
             $subject = "Tus tickets para " . $event['title'];
-            $emailBody = generateEmailBody($event, $tickets, $name, $totalPrice);
+            $emailBody = generateEmailBody($event, $tickets, $primary_name, $totalPrice);
             
             // Generar PDF y adjuntar
-            $pdfPath = generateTicketPDF($event, $tickets, $name, $totalPrice);
+            $pdfPath = generateTicketPDF($event, $tickets, $totalPrice);
             try {
-                sendTicketEmail($email, $subject, $emailBody, $pdfPath);
+                sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
             } catch (Exception $mailEx) {
                 $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
             }
@@ -94,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'event_title' => $event['title'],
                 'tickets' => $tickets,
                 'total_price' => $totalPrice,
-                'email' => $email,
+                'email' => $primary_email,
                 'phone' => $phone
             ];
             
@@ -241,50 +259,28 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
                 <?php endif; ?>
                 
                 <form method="POST" action="" id="purchaseForm">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">
-                                <i class="fas fa-user mr-2"></i>Nombre Completo *
-                            </label>
-                            <input type="text" name="name" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-                                   value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">
-                                <i class="fas fa-envelope mr-2"></i>Email *
-                            </label>
-                            <input type="email" name="email" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-                                   value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">
-                                <i class="fas fa-phone mr-2"></i>Teléfono *
-                            </label>
-                            <input type="tel" name="phone" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-                                   value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">
-                                <i class="fas fa-ticket-alt mr-2"></i>Cantidad de Tickets *
-                            </label>
-                            <select name="quantity" required id="quantity"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
-                                <?php 
-                                $maxQuantity = min(5, $event['available_tickets']);
-                                for ($i = 1; $i <= $maxQuantity; $i++): 
-                                ?>
-                                    <option value="<?php echo $i; ?>" <?php echo (isset($_POST['quantity']) && $_POST['quantity'] == $i) ? 'selected' : ''; ?>>
-                                        <?php echo $i; ?> ticket<?php echo $i > 1 ? 's' : ''; ?>
-                                    </option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 font-semibold mb-2">
+                            <i class="fas fa-ticket-alt mr-2"></i>Cantidad de Tickets *
+                        </label>
+                        <input type="number" name="quantity" id="quantity" 
+                               min="1" max="<?php echo $event['available_tickets']; ?>" 
+                               value="<?php echo isset($_POST['quantity']) ? $_POST['quantity'] : '1'; ?>"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                    </div>
+
+                    <div id="attendeesContainer" class="space-y-6">
+                        <!-- Los campos de los asistentes se generarán aquí con JS -->
+                    </div>
+
+                    <div class="mt-8 border-t pt-6">
+                        <label class="block text-gray-700 font-semibold mb-2">
+                            <i class="fas fa-phone mr-2"></i>Teléfono de contacto (para avisos) *
+                        </label>
+                        <input type="tel" name="phone" required
+                               placeholder="Ej: +34 600 000 000"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                               value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>">
                     </div>
                     
                     <!-- Price Summary -->
@@ -309,16 +305,61 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
     </main>
 
     <script>
-        // Actualizar precio total
-        const quantitySelect = document.getElementById('quantity');
+        const quantityInput = document.getElementById('quantity');
+        const attendeesContainer = document.getElementById('attendeesContainer');
         const totalPriceElement = document.getElementById('totalPrice');
         const basePrice = <?php echo $event['price']; ?>;
         
-        quantitySelect.addEventListener('change', function() {
-            const quantity = parseInt(this.value);
+        function updateAttendeeFields() {
+            const quantity = parseInt(quantityInput.value) || 0;
+            const currentFields = attendeesContainer.children.length;
+            
+            if (quantity > currentFields) {
+                // Añadir campos
+                for (let i = currentFields; i < quantity; i++) {
+                    const attendeeDiv = document.createElement('div');
+                    attendeeDiv.className = 'attendee-block bg-gray-50 p-4 rounded-lg border border-gray-200';
+                    attendeeDiv.innerHTML = `
+                        <h4 class="font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                            <span class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs mr-2">${i + 1}</span>
+                            Datos del Asistente ${i + 1}
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-600 font-semibold mb-1">Nombre *</label>
+                                <input type="text" name="attendees[${i}][name]" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 font-semibold mb-1">Apellidos *</label>
+                                <input type="text" name="attendees[${i}][surname]" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 font-semibold mb-1">Email *</label>
+                                <input type="email" name="attendees[${i}][email]" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm">
+                            </div>
+                        </div>
+                    `;
+                    attendeesContainer.appendChild(attendeeDiv);
+                }
+            } else if (quantity < currentFields) {
+                // Quitar campos
+                for (let i = currentFields; i > quantity; i--) {
+                    attendeesContainer.lastElementChild.remove();
+                }
+            }
+            
+            // Actualizar precio
             const total = basePrice * quantity;
             totalPriceElement.textContent = '$' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        });
+        }
+        
+        quantityInput.addEventListener('input', updateAttendeeFields);
+        
+        // Inicializar campos
+        document.addEventListener('DOMContentLoaded', updateAttendeeFields);
     </script>
 </body>
 </html>

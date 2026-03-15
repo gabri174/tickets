@@ -195,10 +195,10 @@ function paginate($total, $page, $limit = 10) {
 }
 
 // Generar PDF de tickets
-function generateTicketPDF($event, $tickets, $name, $totalPrice) {
+function generateTicketPDF($event, $tickets, $totalPrice) {
     require_once ROOT_PATH . '/includes/classes/TicketPDF.php';
     
-    $pdf = new TicketPDF($event, $tickets, $name, $totalPrice);
+    $pdf = new TicketPDF($event, $tickets, $totalPrice);
     $pdfContent = $pdf->generatePDF();
     
     // Guardar PDF temporalmente
