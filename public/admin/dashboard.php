@@ -100,7 +100,7 @@ $stats = [
                         <span class="text-sm text-gray-600">
                             <?php echo date('d/m/Y H:i'); ?>
                         </span>
-                        <a href="../public/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
+                        <a href="../" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
                             <i class="fas fa-external-link-alt mr-1"></i>Ver sitio
                         </a>
                     </div>

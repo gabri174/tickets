@@ -305,7 +305,7 @@ $currentConfig = [
                                         Respaldar Base de Datos
                                     </a>
                                     
-                                    <a href="../public/" target="_blank" class="block w-full text-left px-4 py-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition">
+                                    <a href="../" target="_blank" class="block w-full text-left px-4 py-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition">
                                         <i class="fas fa-external-link-alt mr-2"></i>
                                         Ver Sitio Público
                                     </a>
