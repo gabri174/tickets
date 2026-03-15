@@ -14,8 +14,9 @@ $search = isset($_GET['search']) ? cleanInput($_GET['search']) : '';
 $eventId = isset($_GET['event_id']) ? intval($_GET['event_id']) : 0;
 
 // Obtener tickets
-$tickets = $db->getAllTickets();
-$events = $db->getAllEvents();
+$adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+$tickets = $db->getAllTickets($adminId);
+$events = $db->getAllEvents($adminId);
 
 // Filtrar tickets
 if ($search || $eventId) {
@@ -119,10 +120,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
                         <i class="fas fa-ticket-alt"></i>
                         <span>Tickets</span>
                     </a>
+                    <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
                     <a href="settings.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
                     </a>
+                    <?php endif; ?>
                 </nav>
             </div>
             

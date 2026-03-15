@@ -34,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             
-            if ($db->createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl)) {
+            $adminId = $_SESSION['admin_id'];
+            if ($db->createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId)) {
                 $message = 'Evento creado exitosamente';
             } else {
                 $error = 'Error al crear el evento';
@@ -61,7 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             
-            if ($db->updateEvent($id, $title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl)) {
+            $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+            if ($db->updateEvent($id, $title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId)) {
                 $message = 'Evento actualizado exitosamente';
             } else {
                 $error = 'Error al actualizar el evento';
@@ -70,7 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 } elseif (isset($_GET['action']) && $_GET['action'] === 'delete') {
     $id = intval($_GET['id']);
-    if ($db->deleteEvent($id)) {
+    $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+    if ($db->deleteEvent($id, $adminId)) {
         $message = 'Evento eliminado exitosamente';
     } else {
         $error = 'Error al eliminar el evento';
@@ -78,12 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Obtener eventos
-$events = $db->getAllEvents();
+$adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+$events = $db->getAllEvents($adminId);
 
 // Obtener evento para editar
 $editEvent = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit') {
-    $editEvent = $db->getEventById(intval($_GET['id']));
+    $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+    $editEvent = $db->getEventById(intval($_GET['id']), $adminId);
 }
 ?>
 
@@ -134,10 +139,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                         <i class="fas fa-ticket-alt"></i>
                         <span>Tickets</span>
                     </a>
+                    <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
                     <a href="settings.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
                     </a>
+                    <?php endif; ?>
                 </nav>
             </div>
             

@@ -6,11 +6,13 @@ require_once '../../includes/classes/Database.php';
 checkAdminSession();
 
 $db = new Database();
+$adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+
 $stats = [
-    'total_events' => $db->countEvents(),
-    'total_tickets' => $db->countTickets(),
-    'recent_events' => array_slice($db->getAllEvents(), 0, 5),
-    'recent_tickets' => array_slice($db->getAllTickets(), 0, 10)
+    'total_events' => $db->countEvents($adminId),
+    'total_tickets' => $db->countTickets($adminId),
+    'recent_events' => array_slice($db->getAllEvents($adminId), 0, 5),
+    'recent_tickets' => array_slice($db->getAllTickets($adminId), 0, 10)
 ];
 ?>
 
@@ -61,10 +63,12 @@ $stats = [
                         <i class="fas fa-ticket-alt"></i>
                         <span>Tickets</span>
                     </a>
+                    <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
                     <a href="settings.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
                     </a>
+                    <?php endif; ?>
                 </nav>
             </div>
             
@@ -261,9 +265,11 @@ $stats = [
                         <a href="tickets.php?export=true" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
                             <i class="fas fa-download mr-2"></i>Exportar Tickets
                         </a>
+                        <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
                         <a href="settings.php" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
                             <i class="fas fa-cog mr-2"></i>Configuración
                         </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

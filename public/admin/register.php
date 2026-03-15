@@ -7,28 +7,29 @@ require_once '../../includes/classes/Database.php';
 
 $db = new Database();
 $error = '';
+$success = '';
 
-// Procesar login
+// Procesar registro
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = cleanInput($_POST['username']);
+    $email = cleanInput($_POST['email']);
     $password = $_POST['password'];
+    $confirm_password = $_POST['confirm_password'];
     
-    if (empty($username) || empty($password)) {
+    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
         $error = 'Por favor completa todos los campos';
+    } elseif ($password !== $confirm_password) {
+        $error = 'Las contraseñas no coinciden';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'El formato del email es inválido';
     } else {
-        $admin = $db->validateAdmin($username, $password);
+        // Intentar registrar (el rol por defecto será 'organizer')
+        $registered = $db->registerAdmin($username, $password, $email, 'organizer');
         
-        if ($admin) {
-            session_start();
-            $_SESSION['admin_id'] = $admin['id'];
-            $_SESSION['admin_username'] = $admin['username'];
-            $_SESSION['admin_email'] = $admin['email'];
-            $_SESSION['admin_role'] = $admin['role'];
-            
-            header('Location: dashboard.php');
-            exit();
+        if ($registered) {
+            $success = 'Registro exitoso. Ahora puedes iniciar sesión como organizador.';
         } else {
-            $error = 'Usuario o contraseña incorrectos';
+            $error = 'El nombre de usuario o email ya existe. Intenta con otro.';
         }
     }
 }
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Tickets</title>
+    <title>Registro de Organizador - Tickets</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -75,17 +76,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="login-container rounded-lg p-8 w-full max-w-md">
+    <div class="login-container rounded-lg p-8 w-full max-w-md my-8">
         <!-- Logo y Título -->
         <div class="text-center mb-8">
             <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
-                <i class="fas fa-user-shield text-white text-2xl"></i>
+                <i class="fas fa-user-plus text-white text-2xl"></i>
             </div>
-            <h1 class="text-2xl font-bold text-gray-800">Panel de Administración</h1>
-            <p class="text-gray-600 mt-2">Tickets System</p>
+            <h1 class="text-2xl font-bold text-gray-800">Registro de Organizador</h1>
+            <p class="text-gray-600 mt-2">Crea cuenta para gestionar tus eventos</p>
         </div>
         
-        <!-- Formulario de Login -->
+        <!-- Formulario -->
         <form method="POST" action="">
             <?php if ($error): ?>
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
@@ -95,8 +96,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php endif; ?>
+
+            <?php if ($success): ?>
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        <?php echo htmlspecialchars($success); ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             
-            <div class="mb-6">
+            <div class="mb-4">
                 <label class="block text-gray-700 font-semibold mb-2">
                     <i class="fas fa-user mr-2"></i>Usuario
                 </label>
@@ -105,76 +115,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        placeholder="Ingresa tu usuario"
                        value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
             </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold mb-2">
+                    <i class="fas fa-envelope mr-2"></i>Email
+                </label>
+                <input type="email" name="email" required
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800 transition"
+                       placeholder="Ingresa tu email"
+                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+            </div>
             
-            <div class="mb-6">
+            <div class="mb-4">
                 <label class="block text-gray-700 font-semibold mb-2">
                     <i class="fas fa-lock mr-2"></i>Contraseña
                 </label>
-                <input type="password" name="password" required
+                <input type="password" name="password" required minlength="6"
                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800 transition"
                        placeholder="Ingresa tu contraseña">
             </div>
-            
+
             <div class="mb-6">
-                <label class="flex items-center">
-                    <input type="checkbox" class="mr-2">
-                    <span class="text-sm text-gray-600">Recordar sesión</span>
+                <label class="block text-gray-700 font-semibold mb-2">
+                    <i class="fas fa-lock mr-2"></i>Confirmar Contraseña
                 </label>
+                <input type="password" name="confirm_password" required minlength="6"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800 transition"
+                       placeholder="Confirma tu contraseña">
             </div>
             
             <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
-                <i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión
+                <i class="fas fa-user-plus mr-2"></i>Registrarse
             </button>
         </form>
         
-        <!-- Información de ayuda -->
-        <div class="mt-8 p-4 bg-gray-50 rounded-lg">
-            <h4 class="font-semibold text-gray-700 mb-2">¿Necesitas ayuda?</h4>
-            <p class="text-sm text-gray-600 mb-2">
-                Contacta al administrador del sistema para obtener acceso.
-            </p>
-            <p class="text-xs text-gray-500">
-                Usuario por defecto: <code>admin</code><br>
-                Contraseña por defecto: <code>admin123</code>
-            </p>
+        <!-- Enlace a Login -->
+        <div class="mt-8 text-center">
+            <p class="text-sm text-gray-600 mb-4">¿Ya tienes una cuenta?</p>
+            <a href="login.php" class="text-blue-600 font-semibold hover:text-blue-800 transition">
+                <i class="fas fa-sign-in-alt mr-1"></i>Iniciar sesión aquí
+            </a>
         </div>
         
         <!-- Footer -->
         <div class="mt-6 text-center">
-            <a href="../public/" class="text-sm text-gray-600 hover:text-gray-800 transition">
+            <a href="../" class="text-sm text-gray-600 hover:text-gray-800 transition">
                 <i class="fas fa-arrow-left mr-1"></i>Volver al sitio
             </a>
         </div>
     </div>
-    
-    <script>
-        // Enfocar en el primer campo
-        document.addEventListener('DOMContentLoaded', function() {
-            const usernameField = document.querySelector('input[name="username"]');
-            if (usernameField && !usernameField.value) {
-                usernameField.focus();
-            } else {
-                const passwordField = document.querySelector('input[name="password"]');
-                if (passwordField) {
-                    passwordField.focus();
-                }
-            }
-        });
-        
-        // Prevenir envío múltiple
-        let formSubmitted = false;
-        document.querySelector('form').addEventListener('submit', function(e) {
-            if (formSubmitted) {
-                e.preventDefault();
-                return false;
-            }
-            formSubmitted = true;
-            
-            // Deshabilitar botón
-            const submitBtn = document.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Iniciando sesión...';
-        });
-    </script>
 </body>
 </html>

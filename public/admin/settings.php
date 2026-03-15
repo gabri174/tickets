@@ -5,6 +5,10 @@ require_once '../../includes/classes/Database.php';
 
 checkAdminSession();
 
+if ($_SESSION['admin_role'] !== 'superadmin') {
+    die("Acceso denegado. Esta sección es solo para el Super Administrador.");
+}
+
 $db = new Database();
 $message = '';
 $error = '';
@@ -89,10 +93,12 @@ $currentConfig = [
                         <i class="fas fa-ticket-alt"></i>
                         <span>Tickets</span>
                     </a>
+                    <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
                     <a href="settings.php" class="flex items-center space-x-3 p-3 rounded-lg bg-white bg-opacity-10">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
                     </a>
+                    <?php endif; ?>
                 </nav>
             </div>
             
