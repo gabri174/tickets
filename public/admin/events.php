@@ -281,7 +281,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                                                                 title="Eliminar">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
-                                                        <a href="../public/buy.php?id=<?php echo $event['id']; ?>" 
+                                                        <a href="../buy.php?id=<?php echo $event['id']; ?>" 
                                                            target="_blank"
                                                            class="text-green-600 hover:text-green-800 transition"
                                                            title="Ver en sitio">
