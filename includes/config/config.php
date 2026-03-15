@@ -4,9 +4,9 @@ if (file_exists(dirname(__DIR__, 2) . '/vendor/autoload.php')) {
     require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 }
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'tickets_system');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_NAME', 'tickets_system-35303938b2bf');
+define('DB_USER', 'Gabrielg');
+define('DB_PASS', 'Guerra2020@._');
 
 // Configuración del sitio
 define('SITE_URL', 'https://ensupresencia.eu');
