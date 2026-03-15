@@ -31,7 +31,16 @@ function validateEmail($email) {
 
 // Generar QR Code
 function generateQRCode($data, $filename) {
-    require_once ROOT_PATH . '/vendor/phpqrcode/qrlib.php';
+    if (!class_exists('QRcode')) {
+        $manualPath = ROOT_PATH . '/vendor/phpqrcode/qrlib.php';
+        if (file_exists($manualPath)) {
+            require_once $manualPath;
+        }
+    }
+    
+    if (!class_exists('QRcode')) {
+        throw new Exception("Librería QRcode no encontrada. Por favor ejecuta 'composer install'");
+    }
     
     $filepath = QRCODES_PATH . '/' . $filename . '.png';
     
@@ -45,9 +54,26 @@ function generateQRCode($data, $filename) {
 
 // Enviar email con ticket
 function sendTicketEmail($to, $subject, $body, $attachment = null) {
-    require_once ROOT_PATH . '/vendor/phpmailer/PHPMailer.php';
-    require_once ROOT_PATH . '/vendor/phpmailer/SMTP.php';
-    require_once ROOT_PATH . '/vendor/phpmailer/Exception.php';
+    if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        $base = ROOT_PATH . '/vendor/phpmailer/phpmailer/src/';
+        if (file_exists($base . 'PHPMailer.php')) {
+            require_once $base . 'PHPMailer.php';
+            require_once $base . 'SMTP.php';
+            require_once $base . 'Exception.php';
+        } else {
+            // Reintento con ruta manual antigua si existe
+            $oldPath = ROOT_PATH . '/vendor/phpmailer/';
+            if (file_exists($oldPath . 'PHPMailer.php')) {
+                require_once $oldPath . 'PHPMailer.php';
+                require_once $oldPath . 'SMTP.php';
+                require_once $oldPath . 'Exception.php';
+            }
+        }
+    }
+
+    if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        return false; // O lanzar excepción si prefieres, pero aquí el código original retornaba false
+    }
     
     $mail = new PHPMailer\PHPMailer\PHPMailer();
     

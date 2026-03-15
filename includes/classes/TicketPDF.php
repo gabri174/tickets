@@ -1,5 +1,14 @@
 <?php
-require_once ROOT_PATH . '/vendor/tcpdf/tcpdf.php';
+if (!class_exists('TCPDF')) {
+    $manualPath = ROOT_PATH . '/vendor/tcpdf/tcpdf.php';
+    if (file_exists($manualPath)) {
+        require_once $manualPath;
+    }
+}
+
+if (!class_exists('TCPDF')) {
+    throw new Exception("Librería TCPDF no encontrada. Por favor ejecuta 'composer install'");
+}
 
 class TicketPDF extends TCPDF {
     private $event;

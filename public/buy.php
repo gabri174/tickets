@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $totalPrice = $event['price'] * $quantity;
         
         try {
+            $pdo = $db->getPdo();
             $pdo->beginTransaction();
             
             for ($i = 0; $i < $quantity; $i++) {

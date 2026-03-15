@@ -152,5 +152,9 @@ class Database {
         $result = $stmt->fetch();
         return $result['total'];
     }
+
+    public function getPdo() {
+        return $this->pdo;
+    }
 }
 ?>
