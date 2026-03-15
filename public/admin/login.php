@@ -139,9 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </p>
         </div>
         
-        <!-- Footer -->
         <div class="mt-6 text-center">
-            <a href="../public/" class="text-sm text-gray-600 hover:text-gray-800 transition">
+            <a href="../" class="text-sm text-gray-600 hover:text-gray-800 transition">
                 <i class="fas fa-arrow-left mr-1"></i>Volver al sitio
             </a>
         </div>
