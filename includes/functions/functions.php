@@ -114,10 +114,12 @@ function sendTicketEmail($to, $subject, $body, $attachment = null) {
         $mail->Subject = $subject;
         $mail->Body    = $body;
         
-        return $mail->send();
+        if ($mail->send()) {
+            return true;
+        }
+        throw new Exception($mail->ErrorInfo);
     } catch (Exception $e) {
-        error_log("Error de PHPMailer: " . $mail->ErrorInfo);
-        return false;
+        throw new Exception($e->getMessage());
     }
 }
 

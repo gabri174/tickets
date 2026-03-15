@@ -83,10 +83,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Generar PDF y adjuntar
             $pdfPath = generateTicketPDF($event, $tickets, $name, $totalPrice);
-            if (!sendTicketEmail($email, $subject, $emailBody, $pdfPath)) {
-                // No lanzamos excepción aquí para no revertir la base de datos si ya se guardó, 
-                // pero guardamos el error para mostrarlo en la siguiente página o log.
-                $_SESSION['email_error'] = "Los tickets se generaron pero no se pudo enviar el correo. Por favor verifica tu configuración SMTP.";
+            try {
+                sendTicketEmail($email, $subject, $emailBody, $pdfPath);
+            } catch (Exception $mailEx) {
+                $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
             }
             
             // Redirigir a página de confirmación

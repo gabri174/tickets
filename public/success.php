@@ -10,10 +10,13 @@ if (!isset($_SESSION['purchase_success'])) {
 
 $purchase = $_SESSION['purchase_success'];
 $emailError = $_SESSION['email_error'] ?? null;
+$debugMode = isset($_GET['debug']);
 
 // Limpiar sesión después de mostrar
-unset($_SESSION['purchase_success']);
-unset($_SESSION['email_error']);
+if (!$debugMode) {
+    unset($_SESSION['purchase_success']);
+    unset($_SESSION['email_error']);
+}
 ?>
 
 <!DOCTYPE html>
@@ -127,7 +130,7 @@ unset($_SESSION['email_error']);
                                 <!-- QR Visual -->
                                 <div class="bg-gray-50 p-3 rounded-lg border">
                                     <?php 
-                                    $qrWebPath = SITE_URL . '/' . str_replace(ROOT_PATH . '/public/', '', $ticket['qr_path']);
+                                    $qrWebPath = SITE_URL . '/qrcodes/' . basename($ticket['qr_path']);
                                     ?>
                                     <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-32 h-32">
                                 </div>
@@ -178,20 +181,18 @@ unset($_SESSION['email_error']);
                 </div>
             </div>
             
-            <!-- Important Notice -->
-            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div class="flex items-start">
-                    <i class="fas fa-exclamation-triangle text-yellow-600 mt-1 mr-3"></i>
-                    <div>
-                        <h4 class="font-semibold text-yellow-800 mb-1">Importante:</h4>
-                        <p class="text-sm text-yellow-700">
-                            Recuerda llegar al evento con al menos 30 minutos de antelación y presentar 
-                            tus códigos de ticket en formato digital o impreso.
-                        </p>
-                    </div>
+                <!-- Debug Info (Only if requested) -->
+                <?php if ($debugMode): ?>
+                <div class="mt-8 p-4 bg-black text-green-400 text-left rounded-lg overflow-x-auto font-mono text-xs">
+                    <p class="font-bold mb-2 border-b border-green-800 pb-1">DEBUG INFO:</p>
+                    <p>SITE_URL: <?php echo SITE_URL; ?></p>
+                    <p>ROOT_PATH: <?php echo ROOT_PATH; ?></p>
+                    <p>QR Example Absolute: <?php echo $purchase['tickets'][0]['qr_path'] ?? 'N/A'; ?></p>
+                    <p>QR Example Web: <?php echo $qrWebPath ?? 'N/A'; ?></p>
+                    <p>Email Error: <?php echo $emailError ?: 'None'; ?></p>
                 </div>
+                <?php endif; ?>
             </div>
-        </div>
     </main>
 
     <script>
