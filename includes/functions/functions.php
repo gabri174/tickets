@@ -31,25 +31,9 @@ function validateEmail($email) {
 
 // Generar QR Code
 function generateQRCode($data, $filename) {
-    if (!class_exists('QRcode')) {
-        $paths = [
-            ROOT_PATH . '/vendor/phpqrcode/phpqrcode/qrlib.php',
-            ROOT_PATH . '/vendor/phpqrcode/qrlib.php'
-        ];
-        foreach ($paths as $path) {
-            if (file_exists($path)) {
-                require_once $path;
-                break;
-            }
-        }
-    }
-    
-    if (!class_exists('QRcode')) {
-        throw new Exception("Librería QRcode no encontrada. Por favor ejecuta 'composer install'");
-    }
-    
     $filepath = QRCODES_PATH . '/' . $filename . '.png';
     
+    // Asegurar que el directorio existe
     if (!file_exists(QRCODES_PATH)) {
         if (!mkdir(QRCODES_PATH, 0777, true)) {
             throw new Exception("No se pudo crear el directorio de QRs. Verifica los permisos de carpeta.");
@@ -59,8 +43,37 @@ function generateQRCode($data, $filename) {
     if (!is_writable(QRCODES_PATH)) {
         throw new Exception("El directorio de QRs no tiene permisos de escritura.");
     }
-    
-    QRcode::png($data, $filepath, QR_ECLEVEL_M, 10);
+
+    // Intentar usar TCPDF2DBarcode (más robusto contra conflictos de nombres)
+    if (class_exists('TCPDF2DBarcode')) {
+        $barcodeobj = new TCPDF2DBarcode($data, 'QRCODE,M');
+        $pngData = $barcodeobj->getBarcodePngData();
+        if ($pngData) {
+            file_put_contents($filepath, $pngData);
+        } else {
+            throw new Exception("Error al generar los datos del QR con TCPDF.");
+        }
+    } else {
+        // Fallback a PHPQRCode si TCPDF2DBarcode no está disponible
+        if (!class_exists('QRcode')) {
+            $paths = [
+                ROOT_PATH . '/vendor/phpqrcode/phpqrcode/qrlib.php',
+                ROOT_PATH . '/vendor/phpqrcode/qrlib.php'
+            ];
+            foreach ($paths as $path) {
+                if (file_exists($path)) {
+                    require_once $path;
+                    break;
+                }
+            }
+        }
+        
+        if (class_exists('QRcode') && method_exists('QRcode', 'png')) {
+            QRcode::png($data, $filepath, QR_ECLEVEL_M, 10);
+        } else {
+            throw new Exception("No se encontró una librería QR válida (Conflicto detectado con TCPDF).");
+        }
+    }
     
     if (!file_exists($filepath)) {
         throw new Exception("Error interno: No se pudo generar el archivo de imagen QR.");
