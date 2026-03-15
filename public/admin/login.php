@@ -127,8 +127,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
         </form>
         
+        <!-- Enlace a Registro -->
+        <div class="mt-6 text-center">
+            <p class="text-sm text-gray-600 mb-2">¿Eres organizador y no tienes cuenta?</p>
+            <a href="register.php" class="text-blue-600 font-semibold hover:text-blue-800 transition">
+                <i class="fas fa-user-plus mr-1"></i>Regístrate aquí
+            </a>
+        </div>
+        
         <!-- Información de ayuda -->
-        <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
             <h4 class="font-semibold text-gray-700 mb-2">¿Necesitas ayuda?</h4>
             <p class="text-sm text-gray-600 mb-2">
                 Contacta al administrador del sistema para obtener acceso.
