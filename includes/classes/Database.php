@@ -69,9 +69,12 @@ class Database {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $this->pdo->prepare("INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)");
         try {
-            return $stmt->execute([$username, $hashedPassword, $email, $role]);
-        } catch (PDOException $e) {
+            if ($stmt->execute([$username, $hashedPassword, $email, $role])) {
+                return true;
+            }
             return false;
+        } catch (PDOException $e) {
+            return "Error de DB: " . $e->getMessage();
         }
     }
     

@@ -26,8 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Intentar registrar (el rol por defecto será 'organizer')
         $registered = $db->registerAdmin($username, $password, $email, 'organizer');
         
-        if ($registered) {
+        if ($registered === true) {
             $success = 'Registro exitoso. Ahora puedes iniciar sesión como organizador.';
+        } elseif (is_string($registered)) {
+            $error = $registered; // PDOException message
         } else {
             $error = 'El nombre de usuario o email ya existe. Intenta con otro.';
         }
