@@ -145,7 +145,7 @@ if (!$ticket) {
             <!-- QR Code -->
             <div class="text-center mb-6">
                 <?php if ($ticket['qr_code_path'] && file_exists($ticket['qr_code_path'])): ?>
-                    <img src="<?php echo SITE_URL . '/' . str_replace(ROOT_PATH . '/', '', $ticket['qr_code_path']); ?>" 
+                    <img src="<?php echo SITE_URL . '/' . str_replace(ROOT_PATH . '/public/', '', $ticket['qr_code_path']); ?>" 
                          alt="QR Code" 
                          class="mx-auto w-32 h-32">
                 <?php else: ?>

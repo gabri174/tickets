@@ -118,7 +118,7 @@ unset($_SESSION['purchase_success']);
                                 <!-- QR Visual -->
                                 <div class="bg-gray-50 p-3 rounded-lg border">
                                     <?php 
-                                    $qrWebPath = SITE_URL . '/' . str_replace(ROOT_PATH . '/', '', $ticket['qr_path']);
+                                    $qrWebPath = SITE_URL . '/' . str_replace(ROOT_PATH . '/public/', '', $ticket['qr_path']);
                                     ?>
                                     <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-32 h-32">
                                 </div>
