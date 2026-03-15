@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $maxTickets = intval($_POST['max_tickets']);
         
         // Validaciones
-        if (empty($title) || empty($dateEvent) || empty($location) || $price <= 0 || $maxTickets <= 0) {
+        if (empty($title) || empty($dateEvent) || empty($location) || $price < 0 || $maxTickets <= 0) {
             $error = 'Por favor completa todos los campos requeridos correctamente';
         } else {
             // Procesar imagen
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $price = floatval($_POST['price']);
         $maxTickets = intval($_POST['max_tickets']);
         
-        if (empty($title) || empty($dateEvent) || empty($location) || $price <= 0 || $maxTickets <= 0) {
+        if (empty($title) || empty($dateEvent) || empty($location) || $price < 0 || $maxTickets <= 0) {
             $error = 'Por favor completa todos los campos requeridos correctamente';
         } else {
             // Procesar imagen si se sube una nueva

@@ -36,8 +36,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($quantity > $event['available_tickets']) $errors[] = 'No hay suficientes tickets disponibles';
     
     if (empty($errors)) {
-        // Generar tickets
-        $tickets = [];
+        // Lógica de Pago
+        $paymentSuccess = true;
+        
+        if ($event['price'] > 0) {
+            // Aquí iría la integración de pasarela de pago (Stripe, PayPal, etc.)
+            // Por ahora asuminos éxito ya que no hay una pasarela configurada.
+            // Si el precio es > 0, se ejecutaría la lógica de cobro.
+            $paymentSuccess = true; 
+        } else {
+            // Si el precio es 0, saltamos directamente a la generación de tickets
+            $paymentSuccess = true;
+        }
+
+        if ($paymentSuccess) {
+            // Generar tickets
+            $tickets = [];
         $totalPrice = $event['price'] * $quantity;
         
         try {
@@ -83,6 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $pdo->rollBack();
             $errors[] = 'Error al procesar la compra. Por favor intenta nuevamente.';
+        }
         }
     }
 }
@@ -263,7 +278,8 @@ function generateTicketPDF($event, $tickets, $name, $totalPrice) {
                     
                     <div class="mt-6">
                         <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
-                            <i class="fas fa-credit-card mr-2"></i>Completar Compra
+                            <i class="fas <?php echo $event['price'] > 0 ? 'fa-credit-card' : 'fa-ticket-alt'; ?> mr-2"></i>
+                            <?php echo $event['price'] > 0 ? 'Completar Compra' : 'Obtener Tickets Gratis'; ?>
                         </button>
                     </div>
                 </form>
