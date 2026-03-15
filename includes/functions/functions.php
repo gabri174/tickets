@@ -44,6 +44,14 @@ function generateQRCode($data, $filename) {
         throw new Exception("El directorio de QRs no tiene permisos de escritura.");
     }
 
+    // Intentar cargar la librería de códigos 2D de TCPDF si no está cargada
+    if (!class_exists('TCPDF2DBarcode')) {
+        $tcpdfBarcodesPath = ROOT_PATH . '/vendor/tecnickcom/tcpdf/tcpdf_barcodes_2d.php';
+        if (file_exists($tcpdfBarcodesPath)) {
+            require_once $tcpdfBarcodesPath;
+        }
+    }
+
     // Intentar usar TCPDF2DBarcode (más robusto contra conflictos de nombres)
     if (class_exists('TCPDF2DBarcode')) {
         $barcodeobj = new TCPDF2DBarcode($data, 'QRCODE,M');
@@ -68,10 +76,11 @@ function generateQRCode($data, $filename) {
             }
         }
         
+        // Solo llamamos a QRcode::png si sabemos que no es el de TCPDF (que no tiene png)
         if (class_exists('QRcode') && method_exists('QRcode', 'png')) {
             QRcode::png($data, $filepath, QR_ECLEVEL_M, 10);
         } else {
-            throw new Exception("No se encontró una librería QR válida (Conflicto detectado con TCPDF).");
+            throw new Exception("Error: Conflicto de librerías QR detectado. Por favor, asegúrate de que el servidor ha sido actualizado correctamente.");
         }
     }
     
