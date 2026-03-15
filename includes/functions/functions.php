@@ -96,6 +96,16 @@ function sendTicketEmail($to, $subject, $body, $attachment = null) {
     
     try {
         $mail->isSMTP();
+        
+        // Activar debug si hay sesión de debug
+        if (isset($_SESSION['debug_email'])) {
+            $mail->SMTPDebug = 2; // Client messages & server responses
+            $mail->Debugoutput = function($str, $level) {
+                if (!isset($_SESSION['smtp_log'])) $_SESSION['smtp_log'] = "";
+                $_SESSION['smtp_log'] .= $str . "\n";
+            };
+        }
+        
         $mail->Host       = SMTP_HOST;
         $mail->SMTPAuth   = true;
         $mail->Username   = SMTP_USERNAME;

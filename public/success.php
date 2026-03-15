@@ -12,10 +12,16 @@ $purchase = $_SESSION['purchase_success'];
 $emailError = $_SESSION['email_error'] ?? null;
 $debugMode = isset($_GET['debug']);
 
+if ($debugMode) {
+    $_SESSION['debug_email'] = true;
+}
+
 // Limpiar sesión después de mostrar
 if (!$debugMode) {
     unset($_SESSION['purchase_success']);
     unset($_SESSION['email_error']);
+    unset($_SESSION['smtp_log']);
+    unset($_SESSION['debug_email']);
 }
 ?>
 
@@ -187,9 +193,18 @@ if (!$debugMode) {
                     <p class="font-bold mb-2 border-b border-green-800 pb-1">DEBUG INFO:</p>
                     <p>SITE_URL: <?php echo SITE_URL; ?></p>
                     <p>ROOT_PATH: <?php echo ROOT_PATH; ?></p>
-                    <p>QR Example Absolute: <?php echo $purchase['tickets'][0]['qr_path'] ?? 'N/A'; ?></p>
-                    <p>QR Example Web: <?php echo $qrWebPath ?? 'N/A'; ?></p>
-                    <p>Email Error: <?php echo $emailError ?: 'None'; ?></p>
+                    <p>QR Example absolute: <?php echo $purchase['tickets'][0]['qr_path'] ?? 'N/A'; ?></p>
+                    <p>QR Example Web URL: <?php echo $qrWebPath ?? 'N/A'; ?></p>
+                    <?php 
+                    $absoluteQr = $purchase['tickets'][0]['qr_path'] ?? '';
+                    if ($absoluteQr) {
+                        echo "<p>File exists on server: " . (file_exists($absoluteQr) ? 'YES' : 'NO') . "</p>";
+                        echo "<p>File size: " . (file_exists($absoluteQr) ? filesize($absoluteQr) . " bytes" : 'N/A') . "</p>";
+                        echo "<p>Permissions: " . (file_exists($absoluteQr) ? substr(sprintf('%o', fileperms($absoluteQr)), -4) : 'N/A') . "</p>";
+                    }
+                    ?>
+                    <p class="mt-4 font-bold border-b border-green-800">SMTP LOG:</p>
+                    <pre class="whitespace-pre-wrap"><?php echo $_SESSION['smtp_log'] ?? 'No log recorded - reload with ?debug=1 to see new attempts'; ?></pre>
                 </div>
                 <?php endif; ?>
             </div>
