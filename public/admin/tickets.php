@@ -370,7 +370,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
                                                 </td>
                                                 <td class="py-3 px-4">
                                                      <div class="flex space-x-2">
-                                                         <a href="../public/ticket.php?code=<?php echo urlencode($ticket['ticket_code']); ?>" 
+                                                         <a href="../ticket.php?code=<?php echo urlencode($ticket['ticket_code']); ?>" 
                                                             target="_blank"
                                                             class="text-blue-600 hover:text-blue-800 transition"
                                                             title="Ver ticket">
