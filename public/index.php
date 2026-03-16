@@ -14,166 +14,136 @@ $events = $db->getActiveEvents();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --color-gray-light: #d9d9d9;
-            --color-gray-dark: #363c40;
-            --color-gray-medium: #babebf;
-            --color-gray-muted: #848b8c;
-            --color-black: #202426;
-        }
-        
-        body {
-            background-color: var(--color-gray-light);
-            color: var(--color-gray-dark);
-        }
-        
-        .bg-primary { background-color: var(--color-gray-dark); }
-        .text-primary { color: var(--color-gray-dark); }
-        .text-muted { color: var(--color-gray-muted); }
-        .border-custom { border-color: var(--color-gray-medium); }
-        
-        .event-card {
-            background: white;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .event-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        .btn-primary {
-            background-color: var(--color-gray-dark);
-            color: white;
-            transition: background-color 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--color-black);
-        }
-    </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="bg-primary text-white shadow-lg">
-        <nav class="container mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-ticket-alt text-2xl"></i>
-                    <h1 class="text-2xl font-bold">Tickets</h1>
-                </div>
-                <div class="flex items-center space-x-6">
-                    <a href="#events" class="hover:text-gray-300 transition">Eventos</a>
-                    <a href="#contact" class="hover:text-gray-300 transition">Contacto</a>
-                    <a href="admin/" class="bg-white text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-                        <i class="fas fa-user-shield mr-2"></i>Admin
-                    </a>
-                </div>
-            </div>
-        </nav>
-    </header>
-
-    <!-- Hero Section -->
-    <section class="bg-gradient-to-b from-gray-800 to-gray-900 text-white py-20">
-        <div class="container mx-auto px-6 text-center">
-            <h2 class="text-5xl font-bold mb-6">Descubre Eventos Increíbles</h2>
-            <p class="text-xl mb-8 text-gray-300">Compra tus entradas de forma segura y rápida</p>
-            <a href="#events" class="btn-primary px-8 py-4 rounded-lg text-lg font-semibold inline-block">
-                Ver Eventos <i class="fas fa-arrow-down ml-2"></i>
-            </a>
+    <!-- Splash Screen (Simulado) -->
+    <div id="splash" class="fixed inset-0 z-50 bg-black flex items-center justify-center transition-opacity duration-500">
+        <div class="text-center">
+            <i class="fas fa-ticket-alt text-6xl text-lime-400 mb-4 animate-bounce"></i>
+            <h1 class="text-3xl font-bold tracking-tighter">TICKETAPP</h1>
         </div>
-    </section>
+    </div>
 
-    <!-- Events Section -->
-    <section id="events" class="py-16">
-        <div class="container mx-auto px-6">
-            <h2 class="text-4xl font-bold text-center mb-12 text-primary">Próximos Eventos</h2>
+    <div class="app-container">
+        <!-- Header / Greeting -->
+        <header class="flex justify-between items-center mb-8 pt-4">
+            <div>
+                <p class="text-gray-400 text-sm font-medium">¡Hola, bienvenido!</p>
+                <h2 class="heading-xl">Explorar Eventos</h2>
+            </div>
+            <div class="flex gap-3">
+                <button class="glass-pill w-12 h-12 flex items-center justify-center text-lg">
+                    <i class="fas fa-search"></i>
+                </button>
+                <a href="admin/" class="glass-pill w-12 h-12 flex items-center justify-center text-lg">
+                    <i class="fas fa-user-shield"></i>
+                </a>
+            </div>
+        </header>
+
+        <!-- Categories (Pills) -->
+        <div class="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
+            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-lime-400 text-black border-none font-semibold">Todos</button>
+            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Música</button>
+            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Festivales</button>
+            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Arte</button>
+            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Teatro</button>
+        </div>
+
+        <!-- Featured Section (Horizontal Scroll) -->
+        <section class="mb-10">
+            <div class="flex justify-between items-end mb-4">
+                <h3 class="text-xl font-bold">Destacados</h3>
+                <a href="#" class="text-lime-400 text-sm font-semibold">Ver todos</a>
+            </div>
             
-            <?php if (empty($events)): ?>
-                <div class="text-center py-12">
-                    <i class="fas fa-calendar-times text-6xl text-muted mb-4"></i>
-                    <p class="text-xl text-muted">No hay eventos disponibles en este momento</p>
-                </div>
-            <?php else: ?>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <?php foreach ($events as $event): ?>
-                        <div class="event-card rounded-lg overflow-hidden shadow-lg border border-custom">
-                            <?php if ($event['image_url']): ?>
-                                <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" 
-                                     alt="<?php echo htmlspecialchars($event['title']); ?>" 
-                                     class="w-full h-48 object-cover">
-                            <?php else: ?>
-                                <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
-                                    <i class="fas fa-image text-4xl text-gray-400"></i>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <div class="p-6">
-                                <h3 class="text-xl font-bold mb-2 text-primary"><?php echo htmlspecialchars($event['title']); ?></h3>
-                                <p class="text-muted mb-4 line-clamp-2"><?php echo htmlspecialchars($event['description']); ?></p>
-                                
-                                <div class="space-y-2 mb-4">
-                                    <div class="flex items-center text-sm text-muted">
-                                        <i class="fas fa-calendar-alt mr-2"></i>
-                                        <?php echo formatDate($event['date_event']); ?>
+            <div class="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                <?php if (!empty($events)): ?>
+                    <?php foreach (array_slice($events, 0, 3) as $event): ?>
+                        <div class="event-card-modern min-w-[280px]">
+                            <div class="event-image-container">
+                                <?php if ($event['image_url']): ?>
+                                    <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="<?php echo htmlspecialchars($event['title']); ?>">
+                                <?php else: ?>
+                                    <div class="w-full h-full bg-gray-800 flex items-center justify-center">
+                                        <i class="fas fa-image text-4xl text-gray-600"></i>
                                     </div>
-                                    <div class="flex items-center text-sm text-muted">
-                                        <i class="fas fa-map-marker-alt mr-2"></i>
-                                        <?php echo htmlspecialchars($event['location']); ?>
-                                    </div>
-                                    <div class="flex items-center text-sm text-muted">
-                                        <i class="fas fa-ticket-alt mr-2"></i>
-                                        <?php echo $event['available_tickets']; ?> disponibles
+                                <?php endif; ?>
+                                <div class="event-overlay">
+                                    <h4 class="text-lg font-bold mb-1"><?php echo htmlspecialchars($event['title']); ?></h4>
+                                    <div class="flex items-center gap-2 text-xs text-gray-300">
+                                        <i class="fas fa-calendar-alt text-blue-400"></i>
+                                        <span><?php echo formatDate($event['date_event'], 'd M, Y'); ?></span>
                                     </div>
                                 </div>
-                                
-                                <div class="flex justify-between items-center">
-                                    <span class="text-2xl font-bold text-primary"><?php echo formatCurrency($event['price']); ?></span>
-                                    <?php if ($event['available_tickets'] > 0): ?>
-                                        <a href="buy.php?id=<?php echo $event['id']; ?>" 
-                                           class="btn-primary px-4 py-2 rounded-lg hover:opacity-90 transition">
-                                            Comprar <i class="fas fa-shopping-cart ml-1"></i>
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="bg-red-500 text-white px-4 py-2 rounded-lg">
-                                            Agotado
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
+                                <a href="buy.php?id=<?php echo $event['id']; ?>" class="absolute top-4 right-4 w-10 h-10 glass-pill flex items-center justify-center text-white">
+                                    <i class="fas fa-arrow-right -rotate-45"></i>
+                                </a>
                             </div>
                         </div>
                     <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-primary text-white py-8">
-        <div class="container mx-auto px-6">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="mb-4 md:mb-0">
-                    <p>&copy; <?php echo date('Y'); ?> <?php echo SITE_NAME; ?>. Todos los derechos reservados.</p>
-                </div>
-                <div class="flex space-x-6">
-                    <a href="#" class="hover:text-gray-300 transition">
-                        <i class="fab fa-facebook text-xl"></i>
-                    </a>
-                    <a href="#" class="hover:text-gray-300 transition">
-                        <i class="fab fa-twitter text-xl"></i>
-                    </a>
-                    <a href="#" class="hover:text-gray-300 transition">
-                        <i class="fab fa-instagram text-xl"></i>
-                    </a>
-                </div>
+                <?php endif; ?>
             </div>
-        </div>
-    </footer>
+        </section>
+
+        <!-- Upcoming Events (Vertical List) -->
+        <section class="mb-10">
+            <h3 class="text-xl font-bold mb-4">Próximos para ti</h3>
+            <div class="space-y-4">
+                <?php if (empty($events)): ?>
+                    <div class="glass-card p-10 text-center">
+                        <i class="fas fa-calendar-times text-4xl text-gray-600 mb-3"></i>
+                        <p class="text-gray-400">No hay eventos disponibles</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($events as $event): ?>
+                        <div class="glass-card p-3 flex gap-4 items-center">
+                            <div class="w-20 h-20 rounded-xl overflow-hidden shadow-lg flex-shrink-0">
+                                <?php if ($event['image_url']): ?>
+                                    <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="" class="w-full h-full object-cover">
+                                <?php else: ?>
+                                    <div class="w-full h-full bg-gray-800 flex items-center justify-center text-gray-600">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-gray-100 truncate"><?php echo htmlspecialchars($event['title']); ?></h4>
+                                <p class="text-blue-400 text-xs font-semibold mb-1"><?php echo formatDate($event['date_event'], 'd Octubre'); ?></p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lime-400 font-bold"><?php echo formatCurrency($event['price']); ?></span>
+                                    <span class="text-[10px] text-gray-500 font-medium px-2 py-1 glass-pill"><?php echo $event['available_tickets']; ?> Libres</span>
+                                </div>
+                            </div>
+                            <a href="buy.php?id=<?php echo $event['id']; ?>" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-lime-400 hover:text-black transition">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </section>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="index.php" class="nav-item active"><i class="fas fa-home"></i></a>
+        <a href="#" class="nav-item"><i class="fas fa-search"></i></a>
+        <a href="#" class="nav-item"><i class="fas fa-ticket-alt"></i></a>
+        <a href="#" class="nav-item"><i class="fas fa-user"></i></a>
+    </nav>
 
     <script>
-        // Smooth scrolling
+        // Splash Screen Hide
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('splash').classList.add('hide');
+            }, 1000);
+        });
+
+        // Simple smooth scrolling
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();

@@ -109,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Redirigir a página de confirmación
             $_SESSION['purchase_success'] = [
+                'event_id' => $eventId,
                 'event_title' => $event['title'],
                 'tickets' => $tickets,
                 'total_price' => $totalPrice,
@@ -173,136 +174,107 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comprar Tickets - <?php echo htmlspecialchars($event['title']); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --color-gray-light: #d9d9d9;
-            --color-gray-dark: #363c40;
-            --color-gray-medium: #babebf;
-            --color-gray-muted: #848b8c;
-            --color-black: #202426;
+        input[type="number"], input[type="text"], input[type="email"], input[type="tel"] {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.3s ease;
         }
-        
-        body { background-color: var(--color-gray-light); }
-        .bg-primary { background-color: var(--color-gray-dark); }
-        .text-primary { color: var(--color-gray-dark); }
-        .btn-primary { background-color: var(--color-gray-dark); }
-        .btn-primary:hover { background-color: var(--color-black); }
+        input:focus { border-color: var(--accent-blue); }
+        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #A1A1A1; }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="bg-primary text-white shadow-lg">
-        <nav class="container mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-ticket-alt text-2xl"></i>
-                    <h1 class="text-2xl font-bold">Tickets</h1>
-                </div>
-                <a href="index.php" class="hover:text-gray-300 transition">
-                    <i class="fas fa-arrow-left mr-2"></i>Volver
-                </a>
-            </div>
-        </nav>
-    </header>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 pt-4">
+            <a href="index.php" class="glass-pill w-12 h-12 flex items-center justify-center text-lg">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h2 class="text-xl font-bold">Checkout</h2>
+            <div class="w-12"></div> <!-- Spacer -->
+        </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-6 py-8">
-        <div class="max-w-4xl mx-auto">
-            <!-- Event Info -->
-            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-                <div class="flex flex-col md:flex-row gap-6">
-                    <?php if ($event['image_url']): ?>
-                        <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" 
-                             alt="<?php echo htmlspecialchars($event['title']); ?>" 
-                             class="w-full md:w-1/3 h-48 object-cover rounded-lg">
-                    <?php endif; ?>
-                    
-                    <div class="flex-1">
-                        <h2 class="text-3xl font-bold mb-4 text-primary"><?php echo htmlspecialchars($event['title']); ?></h2>
-                        <p class="text-gray-600 mb-4"><?php echo htmlspecialchars($event['description']); ?></p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="flex items-center">
-                                <i class="fas fa-calendar-alt text-primary mr-3"></i>
-                                <span><?php echo formatDate($event['date_event']); ?></span>
-                            </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-map-marker-alt text-primary mr-3"></i>
-                                <span><?php echo htmlspecialchars($event['location']); ?></span>
-                            </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-ticket-alt text-primary mr-3"></i>
-                                <span><?php echo $event['available_tickets']; ?> disponibles</span>
-                            </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-tag text-primary mr-3"></i>
-                                <span class="text-2xl font-bold"><?php echo formatCurrency($event['price']); ?></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Purchase Form -->
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-2xl font-bold mb-6 text-primary">Completar Compra</h3>
-                
-                <?php if (!empty($errors)): ?>
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                        <ul class="list-disc list-inside">
-                            <?php foreach ($errors as $error): ?>
-                                <li><?php echo htmlspecialchars($error); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
+        <!-- Event Summary Card -->
+        <div class="glass-card p-4 mb-8 flex gap-4 items-center">
+            <div class="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0">
+                <?php if ($event['image_url']): ?>
+                    <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="" class="w-full h-full object-cover">
+                <?php else: ?>
+                    <div class="w-full h-full bg-gray-800 flex items-center justify-center text-3xl">
+                        <i class="fas fa-image text-gray-600"></i>
                     </div>
                 <?php endif; ?>
-                
-                <form method="POST" action="" id="purchaseForm">
-                    <div class="mb-6">
-                        <label class="block text-gray-700 font-semibold mb-2">
-                            <i class="fas fa-ticket-alt mr-2"></i>Cantidad de Tickets *
-                        </label>
-                        <input type="number" name="quantity" id="quantity" 
-                               min="1" max="<?php echo $event['available_tickets']; ?>" 
-                               value="<?php echo isset($_POST['quantity']) ? $_POST['quantity'] : '1'; ?>"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
-                    </div>
-
-                    <div id="attendeesContainer" class="space-y-6">
-                        <!-- Los campos de los asistentes se generarán aquí con JS -->
-                    </div>
-
-                    <div class="mt-8 border-t pt-6">
-                        <label class="block text-gray-700 font-semibold mb-2">
-                            <i class="fas fa-phone mr-2"></i>Teléfono de contacto (para avisos) *
-                        </label>
-                        <input type="tel" name="phone" required
-                               placeholder="Ej: +34 600 000 000"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-                               value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>">
-                    </div>
-                    
-                    <!-- Price Summary -->
-                    <div class="mt-6 p-4 bg-gray-100 rounded-lg">
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-semibold">Total a pagar:</span>
-                            <span class="text-2xl font-bold text-primary" id="totalPrice">
-                                <?php echo formatCurrency($event['price']); ?>
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6">
-                        <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
-                            <i class="fas <?php echo $event['price'] > 0 ? 'fa-credit-card' : 'fa-ticket-alt'; ?> mr-2"></i>
-                            <?php echo $event['price'] > 0 ? 'Completar Compra' : 'Obtener Tickets Gratis'; ?>
-                        </button>
-                    </div>
-                </form>
+            </div>
+            <div>
+                <h3 class="font-bold text-lg mb-1"><?php echo htmlspecialchars($event['title']); ?></h3>
+                <div class="flex items-center gap-2 text-xs text-gray-400">
+                    <i class="fas fa-calendar-alt text-blue-400"></i>
+                    <span><?php echo formatDate($event['date_event']); ?></span>
+                </div>
+                <div class="mt-2">
+                    <span class="text-lime-400 font-bold text-xl"><?php echo formatCurrency($event['price']); ?></span>
+                    <span class="text-[10px] text-gray-500 ml-1">por ticket</span>
+                </div>
             </div>
         </div>
-    </main>
+
+        <!-- Form -->
+        <form method="POST" action="" id="purchaseForm" class="space-y-6">
+            <?php if (!empty($errors)): ?>
+                <div class="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm mb-6">
+                    <ul class="list-disc list-inside">
+                        <?php foreach ($errors as $error): ?>
+                            <li><?php echo htmlspecialchars($error); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <!-- Quantity -->
+            <div class="glass-card p-6">
+                <label for="quantity"><i class="fas fa-ticket-alt mr-2"></i>¿Cuántos tickets necesitas?</label>
+                <input type="number" name="quantity" id="quantity" 
+                       min="1" max="<?php echo $event['available_tickets']; ?>" 
+                       value="<?php echo isset($_POST['quantity']) ? $_POST['quantity'] : '1'; ?>">
+                <p class="text-[10px] text-gray-500 mt-2">Disponibles: <?php echo $event['available_tickets']; ?></p>
+            </div>
+
+            <div id="attendeesContainer" class="space-y-4">
+                <!-- Los campos de los asistentes se generarán aquí con JS -->
+            </div>
+
+            <!-- Contact -->
+            <div class="glass-card p-6">
+                <label><i class="fas fa-phone mr-2"></i>Móvil de contacto</label>
+                <input type="tel" name="phone" required placeholder="Ej: +34 600 000 000"
+                       value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>">
+                <p class="text-[10px] text-gray-500 mt-2">Usaremos este número para enviarte confirmaciones por WhatsApp.</p>
+            </div>
+
+            <!-- Total and Submit -->
+            <div class="pt-4">
+                <div class="flex justify-between items-center mb-6 px-2">
+                    <span class="text-gray-400 font-medium">Total a pagar</span>
+                    <span class="text-3xl font-bold" id="totalPrice"><?php echo formatCurrency($event['price']); ?></span>
+                </div>
+
+                <button type="submit" class="btn-modern btn-lime w-full text-lg py-4">
+                    <i class="fas <?php echo $event['price'] > 0 ? 'fa-credit-card' : 'fa-check-circle'; ?> mr-2"></i>
+                    <?php echo $event['price'] > 0 ? 'Pagar Ahora' : 'Confirmar Reserva'; ?>
+                </button>
+            </div>
+        </form>
+
+        <div class="h-10"></div> <!-- Bottom spacer -->
+    </div>
 
     <script>
         const quantityInput = document.getElementById('quantity');
@@ -315,37 +287,32 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
             const currentFields = attendeesContainer.children.length;
             
             if (quantity > currentFields) {
-                // Añadir campos
                 for (let i = currentFields; i < quantity; i++) {
                     const attendeeDiv = document.createElement('div');
-                    attendeeDiv.className = 'attendee-block bg-gray-50 p-4 rounded-lg border border-gray-200';
+                    attendeeDiv.className = 'glass-card p-5 animate-slide-up';
                     attendeeDiv.innerHTML = `
-                        <h4 class="font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
-                            <span class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs mr-2">${i + 1}</span>
-                            Datos del Asistente ${i + 1}
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold">${i + 1}</span>
+                            <h4 class="font-bold text-sm">Asistente ${i + 1}</h4>
+                        </div>
+                        <div class="space-y-4">
                             <div>
-                                <label class="block text-xs text-gray-600 font-semibold mb-1">Nombre *</label>
-                                <input type="text" name="attendees[${i}][name]" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm">
+                                <label class="text-xs">Nombre</label>
+                                <input type="text" name="attendees[${i}][name]" required>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-600 font-semibold mb-1">Apellidos *</label>
-                                <input type="text" name="attendees[${i}][surname]" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm">
+                                <label class="text-xs">Apellidos</label>
+                                <input type="text" name="attendees[${i}][surname]" required>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-600 font-semibold mb-1">Email *</label>
-                                <input type="email" name="attendees[${i}][email]" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm">
+                                <label class="text-xs">Email</label>
+                                <input type="email" name="attendees[${i}][email]" required>
                             </div>
                         </div>
                     `;
                     attendeesContainer.appendChild(attendeeDiv);
                 }
             } else if (quantity < currentFields) {
-                // Quitar campos
                 for (let i = currentFields; i > quantity; i--) {
                     attendeesContainer.lastElementChild.remove();
                 }
@@ -357,9 +324,17 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
         }
         
         quantityInput.addEventListener('input', updateAttendeeFields);
-        
-        // Inicializar campos
         document.addEventListener('DOMContentLoaded', updateAttendeeFields);
     </script>
+
+    <style>
+        .animate-slide-up {
+            animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </body>
 </html>

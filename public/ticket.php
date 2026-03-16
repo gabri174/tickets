@@ -39,189 +39,122 @@ if (!$ticket) {
     <meta property="og:type" content="website">
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --color-gray-light: #d9d9d9;
-            --color-gray-dark: #363c40;
-            --color-gray-medium: #babebf;
-            --color-gray-muted: #848b8c;
-            --color-black: #202426;
-        }
-        
         body { 
-            background-color: var(--color-gray-light);
+            background: linear-gradient(180deg, #0A0E14 0%, #171E26 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
         }
-        
-        .ticket-container {
-            background: white;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-        
-        .ticket-header {
-            background: var(--color-gray-dark);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .ticket-body {
-            padding: 30px;
-        }
-        
-        .ticket-code {
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            font-weight: bold;
+        .status-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
             letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
-        
-        .status-valid {
-            background-color: #10b981;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-used {
-            background-color: #ef4444;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        @media print {
-            body { background: white; }
-            .no-print { display: none; }
-            .ticket-container { box-shadow: none; }
-        }
+        .status-valid { background: #DAFB71; color: #000; }
+        .status-used { background: #EE3D5A; color: #fff; }
+        .status-cancelled { background: #666; color: #fff; }
     </style>
 </head>
 <body>
-    <div class="ticket-container">
-        <!-- Ticket Header -->
-        <div class="ticket-header">
-            <div class="flex justify-between items-center mb-4">
-                <i class="fas fa-ticket-alt text-3xl"></i>
-                <span class="status-<?php echo $ticket['status']; ?>">
-                    <?php 
-                    echo $ticket['status'] === 'valid' ? 'VÁLIDO' : 
-                         ($ticket['status'] === 'used' ? 'UTILIZADO' : 'CANCELADO');
-                    ?>
-                </span>
+    <div class="w-full max-w-[400px]">
+        <div class="ticket-main-card shadow-2xl relative">
+            <!-- Status Badge -->
+            <div class="status-badge status-<?php echo $ticket['status']; ?>">
+                <?php 
+                echo $ticket['status'] === 'valid' ? 'VÁLIDO' : 
+                     ($ticket['status'] === 'used' ? 'UTILIZADO' : 'CANCELADO');
+                ?>
             </div>
-            <h1 class="text-2xl font-bold"><?php echo htmlspecialchars($ticket['event_title']); ?></h1>
-        </div>
-        
-        <!-- Ticket Body -->
-        <div class="ticket-body">
-            <!-- Event Details -->
-            <div class="mb-6">
-                <div class="flex items-center mb-3">
-                    <i class="fas fa-calendar-alt text-gray-600 mr-3 w-5"></i>
-                    <span><?php echo formatDate($ticket['date_event']); ?></span>
+
+            <!-- Image Section -->
+            <?php if ($ticket['image_url']): ?>
+                <img src="<?php echo SITE_URL . '/' . $ticket['image_url']; ?>" class="ticket-image" alt="">
+            <?php else: ?>
+                <div class="ticket-image bg-gray-200 flex items-center justify-center text-gray-400">
+                     <i class="fas fa-ticket-alt text-5xl"></i>
                 </div>
-                <div class="flex items-center mb-3">
-                    <i class="fas fa-map-marker-alt text-gray-600 mr-3 w-5"></i>
-                    <span><?php echo htmlspecialchars($ticket['location']); ?></span>
-                </div>
-                <div class="flex items-center mb-3">
-                    <i class="fas fa-user text-gray-600 mr-3 w-5"></i>
-                    <span><?php echo htmlspecialchars($ticket['attendee_name']); ?></span>
-                </div>
-            </div>
-            
-            <!-- QR Code -->
-            <div class="text-center mb-6">
-                <?php if ($ticket['qr_code_path'] && file_exists($ticket['qr_code_path'])): ?>
-                    <img src="<?php echo SITE_URL . '/qrcodes/' . basename($ticket['qr_code_path']); ?>" 
-                         alt="QR Code" 
-                         class="mx-auto w-32 h-32">
-                <?php else: ?>
-                    <div class="w-32 h-32 bg-gray-200 mx-auto flex items-center justify-center">
-                        <i class="fas fa-qrcode text-4xl text-gray-400"></i>
+            <?php endif; ?>
+
+            <div class="ticket-content">
+                <h3 class="text-2xl font-bold text-center mb-6 leading-tight"><?php echo htmlspecialchars($ticket['event_title']); ?></h3>
+                
+                <div class="grid grid-cols-2 gap-y-6 gap-x-4 mb-2">
+                    <div>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">FECHA</p>
+                        <p class="text-sm font-bold text-gray-800"><?php echo formatDate($ticket['date_event'], 'd M, Y'); ?></p>
                     </div>
-                <?php endif; ?>
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">HORA</p>
+                        <p class="text-sm font-bold text-gray-800">19:30 PM</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">LUGAR</p>
+                        <p class="text-sm font-bold text-gray-800 truncate"><?php echo htmlspecialchars($ticket['location']); ?></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">ACCESO</p>
+                        <p class="text-sm font-bold text-gray-800">General</p>
+                    </div>
+                </div>
+
+                <div class="ticket-divider"></div>
+
+                <div class="flex flex-col items-center">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-4">ASISTENTE</p>
+                    <p class="text-lg font-bold text-gray-900 mb-6"><?php echo htmlspecialchars($ticket['attendee_name']); ?></p>
+                    
+                    <!-- QR Visual -->
+                    <div class="p-2 border-2 border-dashed border-gray-200 rounded-2xl mb-4 bg-white">
+                        <?php 
+                        $qrWebPath = SITE_URL . '/qrcodes/' . basename($ticket['qr_code_path']);
+                        ?>
+                        <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-40 h-40 contrast-125">
+                    </div>
+                    <p class="text-xs font-mono text-gray-400 tracking-[0.2em] uppercase"><?php echo $ticket['ticket_code']; ?></p>
+                </div>
             </div>
-            
-            <!-- Ticket Code -->
-            <div class="bg-gray-100 rounded-lg p-4 mb-6">
-                <p class="text-sm text-gray-600 mb-2">Código del Ticket:</p>
-                <p class="ticket-code text-center"><?php echo htmlspecialchars($ticket['ticket_code']); ?></p>
-            </div>
-            
-            <!-- Purchase Info -->
-            <div class="text-sm text-gray-500 text-center">
-                <p>Compra realizada: <?php echo formatDate($ticket['purchase_date']); ?></p>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-2 p-6 pt-0 no-print">
+                <button onclick="shareTicket()" class="btn-modern btn-lime w-full text-sm py-3">
+                    <i class="fab fa-whatsapp mr-2"></i> Compartir por WhatsApp
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="btn-modern bg-gray-200 text-gray-800 flex-1 text-xs py-3">
+                        <i class="fas fa-print mr-2"></i> Imprimir
+                    </button>
+                    <a href="index.php" class="btn-modern bg-gray-800 text-white flex-1 text-xs py-3 text-center">
+                        <i class="fas fa-home mr-2"></i> Inicio
+                    </a>
+                </div>
             </div>
         </div>
         
-        <!-- Print Button (no visible in print) -->
-        <div class="no-print p-4 border-t">
-            <button onclick="window.print()" class="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700 transition">
-                <i class="fas fa-print mr-2"></i>Imprimir Ticket
-            </button>
-        </div>
-    </div>
-    
-    <!-- Mobile Actions (no visible in print) -->
-    <div class="no-print fixed bottom-4 right-4 flex flex-col space-y-2">
-        <button onclick="shareTicket()" class="bg-green-500 text-white p-3 rounded-full shadow-lg hover:bg-green-600 transition">
-            <i class="fab fa-whatsapp text-xl"></i>
-        </button>
-        <button onclick="copyCode()" class="bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition">
-            <i class="fas fa-copy text-xl"></i>
-        </button>
+        <p class="text-[10px] text-gray-500 text-center mt-6 uppercase tracking-widest">Presenta este QR en la entrada del evento</p>
     </div>
     
     <script>
-        // Compartir ticket por WhatsApp
         function shareTicket() {
             const message = `🎫 Mi ticket para "${<?php echo json_encode($ticket['event_title']); ?>}"\n\n` +
                           `📅 ${<?php echo json_encode(formatDate($ticket['date_event'])); ?>}\n` +
                           `📍 ${<?php echo json_encode($ticket['location']); ?>}\n` +
                           `🎟️ Código: ${<?php echo json_encode($ticket['ticket_code']); ?>}\n\n` +
-                          `¡Nos vemos allá! 🎉`;
-            
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
+                          `Ver ticket: ${window.location.href}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
         }
-        
-        // Copiar código al portapapeles
-        function copyCode() {
-            const code = '<?php echo $ticket['ticket_code']; ?>';
-            navigator.clipboard.writeText(code).then(function() {
-                showNotification('¡Código copiado!');
-            });
-        }
-        
-        // Mostrar notificación
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 2000);
-        }
-        
-        // Prevenir zoom en móvil
-        document.addEventListener('gesturestart', function(e) {
-            e.preventDefault();
-        });
     </script>
 </body>
 </html>
