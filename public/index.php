@@ -18,47 +18,42 @@ $events = $db->getActiveEvents();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Splash Screen (Simulado) -->
-    <div id="splash" class="fixed inset-0 z-50 bg-black flex items-center justify-center transition-opacity duration-500">
-        <div class="text-center">
-            <i class="fas fa-ticket-alt text-6xl text-lime-400 mb-4 animate-bounce"></i>
-            <h1 class="text-3xl font-bold tracking-tighter">TICKETAPP</h1>
-        </div>
-    </div>
+    <!-- Main Header / Navbar -->
+    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-ticket-alt text-black text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
+                </div>
 
-    <div class="app-container">
-        <!-- Header / Greeting -->
-        <header class="flex justify-between items-center mb-12 pt-6">
-            <div class="flex items-center gap-8">
-                <div class="flex items-center gap-2">
-                    <i class="fas fa-ticket-alt text-2xl text-lime-400"></i>
-                    <h1 class="text-2xl font-bold tracking-tighter">TICKETAPP</h1>
-                </div>
-                <!-- Desktop Nav -->
-                <nav class="hidden md:flex gap-6 mt-1">
-                    <a href="index.php" class="text-sm font-medium hover:text-lime-400 transition">Inicio</a>
-                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Eventos</a>
-                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Mis Tickets</a>
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="index.php" class="text-sm font-semibold text-lime-400">Inicio</a>
+                    <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition">Eventos</a>
+                    <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition">Mis Tickets</a>
+                    <div class="w-px h-6 bg-white/10 mx-2"></div>
+                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                        <i class="fas fa-user-shield text-xs"></i>
+                        Administración
+                    </a>
                 </nav>
-            </div>
-            
-            <div class="flex gap-3">
-                <div class="hidden md:flex items-center mr-4 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 self-center">
-                    <i class="fas fa-search text-gray-500 mr-2 text-xs"></i>
-                    <input type="text" placeholder="Buscar eventos..." class="bg-transparent border-none outline-none text-xs w-48 text-white">
-                </div>
-                <button class="glass-pill w-12 h-12 flex items-center justify-center text-lg md:hidden">
-                    <i class="fas fa-search"></i>
+
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden text-gray-400 hover:text-white">
+                    <i class="fas fa-bars text-2xl"></i>
                 </button>
-                <a href="admin/" class="glass-pill w-12 h-12 flex items-center justify-center text-lg">
-                    <i class="fas fa-user-shield"></i>
-                </a>
             </div>
-        </header>
-        
-        <div class="mb-10">
-            <p class="text-gray-400 text-sm font-medium">¡Hola, bienvenido!</p>
-            <h2 class="heading-xl">Explorar Eventos</h2>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="mb-12">
+            <p class="text-lime-400 text-sm font-bold uppercase tracking-widest mb-2">¡Bienvenido!</p>
+            <h2 class="text-4xl sm:text-5xl font-black text-white leading-tight">Explorar Últimos <span class="text-gradient">Eventos</span></h2>
         </div>
 
         <!-- Categories (Pills) -->
@@ -118,22 +113,29 @@ $events = $db->getActiveEvents();
         <!-- Upcoming Events Removed/Integrated into Grid for broader layout -->
     </div>
 
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-        <a href="index.php" class="nav-item active"><i class="fas fa-home"></i></a>
-        <a href="#" class="nav-item"><i class="fas fa-search"></i></a>
-        <a href="#" class="nav-item"><i class="fas fa-ticket-alt"></i></a>
-        <a href="#" class="nav-item"><i class="fas fa-user"></i></a>
-    </nav>
+        <!-- Upcoming Events Removed/Integrated into Grid for broader layout -->
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-[#0A0E14] border-t border-white/5 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <i class="fas fa-ticket-alt text-lime-400"></i>
+                <span class="text-xl font-bold text-white tracking-tighter">TICKETAPP</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-8">La plataforma líder para tus entradas digitales.</p>
+            <div class="flex justify-center gap-6 mb-8 text-gray-400">
+                <a href="#" class="hover:text-white transition"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="hover:text-white transition"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="hover:text-white transition"><i class="fab fa-instagram"></i></a>
+            </div>
+            <div class="pt-8 border-t border-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">
+                &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
 
     <script>
-        // Splash Screen Hide
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                document.getElementById('splash').classList.add('hide');
-            }, 1000);
-        });
-
         // Simple smooth scrolling
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {

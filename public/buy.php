@@ -192,9 +192,39 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-12 pt-6">
+    <!-- Main Header / Navbar -->
+    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-ticket-alt text-black text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="index.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Inicio</a>
+                    <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition">Eventos</a>
+                    <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition">Mis Tickets</a>
+                    <div class="w-px h-6 bg-white/10 mx-2"></div>
+                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                        <i class="fas fa-user-shield text-xs"></i>
+                        Administración
+                    </a>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden text-gray-400 hover:text-white">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <a href="index.php" class="glass-pill w-12 h-12 flex items-center justify-center text-lg hover:bg-white/10 transition">
                 <i class="fas fa-arrow-left"></i>
             </a>
@@ -305,8 +335,21 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
     </div> <!-- End lg:col-span-2 -->
 </div> <!-- End grid -->
 
-<div class="h-20"></div> <!-- Bottom spacer -->
-</div>
+<div class="h-20"></div>
+
+    <!-- Footer -->
+    <footer class="bg-[#0A0E14] border-t border-white/5 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <i class="fas fa-ticket-alt text-lime-400"></i>
+                <span class="text-xl font-bold text-white tracking-tighter">TICKETAPP</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-8">La plataforma líder para tus entradas digitales.</p>
+            <div class="pt-8 border-t border-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">
+                &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
 
     <script>
         const quantityInput = document.getElementById('quantity');

@@ -56,24 +56,49 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-12 pt-6">
-            <div class="flex items-center gap-3">
-                <div class="h-12 w-12 glass-pill flex items-center justify-center text-lime-400 bg-lime-400/10 border-lime-400/20">
-                    <i class="fas fa-check text-xl"></i>
+    <!-- Main Header / Navbar -->
+    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-ticket-alt text-black text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
                 </div>
-                <div>
-                    <h2 class="text-2xl font-bold">¡Compra Exitosa!</h2>
-                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Confirmación de Reserva</p>
-                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="index.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Inicio</a>
+                    <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition">Eventos</a>
+                    <a href="#" class="text-sm font-semibold text-lime-400 transition">Mis Tickets</a>
+                    <div class="w-px h-6 bg-white/10 mx-2"></div>
+                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                        <i class="fas fa-user-shield text-xs"></i>
+                        Administración
+                    </a>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden text-gray-400 hover:text-white">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
             </div>
-            <nav class="hidden md:flex gap-6">
-                <a href="index.php" class="text-sm font-medium hover:text-lime-400 transition">Inicio</a>
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Mis Tickets</a>
-            </nav>
-            <a href="index.php" class="btn-modern bg-lime-400 text-black px-8 py-2 text-sm">Hecho</a>
-        </header>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Success Status -->
+        <div class="flex items-center gap-6 mb-12 py-8 bg-lime-400/5 border border-lime-400/10 rounded-3xl px-8">
+            <div class="h-16 w-16 bg-lime-400 rounded-2xl flex items-center justify-center text-black shadow-lg shadow-lime-400/20 flex-shrink-0">
+                <i class="fas fa-check text-3xl"></i>
+            </div>
+            <div>
+                <h2 class="text-3xl font-black text-white mb-1">¡Compra Completada!</h2>
+                <p class="text-gray-400 font-medium">Tus tickets están listos y han sido enviados por correo.</p>
+            </div>
+        </div>
 
         <!-- Notification -->
         <div class="text-center mb-8">
@@ -154,20 +179,22 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
             <?php endforeach; ?>
         </div>
 
-        <!-- Global Actions -->
-        <div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black to-transparent z-40">
-            <div class="max-w-[450px] mx-auto flex gap-4">
-                 <a href="index.php" class="btn-modern bg-gray-800 text-white flex-1 py-4">
-                    <i class="fas fa-home"></i> Inicio
-                </a>
-                <button onclick="shareOnWhatsApp()" class="btn-modern btn-lime flex-[2] py-4">
-                    <i class="fab fa-whatsapp mr-2 text-xl"></i> Compartir Todo
-                </button>
+        <div class="h-24"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-[#0A0E14] border-t border-white/5 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <i class="fas fa-ticket-alt text-lime-400"></i>
+                <span class="text-xl font-bold text-white tracking-tighter">TICKETAPP</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-8">Gracias por confiar en nosotros para tus eventos.</p>
+            <div class="pt-8 border-t border-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">
+                &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
             </div>
         </div>
-        
-        <div class="h-24"></div> <!-- Footer spacer -->
-    </div>
+    </footer>
 
     <script>
         function shareOnWhatsApp() {

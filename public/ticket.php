@@ -69,25 +69,11 @@ if (!$ticket) {
     </style>
 </head>
 <body>
-    <div class="app-container min-h-screen flex flex-col">
-        <!-- Header (Non-printable) -->
-        <header class="flex justify-between items-center mb-12 pt-6 no-print">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-ticket-alt text-2xl text-lime-400"></i>
-                <h1 class="text-2xl font-bold tracking-tighter text-white">TICKETAPP</h1>
-            </div>
-            <nav class="hidden md:flex gap-6">
-                <a href="index.php" class="text-sm font-medium text-gray-400 hover:text-lime-400 transition">Inicio</a>
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Ayuda</a>
-            </nav>
-            <a href="index.php" class="glass-pill w-12 h-12 flex items-center justify-center text-lg hover:bg-white/10 transition text-white">
-                <i class="fas fa-times"></i>
-            </a>
-        </header>
-
-        <div class="flex-1 flex flex-col items-center justify-center py-10">
-            <div class="w-full max-w-[420px]">
-        <div class="ticket-main-card shadow-2xl relative">
+        <div class="flex-1 flex flex-col items-center justify-center py-12 min-h-[70vh]">
+            <div class="w-full max-w-lg">
+                <!-- Ticket Card Container -->
+                <div class="bg-white/5 border border-white/10 p-1.5 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl">
+                    <div class="ticket-main-card shadow-2xl relative">
             <!-- Status Badge -->
             <div class="status-badge status-<?php echo $ticket['status']; ?>">
                 <?php 
@@ -158,10 +144,31 @@ if (!$ticket) {
                     </a>
                 </div>
             </div>
+                </div> <!-- End ticket-main-card container -->
+            </div>
+            
+            <p class="text-[10px] text-gray-500 text-center mt-12 uppercase tracking-widest font-bold no-print">
+                <i class="fas fa-info-circle mr-1 text-lime-400/50"></i>
+                Presenta este QR en la entrada del evento
+            </p>
         </div>
         
-        <p class="text-[10px] text-gray-500 text-center mt-6 uppercase tracking-widest">Presenta este QR en la entrada del evento</p>
+        <div class="h-12 no-print"></div>
     </div>
+
+    <!-- Footer (Non-printable) -->
+    <footer class="bg-[#0A0E14] border-t border-white/5 py-12 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <i class="fas fa-ticket-alt text-lime-400"></i>
+                <span class="text-xl font-bold text-white tracking-tighter text-white">TICKETAPP</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-8">Tu entrada segura y digital.</p>
+            <div class="pt-8 border-t border-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">
+                &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
     
     <script>
         function shareTicket() {
