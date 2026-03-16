@@ -200,8 +200,11 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
         function shareOnWhatsApp() {
             const eventTitle = <?php echo json_encode($purchase['event_title']); ?>;
             const phone = <?php echo json_encode(preg_replace('/[^0-9]/', '', $purchase['phone'] ?? '')); ?>;
+            const firstTicket = <?php echo json_encode($purchase['tickets'][0]['code'] ?? ''); ?>;
+            const ticketUrl = firstTicket ? `<?php echo SITE_URL; ?>/ticket.php?code=${firstTicket}` : `<?php echo SITE_URL; ?>`;
+            
             const message = `🎉 ¡Hola! Aquí tienes tus entradas para "${eventTitle}"!\n\n` +
-                          `Puedes ver tus tickets aquí:\n<?php echo SITE_URL; ?>/index.php\n\n` +
+                          `Puedes ver tu entrada principal aquí:\n${ticketUrl}\n\n` +
                           `¡Gracias por tu compra! 🎪`;
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
         }

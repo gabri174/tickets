@@ -4,7 +4,12 @@ require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
 
 $db = new Database();
-$events = $db->getActiveEvents();
+$allEvents = $db->getActiveEvents();
+
+// Filtrar eventos: Solo mostrar los que tienen imagen (asumiendo que son los "subidos" completamente)
+$events = array_filter($allEvents, function($e) {
+    return !empty($e['image_url']);
+});
 ?>
 
 <!DOCTYPE html>
@@ -50,28 +55,105 @@ $events = $db->getActiveEvents();
         </div>
     </header>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="mb-12">
-            <p class="text-lime-400 text-sm font-bold uppercase tracking-widest mb-2">¡Bienvenido!</p>
-            <h2 class="text-4xl sm:text-5xl font-black text-white leading-tight">Explorar Últimos <span class="text-gradient">Eventos</span></h2>
+    <!-- Hero Section -->
+    <section class="relative overflow-hidden pt-16 pb-24 md:pt-32 md:pb-40">
+        <!-- Background Accents -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full opacity-20 pointer-events-none">
+            <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-lime-400/30 blur-[120px] rounded-full"></div>
+            <div class="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/20 blur-[120px] rounded-full"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="max-w-3xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime-400/10 border border-lime-400/20 text-lime-400 text-xs font-bold uppercase tracking-widest mb-6 animate-fade-in">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-lime-400"></span>
+                    </span>
+                    La evolución de los tickets digitales
+                </div>
+                <h2 class="text-5xl md:text-7xl font-black text-white leading-[1.1] mb-8 tracking-tighter">
+                    Vende tus entradas de forma <span class="text-gradient">inteligente y rápida</span>.
+                </h2>
+                <p class="text-lg md:text-xl text-gray-400 mb-10 leading-relaxed">
+                    TicketApp es la plataforma premium diseñada para organizadores que buscan simplicidad, seguridad y una experiencia inolvidable para sus asistentes. Tickets digitales con QR, gestión en tiempo real y más.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="#eventos" class="btn-modern bg-lime-400 text-black px-10 py-4 text-lg font-bold flex items-center justify-center gap-2 group">
+                        Explorar Eventos
+                        <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                    <a href="admin/" class="btn-modern bg-white/5 border border-white/10 text-white px-10 py-4 text-lg font-bold hover:bg-white/10 transition flex items-center justify-center gap-2">
+                        Gestionar mis Eventos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Advantages Section -->
+    <section class="py-24 bg-white/[0.02] border-y border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <!-- Advantage 1 -->
+                <div class="flex flex-col gap-5">
+                    <div class="w-14 h-14 bg-lime-400/10 rounded-2xl flex items-center justify-center text-lime-400 text-2xl border border-lime-400/20">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-white mb-2">QR de Seguridad Único</h4>
+                        <p class="text-gray-400 leading-relaxed text-sm">Cada entrada es única y segura. Olvídate de falsificaciones con nuestro sistema de validación dinámica por código QR.</p>
+                    </div>
+                </div>
+                <!-- Advantage 2 -->
+                <div class="flex flex-col gap-5">
+                    <div class="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 text-2xl border border-blue-500/20">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-white mb-2">Envío por WhatsApp</h4>
+                        <p class="text-gray-400 leading-relaxed text-sm">Tus asistentes reciben sus tickets directamente en su móvil. Instantáneo, ecológico y siempre a mano.</p>
+                    </div>
+                </div>
+                <!-- Advantage 3 -->
+                <div class="flex flex-col gap-5">
+                    <div class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 text-2xl border border-purple-500/20">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-white mb-2">Control en Tiempo Real</h4>
+                        <p class="text-gray-400 leading-relaxed text-sm">Monitoriza tus ventas y el acceso al evento desde nuestro panel de administración premium para organizadores.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="eventos" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+            <div class="max-w-2xl">
+                <p class="text-lime-400 text-sm font-bold uppercase tracking-widest mb-3">Próximas experiencias</p>
+                <h3 class="text-4xl md:text-5xl font-black text-white leading-tight">Encuentra tu próximo <br><span class="text-gradient">momento inolvidable</span></h3>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="relative w-full md:w-80 group">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-lime-400 transition-colors"></i>
+                <input type="text" placeholder="Buscar por ciudad o artista..." class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-lime-400/50 transition-all placeholder:text-gray-600">
+            </div>
         </div>
 
         <!-- Categories (Pills) -->
-        <div class="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
-            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-lime-400 text-black border-none font-semibold">Todos</button>
-            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Música</button>
-            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Festivales</button>
-            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Arte</button>
-            <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Teatro</button>
+        <div class="flex gap-3 overflow-x-auto pb-8 no-scrollbar mb-10 border-b border-white/5">
+            <button class="px-8 py-3 rounded-full bg-lime-400 text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(218,251,113,0.3)]">Todos</button>
+            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Música</button>
+            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Conciertos</button>
+            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Teatro</button>
+            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Festivales</button>
         </div>
 
-        <!-- Featured Section (Grid) -->
-        <section class="mb-14">
-            <div class="flex justify-between items-end mb-6">
-                <h3 class="text-2xl font-bold">Eventos Destacados</h3>
-                <a href="#" class="text-lime-400 text-sm font-semibold">Ver todos</a>
-            </div>
-            
+        <!-- Events Section (Grid) -->
+        <section class="mb-20">
             <div class="event-grid">
                 <?php if (!empty($events)): ?>
                     <?php foreach ($events as $event): ?>
