@@ -194,37 +194,57 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
 <body>
     <div class="app-container">
         <!-- Header -->
-        <header class="flex justify-between items-center mb-8 pt-4">
-            <a href="index.php" class="glass-pill w-12 h-12 flex items-center justify-center text-lg">
+        <header class="flex justify-between items-center mb-12 pt-6">
+            <a href="index.php" class="glass-pill w-12 h-12 flex items-center justify-center text-lg hover:bg-white/10 transition">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <h2 class="text-xl font-bold">Checkout</h2>
-            <div class="w-12"></div> <!-- Spacer -->
+            <h2 class="text-2xl font-bold">Reserva de Entradas</h2>
+            <div class="hidden md:flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-lime-400"></span>
+                <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Reserva Segura</span>
+            </div>
+            <div class="w-12 md:hidden"></div>
         </header>
 
-        <!-- Event Summary Card -->
-        <div class="glass-card p-4 mb-8 flex gap-4 items-center">
-            <div class="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0">
-                <?php if ($event['image_url']): ?>
-                    <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="" class="w-full h-full object-cover">
-                <?php else: ?>
-                    <div class="w-full h-full bg-gray-800 flex items-center justify-center text-3xl">
-                        <i class="fas fa-image text-gray-600"></i>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
+            <!-- Sidebar: Event Summary -->
+            <div class="lg:col-span-1 lg:sticky lg:top-6">
+                <div class="glass-card overflow-hidden">
+                    <div class="h-48 w-full overflow-hidden">
+                        <?php if ($event['image_url']): ?>
+                            <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <div class="w-full h-full bg-gray-800 flex items-center justify-center text-3xl">
+                                <i class="fas fa-image text-gray-700"></i>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
-            </div>
-            <div>
-                <h3 class="font-bold text-lg mb-1"><?php echo htmlspecialchars($event['title']); ?></h3>
-                <div class="flex items-center gap-2 text-xs text-gray-400">
-                    <i class="fas fa-calendar-alt text-blue-400"></i>
-                    <span><?php echo formatDate($event['date_event']); ?></span>
+                    <div class="p-6">
+                        <h3 class="font-bold text-xl mb-4"><?php echo htmlspecialchars($event['title']); ?></h3>
+                        <div class="space-y-3 mb-6">
+                            <div class="flex items-center gap-3 text-sm text-gray-400">
+                                <i class="fas fa-calendar-alt text-blue-400 w-5"></i>
+                                <span><?php echo formatDate($event['date_event'], 'l, d F Y'); ?></span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm text-gray-400">
+                                <i class="fas fa-clock text-blue-400 w-5"></i>
+                                <span>19:30 PM</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm text-gray-400">
+                                <i class="fas fa-map-marker-alt text-red-400 w-5"></i>
+                                <span><?php echo htmlspecialchars($event['location']); ?></span>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-white/10">
+                            <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">PRECIO UNITARIO</p>
+                            <span class="text-lime-400 font-bold text-2xl"><?php echo formatCurrency($event['price']); ?></span>
+                        </div>
+                    </div>
                 </div>
-                <div class="mt-2">
-                    <span class="text-lime-400 font-bold text-xl"><?php echo formatCurrency($event['price']); ?></span>
-                    <span class="text-[10px] text-gray-500 ml-1">por ticket</span>
-                </div>
             </div>
-        </div>
+
+            <!-- Main: Form -->
+            <div class="lg:col-span-2">
 
         <!-- Form -->
         <form method="POST" action="" id="purchaseForm" class="space-y-6">
@@ -260,21 +280,33 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
             </div>
 
             <!-- Total and Submit -->
-            <div class="pt-4">
-                <div class="flex justify-between items-center mb-6 px-2">
-                    <span class="text-gray-400 font-medium">Total a pagar</span>
-                    <span class="text-3xl font-bold" id="totalPrice"><?php echo formatCurrency($event['price']); ?></span>
-                </div>
+            <div class="pt-8">
+                <div class="glass-card p-8 bg-gradient-to-br from-white/5 to-transparent">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <p class="text-gray-400 font-medium">Total a pagar</p>
+                            <p class="text-[10px] text-gray-500">Incluye impuestos y cargos de servicio</p>
+                        </div>
+                        <span class="text-4xl font-black text-white" id="totalPrice"><?php echo formatCurrency($event['price']); ?></span>
+                    </div>
 
-                <button type="submit" class="btn-modern btn-lime w-full text-lg py-4">
-                    <i class="fas <?php echo $event['price'] > 0 ? 'fa-credit-card' : 'fa-check-circle'; ?> mr-2"></i>
-                    <?php echo $event['price'] > 0 ? 'Pagar Ahora' : 'Confirmar Reserva'; ?>
-                </button>
+                    <button type="submit" class="btn-modern btn-lime w-full text-lg py-5 shadow-lg shadow-lime-400/10">
+                        <i class="fas <?php echo $event['price'] > 0 ? 'fa-credit-card' : 'fa-check-circle'; ?> mr-3"></i>
+                        <?php echo $event['price'] > 0 ? 'Proceder al Pago' : 'Confirmar mi Plaza'; ?>
+                    </button>
+                    
+                    <p class="text-center text-[10px] text-gray-500 mt-6 flex items-center justify-center gap-2">
+                        <i class="fas fa-lock text-lime-400/50"></i>
+                        Tus datos están protegidos bajo cifrado de 256 bits
+                    </p>
+                </div>
             </div>
         </form>
+    </div> <!-- End lg:col-span-2 -->
+</div> <!-- End grid -->
 
-        <div class="h-10"></div> <!-- Bottom spacer -->
-    </div>
+<div class="h-20"></div> <!-- Bottom spacer -->
+</div>
 
     <script>
         const quantityInput = document.getElementById('quantity');

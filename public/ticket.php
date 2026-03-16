@@ -69,7 +69,24 @@ if (!$ticket) {
     </style>
 </head>
 <body>
-    <div class="w-full max-w-[400px]">
+    <div class="app-container min-h-screen flex flex-col">
+        <!-- Header (Non-printable) -->
+        <header class="flex justify-between items-center mb-12 pt-6 no-print">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-ticket-alt text-2xl text-lime-400"></i>
+                <h1 class="text-2xl font-bold tracking-tighter text-white">TICKETAPP</h1>
+            </div>
+            <nav class="hidden md:flex gap-6">
+                <a href="index.php" class="text-sm font-medium text-gray-400 hover:text-lime-400 transition">Inicio</a>
+                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Ayuda</a>
+            </nav>
+            <a href="index.php" class="glass-pill w-12 h-12 flex items-center justify-center text-lg hover:bg-white/10 transition text-white">
+                <i class="fas fa-times"></i>
+            </a>
+        </header>
+
+        <div class="flex-1 flex flex-col items-center justify-center py-10">
+            <div class="w-full max-w-[420px]">
         <div class="ticket-main-card shadow-2xl relative">
             <!-- Status Badge -->
             <div class="status-badge status-<?php echo $ticket['status']; ?>">

@@ -58,14 +58,21 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
 <body>
     <div class="app-container">
         <!-- Header -->
-        <header class="flex justify-between items-center mb-6 pt-4">
+        <header class="flex justify-between items-center mb-12 pt-6">
             <div class="flex items-center gap-3">
-                <div class="h-10 w-10 glass-pill flex items-center justify-center text-lime-400">
-                    <i class="fas fa-check"></i>
+                <div class="h-12 w-12 glass-pill flex items-center justify-center text-lime-400 bg-lime-400/10 border-lime-400/20">
+                    <i class="fas fa-check text-xl"></i>
                 </div>
-                <h2 class="text-xl font-bold">Resumen de Compra</h2>
+                <div>
+                    <h2 class="text-2xl font-bold">¡Compra Exitosa!</h2>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Confirmación de Reserva</p>
+                </div>
             </div>
-            <a href="index.php" class="text-gray-400 font-bold hover:text-white transition">Hecho</a>
+            <nav class="hidden md:flex gap-6">
+                <a href="index.php" class="text-sm font-medium hover:text-lime-400 transition">Inicio</a>
+                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Mis Tickets</a>
+            </nav>
+            <a href="index.php" class="btn-modern bg-lime-400 text-black px-8 py-2 text-sm">Hecho</a>
         </header>
 
         <!-- Notification -->
@@ -80,8 +87,8 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
             </div>
         <?php endif; ?>
 
-        <!-- Tickets List -->
-        <div class="space-y-10 mb-12">
+        <!-- Tickets Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-12">
             <?php foreach ($purchase['tickets'] as $index => $ticket): ?>
                 <div class="ticket-main-card shadow-2xl animate-ticket">
                     <!-- Top Section: Image -->

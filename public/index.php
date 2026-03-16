@@ -28,13 +28,26 @@ $events = $db->getActiveEvents();
 
     <div class="app-container">
         <!-- Header / Greeting -->
-        <header class="flex justify-between items-center mb-8 pt-4">
-            <div>
-                <p class="text-gray-400 text-sm font-medium">¡Hola, bienvenido!</p>
-                <h2 class="heading-xl">Explorar Eventos</h2>
+        <header class="flex justify-between items-center mb-12 pt-6">
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-ticket-alt text-2xl text-lime-400"></i>
+                    <h1 class="text-2xl font-bold tracking-tighter">TICKETAPP</h1>
+                </div>
+                <!-- Desktop Nav -->
+                <nav class="hidden md:flex gap-6 mt-1">
+                    <a href="index.php" class="text-sm font-medium hover:text-lime-400 transition">Inicio</a>
+                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Eventos</a>
+                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition">Mis Tickets</a>
+                </nav>
             </div>
+            
             <div class="flex gap-3">
-                <button class="glass-pill w-12 h-12 flex items-center justify-center text-lg">
+                <div class="hidden md:flex items-center mr-4 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 self-center">
+                    <i class="fas fa-search text-gray-500 mr-2 text-xs"></i>
+                    <input type="text" placeholder="Buscar eventos..." class="bg-transparent border-none outline-none text-xs w-48 text-white">
+                </div>
+                <button class="glass-pill w-12 h-12 flex items-center justify-center text-lg md:hidden">
                     <i class="fas fa-search"></i>
                 </button>
                 <a href="admin/" class="glass-pill w-12 h-12 flex items-center justify-center text-lg">
@@ -42,6 +55,11 @@ $events = $db->getActiveEvents();
                 </a>
             </div>
         </header>
+        
+        <div class="mb-10">
+            <p class="text-gray-400 text-sm font-medium">¡Hola, bienvenido!</p>
+            <h2 class="heading-xl">Explorar Eventos</h2>
+        </div>
 
         <!-- Categories (Pills) -->
         <div class="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
@@ -52,35 +70,44 @@ $events = $db->getActiveEvents();
             <button class="glass-pill px-6 py-2 whitespace-nowrap bg-transparent text-gray-400 font-medium hover:text-white">Teatro</button>
         </div>
 
-        <!-- Featured Section (Horizontal Scroll) -->
-        <section class="mb-10">
-            <div class="flex justify-between items-end mb-4">
-                <h3 class="text-xl font-bold">Destacados</h3>
+        <!-- Featured Section (Grid) -->
+        <section class="mb-14">
+            <div class="flex justify-between items-end mb-6">
+                <h3 class="text-2xl font-bold">Eventos Destacados</h3>
                 <a href="#" class="text-lime-400 text-sm font-semibold">Ver todos</a>
             </div>
             
-            <div class="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+            <div class="event-grid">
                 <?php if (!empty($events)): ?>
-                    <?php foreach (array_slice($events, 0, 3) as $event): ?>
-                        <div class="event-card-modern min-w-[280px]">
-                            <div class="event-image-container">
+                    <?php foreach ($events as $event): ?>
+                        <div class="event-card-modern">
+                            <div class="event-image-container group">
                                 <?php if ($event['image_url']): ?>
-                                    <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="<?php echo htmlspecialchars($event['title']); ?>">
+                                    <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="<?php echo htmlspecialchars($event['title']); ?>" class="transition-transform duration-500 group-hover:scale-110 w-full h-full object-cover">
                                 <?php else: ?>
                                     <div class="w-full h-full bg-gray-800 flex items-center justify-center">
-                                        <i class="fas fa-image text-4xl text-gray-600"></i>
+                                        <i class="fas fa-image text-5xl text-gray-700"></i>
                                     </div>
                                 <?php endif; ?>
                                 <div class="event-overlay">
-                                    <h4 class="text-lg font-bold mb-1"><?php echo htmlspecialchars($event['title']); ?></h4>
-                                    <div class="flex items-center gap-2 text-xs text-gray-300">
-                                        <i class="fas fa-calendar-alt text-blue-400"></i>
-                                        <span><?php echo formatDate($event['date_event'], 'd M, Y'); ?></span>
+                                    <div class="flex justify-between items-end">
+                                        <div class="flex-1 min-w-0">
+                                            <h4 class="text-xl font-bold mb-1 truncate"><?php echo htmlspecialchars($event['title']); ?></h4>
+                                            <div class="flex items-center gap-2 text-sm text-gray-300">
+                                                <i class="fas fa-calendar-alt text-blue-400"></i>
+                                                <span><?php echo formatDate($event['date_event'], 'd M, Y'); ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right flex-shrink-0 ml-4">
+                                            <p class="text-lime-400 font-bold text-lg mb-0"><?php echo formatCurrency($event['price']); ?></p>
+                                            <p class="text-[10px] text-gray-400 uppercase tracking-tighter"><?php echo $event['available_tickets']; ?> disponibles</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <a href="buy.php?id=<?php echo $event['id']; ?>" class="absolute top-4 right-4 w-10 h-10 glass-pill flex items-center justify-center text-white">
-                                    <i class="fas fa-arrow-right -rotate-45"></i>
+                                <a href="buy.php?id=<?php echo $event['id']; ?>" class="absolute top-4 right-4 w-12 h-12 glass-pill flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform bg-lime-400/20 z-20">
+                                    <i class="fas fa-shopping-cart text-lg text-lime-400"></i>
                                 </a>
+                                <a href="buy.php?id=<?php echo $event['id']; ?>" class="absolute inset-0 z-10"></a>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -88,43 +115,7 @@ $events = $db->getActiveEvents();
             </div>
         </section>
 
-        <!-- Upcoming Events (Vertical List) -->
-        <section class="mb-10">
-            <h3 class="text-xl font-bold mb-4">Próximos para ti</h3>
-            <div class="space-y-4">
-                <?php if (empty($events)): ?>
-                    <div class="glass-card p-10 text-center">
-                        <i class="fas fa-calendar-times text-4xl text-gray-600 mb-3"></i>
-                        <p class="text-gray-400">No hay eventos disponibles</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($events as $event): ?>
-                        <div class="glass-card p-3 flex gap-4 items-center">
-                            <div class="w-20 h-20 rounded-xl overflow-hidden shadow-lg flex-shrink-0">
-                                <?php if ($event['image_url']): ?>
-                                    <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="" class="w-full h-full object-cover">
-                                <?php else: ?>
-                                    <div class="w-full h-full bg-gray-800 flex items-center justify-center text-gray-600">
-                                        <i class="fas fa-image"></i>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-gray-100 truncate"><?php echo htmlspecialchars($event['title']); ?></h4>
-                                <p class="text-blue-400 text-xs font-semibold mb-1"><?php echo formatDate($event['date_event'], 'd Octubre'); ?></p>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-lime-400 font-bold"><?php echo formatCurrency($event['price']); ?></span>
-                                    <span class="text-[10px] text-gray-500 font-medium px-2 py-1 glass-pill"><?php echo $event['available_tickets']; ?> Libres</span>
-                                </div>
-                            </div>
-                            <a href="buy.php?id=<?php echo $event['id']; ?>" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-lime-400 hover:text-black transition">
-                                <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </section>
+        <!-- Upcoming Events Removed/Integrated into Grid for broader layout -->
     </div>
 
     <!-- Bottom Navigation -->
