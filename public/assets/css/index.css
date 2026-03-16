@@ -79,7 +79,7 @@ body {
 
 /* Typo Utilities */
 .text-gradient {
-    background: linear-gradient(135deg, var(--accent-blue), var(--accent-red));
+    background: linear-gradient(to right, #DAFB71, #60A5FA);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -202,6 +202,15 @@ header.sticky {
 @keyframes fadeOut {
     from { opacity: 1; }
     to { opacity: 0; pointer-events: none; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 1.2s ease-out forwards;
 }
 
 #splash.hide {
