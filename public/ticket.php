@@ -69,7 +69,41 @@ if (!$ticket) {
     </style>
 </head>
 <body>
-        <div class="flex-1 flex flex-col items-center justify-center py-12 min-h-[70vh]">
+    <!-- Main Header / Navbar -->
+    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5 w-full">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <a href="index.php" class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-ticket-alt text-black text-xl"></i>
+                        </div>
+                        <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="index.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Inicio</a>
+                    <a href="about.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Nosotros</a>
+                    <a href="contact.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Contacto</a>
+                    <div class="w-px h-6 bg-white/10 mx-2"></div>
+                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                        <i class="fas fa-user-shield text-xs"></i>
+                        Administración
+                    </a>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden text-gray-400 hover:text-white">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="w-full flex-1 flex flex-col items-center justify-center py-12 min-h-[70vh]">
             <div class="w-full max-w-lg">
                 <!-- Ticket Card Container -->
                 <div class="bg-white/5 border border-white/10 p-1.5 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl">
