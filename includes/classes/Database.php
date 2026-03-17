@@ -130,7 +130,7 @@ class Database {
     }
 
     public function getTicketByCode($code) {
-        $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title, e.date_event, e.location, tt.name as ticket_type_name FROM tickets t JOIN events e ON t.event_id = e.id LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.ticket_code = ?");
+        $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title, e.date_event, e.location, e.image_url, tt.name as ticket_type_name FROM tickets t JOIN events e ON t.event_id = e.id LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.ticket_code = ?");
         $stmt->execute([$code]);
         return $stmt->fetch();
     }

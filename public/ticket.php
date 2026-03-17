@@ -1,9 +1,13 @@
 <?php
+session_start();
 require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
 
 $db = new Database();
+$isAdmin = isset($_SESSION['admin_id']);
+$validationSuccess = false;
+$errorMsg = '';
 
 // Obtener ticket por código
 if (!isset($_GET['code']) || empty($_GET['code'])) {
@@ -13,12 +17,32 @@ if (!isset($_GET['code']) || empty($_GET['code'])) {
 }
 
 $ticketCode = cleanInput($_GET['code']);
+
+// Procesar Validación (Solo para Admins)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'validate' && $isAdmin) {
+    $currentTicket = $db->getTicketByCode($ticketCode);
+    if ($currentTicket && $currentTicket['status'] === 'valid') {
+        if ($db->updateTicketStatus($currentTicket['id'], 'used')) {
+            $validationSuccess = true;
+        } else {
+            $errorMsg = 'Error al actualizar el estado del ticket.';
+        }
+    } else {
+        $errorMsg = 'El ticket no es válido o ya ha sido utilizado.';
+    }
+}
+
 $ticket = $db->getTicketByCode($ticketCode);
 
 if (!$ticket) {
     header('HTTP/1.0 404 Not Found');
     echo '<h1>Ticket no encontrado</h1>';
     exit();
+}
+
+// Asegurar que image_url existe para evitar warnings (aunque ya se añadió a la query)
+if (!isset($ticket['image_url'])) {
+    $ticket['image_url'] = null;
 }
 ?>
 
@@ -103,7 +127,50 @@ if (!$ticket) {
         </div>
     </header>
 
+<?php if ($isAdmin): ?>
+    <!-- Admin Toolbar -->
+    <div class="fixed top-24 left-0 right-0 z-40 px-4 no-print flex justify-center">
+        <div class="bg-gray-900/90 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
+                <span class="text-[10px] font-black uppercase tracking-widest text-lime-400">Modo Administrador</span>
+            </div>
+            <div class="h-4 w-px bg-white/10"></div>
+            <?php if ($ticket['status'] === 'valid'): ?>
+                <form method="POST" class="m-0">
+                    <input type="hidden" name="action" value="validate">
+                    <button type="submit" class="bg-lime-400 text-black px-4 py-1.5 rounded-xl text-xs font-bold hover:scale-105 transition-all shadow-lg shadow-lime-400/20">
+                        <i class="fas fa-check-circle mr-1"></i> Validar Entrada
+                    </button>
+                </form>
+            <?php else: ?>
+                <span class="text-xs font-bold text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i> Ticket ya procesado
+                </span>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
+
     <div class="w-full flex-1 flex flex-col items-center justify-center py-12 min-h-[70vh]">
+        <?php if ($validationSuccess): ?>
+            <div class="w-full max-w-lg mb-6 animate-bounce">
+                <div class="bg-lime-400 text-black px-6 py-4 rounded-2xl flex items-center justify-center gap-3 shadow-2xl shadow-lime-400/30">
+                    <i class="fas fa-check-double text-2xl"></i>
+                    <span class="font-black uppercase tracking-tight text-lg">¡Ticket Validado con Éxito!</span>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($errorMsg): ?>
+            <div class="w-full max-w-lg mb-6">
+                <div class="bg-red-500 text-white px-6 py-4 rounded-2xl flex items-center justify-center gap-3 shadow-2xl">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    <span class="font-black uppercase tracking-tight text-lg"><?php echo $errorMsg; ?></span>
+                </div>
+            </div>
+        <?php endif; ?>
+
             <div class="w-full max-w-lg">
                 <!-- Ticket Card Container -->
                 <div class="bg-white/5 border border-white/10 p-1.5 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl">
