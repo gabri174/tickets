@@ -17,7 +17,9 @@ $events = array_filter($allEvents, function($e) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo SITE_NAME; ?></title>
+    <title><?php echo SITE_NAME; ?> - Tu plataforma de tickets</title>
+    <meta name="description" content="Vende y compra tus entradas de forma inteligente y rápida con TicketApp. La plataforma líder para experiencias inolvidables.">
+    <meta name="keywords" content="tickets, entradas, eventos, conciertos, teatro, festivales, deportes, TicketApp">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -139,17 +141,17 @@ $events = array_filter($allEvents, function($e) {
             <!-- Search Bar -->
             <div class="relative w-full md:w-80 group">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-lime-400 transition-colors"></i>
-                <input type="text" placeholder="Buscar por ciudad o artista..." class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-lime-400/50 transition-all placeholder:text-gray-600">
+                <input type="text" id="eventSearch" placeholder="Buscar eventos..." class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-lime-400/50 transition-all placeholder:text-gray-600">
             </div>
         </div>
 
         <!-- Categories (Pills) -->
-        <div class="flex gap-3 overflow-x-auto pb-8 no-scrollbar mb-10 border-b border-white/5">
-            <button class="px-8 py-3 rounded-full bg-lime-400 text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(218,251,113,0.3)]">Todos</button>
-            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Música</button>
-            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Conciertos</button>
-            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Teatro</button>
-            <button class="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Festivales</button>
+        <div class="flex gap-3 overflow-x-auto pb-8 no-scrollbar mb-10 border-b border-white/5" id="categoryPills">
+            <button data-category="todos" class="category-pill active px-8 py-3 rounded-full bg-lime-400 text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(218,251,113,0.3)]">Todos</button>
+            <button data-category="musica" class="category-pill px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Música</button>
+            <button data-category="conciertos" class="category-pill px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Conciertos</button>
+            <button data-category="teatro" class="category-pill px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Teatro</button>
+            <button data-category="festivales" class="category-pill px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 font-bold text-sm hover:text-white hover:bg-white/10 transition-all">Festivales</button>
         </div>
 
         <!-- Events Section (Grid) -->
@@ -157,7 +159,7 @@ $events = array_filter($allEvents, function($e) {
             <div class="event-grid">
                 <?php if (!empty($events)): ?>
                     <?php foreach ($events as $event): ?>
-                        <div class="event-card-modern">
+                        <div class="event-card-modern" data-category="<?php echo htmlspecialchars($event['category']); ?>" data-title="<?php echo htmlspecialchars(strtolower($event['title'])); ?>">
                             <div class="event-image-container group">
                                 <?php if ($event['image_url']): ?>
                                     <img src="<?php echo SITE_URL . '/' . $event['image_url']; ?>" alt="<?php echo htmlspecialchars($event['title']); ?>" class="transition-transform duration-500 group-hover:scale-110 w-full h-full object-cover">
@@ -192,10 +194,6 @@ $events = array_filter($allEvents, function($e) {
             </div>
         </section>
 
-        <!-- Upcoming Events Removed/Integrated into Grid for broader layout -->
-    </div>
-
-        <!-- Upcoming Events Removed/Integrated into Grid for broader layout -->
     </div>
 
     <!-- Footer -->
@@ -218,14 +216,57 @@ $events = array_filter($allEvents, function($e) {
     </footer>
 
     <script>
-        // Simple smooth scrolling
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
-                }
+        document.addEventListener('DOMContentLoaded', () => {
+            const pills = document.querySelectorAll('.category-pill');
+            const cards = document.querySelectorAll('.event-card-modern');
+            const searchInput = document.getElementById('eventSearch');
+            let currentCategory = 'todos';
+
+            function filterEvents() {
+                const searchTerm = searchInput.value.toLowerCase();
+                
+                cards.forEach(card => {
+                    const cardCategory = card.dataset.category;
+                    const cardTitle = card.dataset.title;
+                    const matchesCategory = currentCategory === 'todos' || cardCategory === currentCategory;
+                    const matchesSearch = cardTitle.includes(searchTerm);
+
+                    if (matchesCategory && matchesSearch) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+
+            pills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    // Reset pills UI
+                    pills.forEach(p => {
+                        p.classList.remove('bg-lime-400', 'text-black', 'active');
+                        p.classList.add('bg-white/5', 'text-gray-400');
+                    });
+                    
+                    // Activate current pill
+                    pill.classList.remove('bg-white/5', 'text-gray-400');
+                    pill.classList.add('bg-lime-400', 'text-black', 'active');
+                    
+                    currentCategory = pill.dataset.category;
+                    filterEvents();
+                });
+            });
+
+            searchInput.addEventListener('input', filterEvents);
+
+            // Smooth scroll for anchors
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
             });
         });
     </script>

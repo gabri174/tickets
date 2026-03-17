@@ -9,28 +9,65 @@ $db = new Database();
 $message = '';
 $error = '';
 
-// Procesar acciones
+// ─── CATEGORÍAS DISPONIBLES ───────────────────────────────
+$categories = [
+    'conciertos'   => '🎸 Conciertos',
+    'musica'       => '🎵 Música',
+    'teatro'       => '🎭 Teatro',
+    'festivales'   => '🎉 Festivales',
+    'deportes'     => '⚽ Deportes',
+    'gastronomia'  => '🍷 Gastronomía',
+    'arte'         => '🎨 Arte & Cultura',
+    'otros'        => '📌 Otros',
+];
+
+// ─── FUNCIÓN SEO AUTOMÁTICO ───────────────────────────────
+function generateSeo($title, $description, $location, $dateEvent) {
+    $date = date('d/m/Y', strtotime($dateEvent));
+    $seoTitle = mb_substr("$title en $location | Entradas y Tickets", 0, 60);
+    $desc = !empty($description) ? mb_substr($description, 0, 100) : "$title se celebra el $date en $location.";
+    $seoDescription = mb_substr("$desc Compra tus entradas online de forma segura.", 0, 160);
+    $words = array_unique(array_filter(array_map('trim', explode(' ', strtolower("$title $location tickets entradas evento")))));
+    $seoKeywords = implode(', ', array_slice($words, 0, 8));
+    return [$seoTitle, $seoDescription, $seoKeywords];
+}
+
+// ─── PROCESAR ACCIONES ────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
-    if ($action === 'create') {
-        // Asegurar que el directorio de subidas existe
+    if ($action === 'create' || $action === 'update') {
         if (!file_exists(UPLOADS_PATH)) {
             mkdir(UPLOADS_PATH, 0777, true);
         }
         
-        $title = cleanInput($_POST['title']);
+        $title       = cleanInput($_POST['title']);
         $description = cleanInput($_POST['description']);
-        $dateEvent = cleanInput($_POST['date_event']);
-        $location = cleanInput($_POST['location']);
-        $price = floatval($_POST['price']);
-        $maxTickets = intval($_POST['max_tickets']);
+        $dateEvent   = cleanInput($_POST['date_event']);
+        $location    = cleanInput($_POST['location']);
+        $price       = floatval($_POST['price']);
+        $maxTickets  = intval($_POST['max_tickets']);
+        $category    = cleanInput($_POST['category'] ?? 'otros');
         
-        // Validaciones
+        // SEO — si el usuario los deja vacíos, generamos automáticamente
+        $seoTitle       = cleanInput($_POST['seo_title'] ?? '');
+        $seoDescription = cleanInput($_POST['seo_description'] ?? '');
+        $seoKeywords    = cleanInput($_POST['seo_keywords'] ?? '');
+        
+        if (empty($seoTitle) || empty($seoDescription)) {
+            [$autoTitle, $autoDesc, $autoKw] = generateSeo($title, $description, $location, $dateEvent);
+            if (empty($seoTitle)) $seoTitle = $autoTitle;
+            if (empty($seoDescription)) $seoDescription = $autoDesc;
+            if (empty($seoKeywords)) $seoKeywords = $autoKw;
+        }
+        
+        // Ticket types desde JSON
+        $ticketTypesJson = $_POST['ticket_types_data'] ?? '[]';
+        $ticketTypes = json_decode($ticketTypesJson, true) ?: [];
+        
         if (empty($title) || empty($dateEvent) || empty($location) || $price < 0 || $maxTickets <= 0) {
             $error = 'Por favor completa todos los campos requeridos correctamente';
         } else {
-            // Procesar imagen
             $imageUrl = null;
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
                 $imageName = uploadImage($_FILES['image'], UPLOADS_PATH);
@@ -40,42 +77,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             $adminId = $_SESSION['admin_id'];
-            if ($db->createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId)) {
-                $message = 'Evento creado exitosamente';
-            } else {
-                $error = 'Error al crear el evento';
-            }
-        }
-    } elseif ($action === 'update') {
-        $id = intval($_POST['id']);
-        $title = cleanInput($_POST['title']);
-        $description = cleanInput($_POST['description']);
-        $dateEvent = cleanInput($_POST['date_event']);
-        $location = cleanInput($_POST['location']);
-        $price = floatval($_POST['price']);
-        $maxTickets = intval($_POST['max_tickets']);
-        
-        if (empty($title) || empty($dateEvent) || empty($location) || $price < 0 || $maxTickets <= 0) {
-            $error = 'Por favor completa todos los campos requeridos correctamente';
-        } else {
-            // Obtener evento actual para preservar la imagen si no se sube una nueva
-            $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
-            $currentEvent = $db->getEventById($id, $adminId);
-            $imageUrl = $currentEvent ? $currentEvent['image_url'] : null;
-
-            // Procesar imagen si se sube una nueva
-            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $imageName = uploadImage($_FILES['image'], UPLOADS_PATH);
-                if ($imageName) {
-                    $imageUrl = 'uploads/' . $imageName;
-                }
-            }
             
-            $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
-            if ($db->updateEvent($id, $title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId)) {
-                $message = 'Evento actualizado exitosamente';
-            } else {
-                $error = 'Error al actualizar el evento';
+            if ($action === 'create') {
+                if ($db->createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId, $category, $seoTitle, $seoDescription, $seoKeywords)) {
+                    $newEventId = $db->getLastInsertId();
+                    // Guardar tipos de entrada
+                    foreach ($ticketTypes as $i => $tt) {
+                        if (!empty($tt['name']) && intval($tt['max']) > 0) {
+                            $db->createTicketType($newEventId, $tt['name'], $tt['desc'] ?? '', floatval($tt['price']), intval($tt['max']), $i);
+                        }
+                    }
+                    $message = 'Evento creado exitosamente';
+                } else {
+                    $error = 'Error al crear el evento';
+                }
+            } elseif ($action === 'update') {
+                $id = intval($_POST['id']);
+                $adminId2 = ($_SESSION['admin_role'] === 'superadmin') ? null : $adminId;
+                $currentEvent = $db->getEventById($id, $adminId2);
+                if (!$imageUrl && $currentEvent) $imageUrl = $currentEvent['image_url'];
+                
+                if ($db->updateEvent($id, $title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId2, $category, $seoTitle, $seoDescription, $seoKeywords)) {
+                    // Reemplazar ticket types
+                    $db->deleteTicketTypesByEvent($id);
+                    foreach ($ticketTypes as $i => $tt) {
+                        if (!empty($tt['name']) && intval($tt['max']) > 0) {
+                            $db->createTicketType($id, $tt['name'], $tt['desc'] ?? '', floatval($tt['price']), intval($tt['max']), $i);
+                        }
+                    }
+                    $message = 'Evento actualizado exitosamente';
+                } else {
+                    $error = 'Error al actualizar el evento';
+                }
             }
         }
     }
@@ -93,13 +126,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
 $events = $db->getAllEvents($adminId);
 
-// Obtener evento para editar
-$editEvent = null;
-if (isset($_GET['action']) && $_GET['action'] === 'edit') {
-    $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
-    $editEvent = $db->getEventById(intval($_GET['id']), $adminId);
+// Cargar ticket types de cada evento para el JS
+$allTicketTypes = [];
+foreach ($events as $ev) {
+    $allTicketTypes[$ev['id']] = $db->getTicketTypesByEvent($ev['id']);
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -271,6 +304,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                                 <tr class="text-[10px] text-gray-500 uppercase tracking-widest text-left border-b border-white/5">
                                     <th class="px-8 py-6 font-black">Evento</th>
                                     <th class="px-6 py-6 font-black">Fecha & Lugar</th>
+                                    <th class="px-6 py-6 font-black">Categoría</th>
                                     <th class="px-6 py-6 font-black">Precio</th>
                                     <th class="px-6 py-6 font-black">Capacidad</th>
                                     <th class="px-6 py-6 font-black">Estado</th>
@@ -320,6 +354,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                                                         <?php echo htmlspecialchars($event['location']); ?>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td class="px-6 py-5">
+                                                <?php
+                                                $catKey = $event['category'] ?? 'otros';
+                                                $catLabels = ['conciertos'=>'🎸','musica'=>'🎵','teatro'=>'🎭','festivales'=>'🎉','deportes'=>'⚽','gastronomia'=>'🍷','arte'=>'🎨','otros'=>'📌'];
+                                                $catColors = ['conciertos'=>'text-purple-400 bg-purple-400/10','musica'=>'text-blue-400 bg-blue-400/10','teatro'=>'text-yellow-400 bg-yellow-400/10','festivales'=>'text-lime-400 bg-lime-400/10','deportes'=>'text-green-400 bg-green-400/10','gastronomia'=>'text-orange-400 bg-orange-400/10','arte'=>'text-pink-400 bg-pink-400/10','otros'=>'text-gray-400 bg-gray-400/10'];
+                                                $color = $catColors[$catKey] ?? 'text-gray-400 bg-gray-400/10';
+                                                ?>
+                                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black border border-white/10 <?php echo $color; ?>">
+                                                    <?php echo ($catLabels[$catKey] ?? '📌') . ' ' . ucfirst($catKey); ?>
+                                                </span>
                                             </td>
                                             <td class="px-6 py-5">
                                                 <span class="text-sm font-black text-white">
@@ -382,11 +427,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
         </main>
     </div>
     
-    <!-- Modal Redesign -->
+    <!-- Modal -->
     <div id="eventModal" class="fixed inset-0 hidden z-[100] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
-        <div class="glass-modal w-full max-w-2xl rounded-[3rem] p-10 relative overflow-y-auto max-h-[90vh] animate-fade-in">
-            <div class="flex justify-between items-center mb-10">
+        <div class="glass-modal w-full max-w-3xl rounded-[3rem] p-10 relative overflow-y-auto max-h-[92vh] animate-fade-in">
+            <div class="flex justify-between items-center mb-8">
                 <div>
                     <h3 class="text-3xl font-black tracking-tighter" id="modalTitle">Nuevo Evento</h3>
                     <p class="text-xs text-lime-400 font-bold uppercase tracking-widest mt-1">Completa los datos de la función</p>
@@ -395,81 +440,133 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-            
-            <form method="POST" enctype="multipart/form-data" id="eventForm" class="space-y-8">
+
+            <form method="POST" enctype="multipart/form-data" id="eventForm" class="space-y-6">
                 <input type="hidden" name="action" id="formAction" value="create">
                 <input type="hidden" name="id" id="eventId">
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="md:col-span-2 space-y-2">
+                <input type="hidden" name="ticket_types_data" id="ticketTypesData" value="[]">
+
+                <!-- INFO BÁSICA -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="md:col-span-2 space-y-1">
                         <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Título del Evento *</label>
                         <input type="text" name="title" required id="eventTitle"
-                               class="w-full px-6 py-4 rounded-2xl transition-all focus:ring-0 outline-none"
+                               class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none"
                                placeholder="Ej: Gran Concierto de Verano">
                     </div>
-                    
-                    <div class="md:col-span-2 space-y-2">
+
+                    <div class="md:col-span-2 space-y-1">
                         <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Descripción</label>
-                        <textarea name="description" rows="4" id="eventDescription"
-                                  class="w-full px-6 py-4 rounded-2xl transition-all focus:ring-0 outline-none resize-none"
+                        <textarea name="description" rows="3" id="eventDescription"
+                                  class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none resize-none"
                                   placeholder="Detalla de qué trata tu evento..."></textarea>
                     </div>
-                    
-                    <div class="space-y-2">
+
+                    <div class="space-y-1">
                         <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Fecha y Hora *</label>
                         <input type="datetime-local" name="date_event" required id="eventDate"
-                               class="w-full px-6 py-4 rounded-2xl transition-all focus:ring-0 outline-none">
+                               class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none">
                     </div>
-                    
-                    <div class="space-y-2">
+
+                    <div class="space-y-1">
                         <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Lugar del Evento *</label>
                         <input type="text" name="location" required id="eventLocation"
-                               class="w-full px-6 py-4 rounded-2xl transition-all focus:ring-0 outline-none"
+                               class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none"
                                placeholder="Ej: Auditorio Central">
                     </div>
-                    
-                    <div class="space-y-2">
-                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Precio por Ticket *</label>
-                        <div class="relative">
-                            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500 font-bold">€</span>
-                            <input type="number" name="price" step="0.01" min="0" required id="eventPrice"
-                                   class="w-full pl-10 pr-6 py-4 rounded-2xl transition-all focus:ring-0 outline-none"
-                                   placeholder="0.00">
-                        </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Categoría *</label>
+                        <select name="category" id="eventCategory" class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none">
+                            <?php foreach ($categories as $key => $label): ?>
+                                <option value="<?php echo $key; ?>"><?php echo $label; ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    
-                    <div class="space-y-2">
-                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Aforo Máximo *</label>
+
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Aforo Total *</label>
                         <input type="number" name="max_tickets" min="1" required id="eventMaxTickets"
-                               class="w-full px-6 py-4 rounded-2xl transition-all focus:ring-0 outline-none"
+                               class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none"
                                placeholder="Ej: 500">
                     </div>
-                    
-                    <div class="md:col-span-2 space-y-4">
-                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Póster del Evento</label>
-                        
-                        <div class="hidden border border-white/10 rounded-3xl p-4 bg-white/5 items-center gap-4" id="editImagePreviewContainer">
-                            <img src="" id="editImagePreview" class="w-20 h-20 rounded-xl object-cover border border-white/10">
-                            <div>
-                                <p class="text-[10px] font-black text-gray-400 uppercase">Imagen Registrada</p>
-                                <p class="text-xs text-gray-500">Se usará esta imagen si no subes una nueva</p>
-                            </div>
-                        </div>
 
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Precio Base (si no hay tipos)</label>
                         <div class="relative">
-                            <input type="file" name="image" accept="image/*"
-                                   class="w-full text-xs text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-white/10 file:text-white hover:file:bg-white/20 file:transition-all cursor-pointer">
+                            <span class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 font-bold">€</span>
+                            <input type="number" name="price" step="0.01" min="0" id="eventPrice"
+                                   class="w-full pl-9 pr-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none"
+                                   placeholder="0.00" value="0">
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Póster del Evento</label>
+                        <div class="hidden border border-white/10 rounded-2xl p-3 bg-white/5 items-center gap-4" id="editImagePreviewContainer">
+                            <img src="" id="editImagePreview" class="w-16 h-16 rounded-xl object-cover border border-white/10">
+                            <p class="text-xs text-gray-500">Se usará esta imagen si no subes una nueva</p>
+                        </div>
+                        <input type="file" name="image" accept="image/*"
+                               class="w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-white/10 file:text-white hover:file:bg-white/20 file:transition-all cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- TIPOS DE ENTRADA -->
+                <div class="border-t border-white/5 pt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <p class="text-sm font-black">Tipos de Entrada</p>
+                            <p class="text-[10px] text-gray-500">Crea diferentes categorías de tickets (VIP, General, etc.)</p>
+                        </div>
+                        <button type="button" onclick="addTicketType()" class="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-gray-300 hover:text-lime-400 hover:border-lime-400/30 transition-all">
+                            <i class="fas fa-plus"></i> Añadir tipo
+                        </button>
+                    </div>
+                    <div id="ticketTypesList" class="space-y-3"></div>
+                    <p id="noTypesNote" class="text-[10px] text-gray-600 text-center py-4">Si no añades tipos, se usará el precio base</p>
+                </div>
+
+                <!-- SEO -->
+                <div class="border-t border-white/5 pt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <p class="text-sm font-black">SEO <span class="text-lime-400">✦ Auto</span></p>
+                            <p class="text-[10px] text-gray-500">Se genera automáticamente. Puedes editarlo manualmente.</p>
+                        </div>
+                        <button type="button" onclick="previewSeo()" class="flex items-center gap-2 px-4 py-2 bg-lime-400/10 border border-lime-400/20 rounded-xl text-xs font-black text-lime-400 hover:bg-lime-400/20 transition-all">
+                            <i class="fas fa-magic"></i> Previsualizar
+                        </button>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">SEO Title <span class="text-gray-600">(máx 60 chars)</span></label>
+                            <input type="text" name="seo_title" id="seoTitle" maxlength="60"
+                                   class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none"
+                                   placeholder="Se genera automáticamente">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Meta Description <span class="text-gray-600">(máx 160 chars)</span></label>
+                            <textarea name="seo_description" id="seoDescription" maxlength="160" rows="2"
+                                      class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none resize-none"
+                                      placeholder="Se genera automáticamente"></textarea>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Keywords</label>
+                            <input type="text" name="seo_keywords" id="seoKeywords"
+                                   class="w-full px-5 py-3.5 rounded-xl transition-all focus:ring-0 outline-none"
+                                   placeholder="Se genera automáticamente">
                         </div>
                     </div>
                 </div>
-                
-                <div class="flex justify-end gap-4 mt-12">
-                    <button type="button" onclick="closeModal()" 
-                            class="px-8 py-4 rounded-2xl text-xs font-black uppercase text-gray-500 hover:text-white transition-colors">
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeModal()"
+                            class="px-7 py-3.5 rounded-xl text-xs font-black uppercase text-gray-500 hover:text-white transition-colors">
                         Descartar
                     </button>
-                    <button type="submit" class="px-10 py-4 bg-lime-400 text-black rounded-2xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
-                        <i class="fas fa-save mr-2"></i>GUARDAR CAMBIOS
+                    <button type="submit" class="px-8 py-3.5 bg-lime-400 text-black rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
+                        <i class="fas fa-save mr-2"></i>GUARDAR EVENTO
                     </button>
                 </div>
             </form>
@@ -478,49 +575,122 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
     
     <script>
         const eventsData = <?php echo json_encode($events); ?>;
-        
+        const allTicketTypes = <?php echo json_encode($allTicketTypes); ?>;
+        let ticketTypes = [];
+
         function showCreateModal() {
             document.getElementById('modalTitle').textContent = 'Nuevo Evento';
             document.getElementById('formAction').value = 'create';
             document.getElementById('editImagePreviewContainer').style.display = 'none';
             document.getElementById('eventForm').reset();
+            ticketTypes = [];
+            renderTicketTypes();
+            document.getElementById('seoTitle').value = '';
+            document.getElementById('seoDescription').value = '';
+            document.getElementById('seoKeywords').value = '';
             document.getElementById('eventModal').classList.remove('hidden');
             document.body.classList.add('overflow-hidden');
         }
-        
+
         function editEvent(id) {
             const event = eventsData.find(e => e.id == id);
             if (!event) return;
-            
             document.getElementById('modalTitle').textContent = 'Editar Evento';
             document.getElementById('formAction').value = 'update';
             document.getElementById('eventId').value = event.id;
             document.getElementById('eventTitle').value = event.title;
-            document.getElementById('eventDescription').value = event.description;
-            document.getElementById('eventDate').value = event.date_event.replace(' ', 'T');
+            document.getElementById('eventDescription').value = event.description || '';
+            document.getElementById('eventDate').value = (event.date_event || '').replace(' ', 'T');
             document.getElementById('eventLocation').value = event.location;
             document.getElementById('eventPrice').value = event.price;
             document.getElementById('eventMaxTickets').value = event.max_tickets;
-            
+            document.getElementById('eventCategory').value = event.category || 'otros';
+            document.getElementById('seoTitle').value = event.seo_title || '';
+            document.getElementById('seoDescription').value = event.seo_description || '';
+            document.getElementById('seoKeywords').value = event.seo_keywords || '';
             if (event.image_url) {
                 document.getElementById('editImagePreview').src = '<?php echo SITE_URL; ?>/' + event.image_url;
                 document.getElementById('editImagePreviewContainer').style.display = 'flex';
             } else {
                 document.getElementById('editImagePreviewContainer').style.display = 'none';
             }
-            
+            // Load ticket types
+            ticketTypes = (allTicketTypes[id] || []).map(tt => ({name: tt.name, desc: tt.description || '', price: tt.price, max: tt.max_tickets}));
+            renderTicketTypes();
             document.getElementById('eventModal').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
         }
-        
+
         function deleteEvent(id) {
-            if (confirm('¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.')) {
+            if (confirm('¿Estás seguro de que deseas eliminar este evento?')) {
                 window.location.href = 'events.php?action=delete&id=' + id;
             }
         }
-        
+
         function closeModal() {
             document.getElementById('eventModal').classList.add('hidden');
             document.body.classList.remove('overflow-hidden');
+        }
+
+        // ─── TICKET TYPES ─────────────────────────────────────
+        function addTicketType() {
+            ticketTypes.push({name: '', desc: '', price: 0, max: 0});
+            renderTicketTypes();
+        }
+
+        function removeTicketType(i) {
+            ticketTypes.splice(i, 1);
+            renderTicketTypes();
+        }
+
+        function renderTicketTypes() {
+            const list = document.getElementById('ticketTypesList');
+            const note = document.getElementById('noTypesNote');
+            list.innerHTML = '';
+            note.style.display = ticketTypes.length === 0 ? 'block' : 'none';
+            ticketTypes.forEach((tt, i) => {
+                list.innerHTML += `
+                <div class="flex gap-2 items-start glass-card rounded-2xl p-4 border border-white/5">
+                    <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <input type="text" placeholder="Nombre (VIP, General...)" value="${tt.name}"
+                            onchange="ticketTypes[${i}].name=this.value; syncTypes()"
+                            class="col-span-2 px-4 py-2.5 rounded-xl text-sm outline-none transition-all">
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">€</span>
+                            <input type="number" placeholder="Precio" value="${tt.price}" min="0" step="0.01"
+                                onchange="ticketTypes[${i}].price=parseFloat(this.value)||0; syncTypes()"
+                                class="w-full pl-7 pr-3 py-2.5 rounded-xl text-sm outline-none transition-all">
+                        </div>
+                        <input type="number" placeholder="Cantidad" value="${tt.max}" min="1"
+                            onchange="ticketTypes[${i}].max=parseInt(this.value)||0; syncTypes()"
+                            class="px-4 py-2.5 rounded-xl text-sm outline-none transition-all">
+                    </div>
+                    <button type="button" onclick="removeTicketType(${i})" class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-red-400/10 text-red-400 hover:bg-red-400 hover:text-white transition-all text-xs">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>`;
+            });
+            syncTypes();
+        }
+
+        function syncTypes() {
+            document.getElementById('ticketTypesData').value = JSON.stringify(ticketTypes);
+        }
+
+        // ─── SEO PREVIEW ──────────────────────────────────────
+        function previewSeo() {
+            const title = document.getElementById('eventTitle').value;
+            const location = document.getElementById('eventLocation').value;
+            const desc = document.getElementById('eventDescription').value;
+            if (!title) { alert('Completa el título del evento primero'); return; }
+            const seoTitle = (title + ' en ' + location + ' | Entradas y Tickets').substring(0, 60);
+            const snippet = desc ? desc.substring(0, 100) : title + ' - ¡Consigue tus entradas online!';
+            const seoDesc = (snippet + ' Compra tus entradas de forma segura.').substring(0, 160);
+            const words = [...new Set((title + ' ' + location + ' tickets entradas evento').toLowerCase().split(' ').filter(w => w.length > 2))];
+            const keywords = words.slice(0, 8).join(', ');
+            document.getElementById('seoTitle').value = seoTitle;
+            document.getElementById('seoDescription').value = seoDesc;
+            document.getElementById('seoKeywords').value = keywords;
         }
     </script>
 </body>

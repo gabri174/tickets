@@ -142,8 +142,8 @@ if (!$ticket) {
                         <p class="text-sm font-bold text-gray-800 truncate"><?php echo htmlspecialchars($ticket['location']); ?></p>
                     </div>
                     <div class="text-right">
-                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">ACCESO</p>
-                        <p class="text-sm font-bold text-gray-800">General</p>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">TIPO</p>
+                        <p class="text-sm font-bold text-gray-800"><?php echo htmlspecialchars($ticket['ticket_type_name'] ?? 'General'); ?></p>
                     </div>
                 </div>
 

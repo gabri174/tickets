@@ -142,8 +142,8 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                                 <p class="text-sm font-bold text-gray-800 truncate"><?php echo htmlspecialchars($eventData['location'] ?? 'Auditorio Principal'); ?></p>
                             </div>
                             <div class="text-right">
-                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">ASIENTO</p>
-                                <p class="text-sm font-bold text-gray-800">General</p>
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">TIPO</p>
+                                <p class="text-sm font-bold text-gray-800"><?php echo htmlspecialchars($ticket['type_name'] ?? 'General'); ?></p>
                             </div>
                         </div>
 

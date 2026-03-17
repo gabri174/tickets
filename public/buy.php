@@ -19,6 +19,7 @@ if (!$event) {
     header('Location: index.php');
     exit();
 }
+$ticketTypes = $db->getTicketTypesByEvent($eventId);
 
 // Procesar formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -47,23 +48,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (empty($errors)) {
-        // Lógica de Pago
-        $paymentSuccess = true;
-        
-        if ($event['price'] > 0) {
-            // Aquí iría la integración de pasarela de pago (Stripe, PayPal, etc.)
-            // Por ahora asuminos éxito ya que no hay una pasarela configurada.
-            // Si el precio es > 0, se ejecutaría la lógica de cobro.
-            $paymentSuccess = true; 
-        } else {
-            // Si el precio es 0, saltamos directamente a la generación de tickets
-            $paymentSuccess = true;
+        // Obtener precio y validar tipo de entrada
+        $ticketTypeId = isset($_POST['ticket_type_id']) ? (int) $_POST['ticket_type_id'] : null;
+        $unitPrice = $event['price'];
+        $ticketTypeName = '';
+
+        if (!empty($ticketTypes)) {
+            if (!$ticketTypeId) {
+                $errors[] = 'Debes seleccionar un tipo de entrada';
+            } else {
+                $selectedType = null;
+                foreach ($ticketTypes as $tt) {
+                    if ($tt['id'] == $ticketTypeId) {
+                        $selectedType = $tt;
+                        break;
+                    }
+                }
+                if (!$selectedType) {
+                    $errors[] = 'Tipo de entrada inválido';
+                } elseif ($selectedType['available_tickets'] < $quantity) {
+                    $errors[] = 'No hay suficientes entradas disponibles de este tipo';
+                } else {
+                    $unitPrice = $selectedType['price'];
+                    $ticketTypeName = $selectedType['name'];
+                }
+            }
         }
 
-        if ($paymentSuccess) {
-            // Generar tickets
-            $tickets = [];
-        $totalPrice = $event['price'] * $quantity;
+        if (empty($errors)) {
+            $totalPrice = $unitPrice * $quantity;
+            $paymentSuccess = true; // Simulación de pago
         
         try {
             $pdo = $db->getPdo();
@@ -81,17 +95,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $qrData = SITE_URL . "/ticket.php?code=" . $ticketCode;
                 $qrPath = generateQRCode($qrData, $qrFilename);
                 
-                $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath);
+                $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId);
                 $tickets[] = [
                     'code' => $ticketCode,
                     'qr_path' => $qrPath,
                     'name' => $a_name,
-                    'email' => $a_email
+                    'email' => $a_email,
+                    'type_name' => $ticketTypeName
                 ];
             }
             
             // Actualizar tickets disponibles
             $db->updateAvailableTickets($eventId, $quantity);
+            if ($ticketTypeId) {
+                $db->updateAvailableTicketType($ticketTypeId, $quantity);
+            }
             
             $pdo->commit();
             
@@ -172,7 +190,12 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprar Tickets - <?php echo htmlspecialchars($event['title']); ?></title>
+    <title><?php echo htmlspecialchars($event['seo_title'] ?: $event['title'] . ' - TicketApp'); ?></title>
+    <meta name="description" content="<?php echo htmlspecialchars($event['seo_description'] ?: 'Compra tus entradas para ' . $event['title'] . ' en ' . $event['location']); ?>">
+    <?php if ($event['seo_keywords']): ?>
+    <meta name="keywords" content="<?php echo htmlspecialchars($event['seo_keywords']); ?>">
+    <?php endif; ?>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -265,9 +288,9 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
                                 <span><?php echo htmlspecialchars($event['location']); ?></span>
                             </div>
                         </div>
-                        <div class="pt-4 border-t border-white/10">
+                        <div class="pt-4 border-t border-white/10" id="priceDisplayBox">
                             <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">PRECIO UNITARIO</p>
-                            <span class="text-lime-400 font-bold text-2xl"><?php echo formatCurrency($event['price']); ?></span>
+                            <span class="text-lime-400 font-bold text-2xl" id="unitPriceDisplay"><?php echo formatCurrency($event['price']); ?></span>
                         </div>
                     </div>
                 </div>
@@ -288,13 +311,44 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
                 </div>
             <?php endif; ?>
 
+            <!-- Ticket Type Selection -->
+            <?php if (!empty($ticketTypes)): ?>
+            <div class="glass-card p-6">
+                <label class="mb-4"><i class="fas fa-layer-group mr-2"></i>Selecciona tu tipo de entrada</label>
+                <div class="grid grid-cols-1 gap-3">
+                    <?php foreach ($ticketTypes as $index => $type): ?>
+                        <label class="relative flex items-center p-4 rounded-2xl border border-white/10 bg-white/5 cursor-pointer hover:bg-white/10 transition-all group">
+                            <input type="radio" name="ticket_type_id" value="<?php echo $type['id']; ?>" 
+                                   data-price="<?php echo $type['price']; ?>" 
+                                   data-name="<?php echo htmlspecialchars($type['name']); ?>"
+                                   class="ticket-type-radio hidden" 
+                                   <?php echo $index === 0 ? 'checked' : ''; ?> required>
+                            <div class="w-5 h-5 rounded-full border-2 border-white/20 mr-4 flex items-center justify-center group-hover:border-lime-400/50 transition-colors radio-custom">
+                                <div class="w-2.5 h-2.5 rounded-full bg-lime-400 scale-0 transition-transform radio-dot"></div>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm"><?php echo htmlspecialchars($type['name']); ?></p>
+                                <?php if ($type['description']): ?>
+                                    <p class="text-[10px] text-gray-500"><?php echo htmlspecialchars($type['description']); ?></p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-lime-400"><?php echo formatCurrency($type['price']); ?></p>
+                                <p class="text-[9px] text-gray-500 uppercase"><?php echo $type['available_tickets']; ?> disponibles</p>
+                            </div>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Quantity -->
             <div class="glass-card p-6">
                 <label for="quantity"><i class="fas fa-ticket-alt mr-2"></i>¿Cuántos tickets necesitas?</label>
                 <input type="number" name="quantity" id="quantity" 
                        min="1" max="<?php echo $event['available_tickets']; ?>" 
                        value="<?php echo isset($_POST['quantity']) ? $_POST['quantity'] : '1'; ?>">
-                <p class="text-[10px] text-gray-500 mt-2">Disponibles: <?php echo $event['available_tickets']; ?></p>
+                <p class="text-[10px] text-gray-500 mt-2">Capacidad máxima del evento: <?php echo $event['available_tickets']; ?></p>
             </div>
 
             <div id="attendeesContainer" class="space-y-4">
@@ -355,7 +409,32 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
         const quantityInput = document.getElementById('quantity');
         const attendeesContainer = document.getElementById('attendeesContainer');
         const totalPriceElement = document.getElementById('totalPrice');
-        const basePrice = <?php echo $event['price']; ?>;
+        const unitPriceDisplay = document.getElementById('unitPriceDisplay');
+        const typeRadios = document.querySelectorAll('.ticket-type-radio');
+        
+        let currentUnitPrice = <?php echo $event['price']; ?>;
+        
+        function updatePrices() {
+            const selectedRadio = document.querySelector('.ticket-type-radio:checked');
+            if (selectedRadio) {
+                currentUnitPrice = parseFloat(selectedRadio.dataset.price);
+                unitPriceDisplay.textContent = formatCurrency(currentUnitPrice);
+                
+                // Update Radio UI
+                document.querySelectorAll('.radio-dot').forEach(dot => dot.classList.add('scale-0'));
+                selectedRadio.closest('label').querySelector('.radio-dot').classList.remove('scale-0');
+                document.querySelectorAll('.radio-custom').forEach(rd => rd.classList.remove('border-lime-400'));
+                selectedRadio.closest('label').querySelector('.radio-custom').classList.add('border-lime-400');
+            }
+
+            const quantity = parseInt(quantityInput.value) || 0;
+            const total = currentUnitPrice * quantity;
+            totalPriceElement.textContent = formatCurrency(total);
+        }
+
+        function formatCurrency(amount) {
+            return '$' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
         
         function updateAttendeeFields() {
             const quantity = parseInt(quantityInput.value) || 0;
@@ -393,12 +472,11 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
                 }
             }
             
-            // Actualizar precio
-            const total = basePrice * quantity;
-            totalPriceElement.textContent = '$' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            updatePrices();
         }
         
         quantityInput.addEventListener('input', updateAttendeeFields);
+        typeRadios.forEach(radio => radio.addEventListener('change', updatePrices));
         document.addEventListener('DOMContentLoaded', updateAttendeeFields);
     </script>
 
