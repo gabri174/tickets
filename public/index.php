@@ -38,8 +38,8 @@ $events = array_filter($allEvents, function($e) {
                 <!-- Desktop Navigation -->
                 <nav class="hidden md:flex items-center gap-8">
                     <a href="index.php" class="text-sm font-semibold text-lime-400">Inicio</a>
-                    <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition">Eventos</a>
-                    <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition">Mis Tickets</a>
+                    <a href="about.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Nosotros</a>
+                    <a href="contact.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Contacto</a>
                     <div class="w-px h-6 bg-white/10 mx-2"></div>
                     <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
                         <i class="fas fa-user-shield text-xs"></i>
