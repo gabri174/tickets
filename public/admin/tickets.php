@@ -115,404 +115,383 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tickets - Admin Tickets</title>
+    <title>Tickets & Ventas - Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --color-gray-light: #d9d9d9;
-            --color-gray-dark: #363c40;
-            --color-gray-medium: #babebf;
-            --color-gray-muted: #848b8c;
-            --color-black: #202426;
+        body {
+            background-color: #0A0E14;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
         }
-        
-        body { background-color: var(--color-gray-light); }
-        .sidebar { background-color: var(--color-gray-dark); }
-        .btn-primary { background-color: var(--color-gray-dark); }
-        .btn-primary:hover { background-color: var(--color-black); }
-        .card { background: white; }
+        .glass-sidebar {
+            background: rgba(255,255,255,0.02);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .glass-card {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .nav-link { transition: all 0.2s ease; position: relative; }
+        .nav-link.active { background: rgba(218,251,113,0.1); color: #DAFB71; }
+        .nav-link.active::before {
+            content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
+            width: 3px; background: #DAFB71; border-radius: 0 4px 4px 0;
+        }
+        .text-gradient {
+            background: linear-gradient(to right, #DAFB71, #60A5FA);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        input, select {
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+        }
+        input::placeholder { color: rgba(255,255,255,0.3) !important; }
+        input:focus, select:focus {
+            border-color: rgba(218,251,113,0.5) !important;
+            box-shadow: 0 0 15px rgba(218,251,113,0.1) !important;
+        }
+        select option { background: #111827; color: white; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        tr:hover { background: rgba(255,255,255,0.02); }
     </style>
 </head>
-<body class="font-sans">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <aside class="sidebar w-64 text-white">
-            <div class="p-6">
-                <div class="flex items-center space-x-2 mb-8">
-                    <i class="fas fa-ticket-alt text-2xl"></i>
-                    <h1 class="text-xl font-bold">Admin Panel</h1>
+<body class="overflow-hidden">
+<div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="glass-sidebar w-72 flex flex-col z-20">
+        <div class="p-8">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center shadow-lg shadow-lime-400/20">
+                    <i class="fas fa-ticket-alt text-black text-xl"></i>
                 </div>
-                
-                <nav class="space-y-2">
-                    <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="events.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Eventos</span>
-                    </a>
-                    <a href="tickets.php" class="flex items-center space-x-3 p-3 rounded-lg bg-white bg-opacity-10">
-                        <i class="fas fa-ticket-alt"></i>
-                        <span>Tickets</span>
-                    </a>
-                    <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
-                    <a href="settings.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
-                        <i class="fas fa-cog"></i>
-                        <span>Configuración</span>
-                    </a>
-                    <?php endif; ?>
-                </nav>
+                <span class="text-xl font-black tracking-tighter">TICKET<span class="text-lime-400">APP</span></span>
             </div>
-            
-            <!-- User Info -->
-            <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-600">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold"><?php echo htmlspecialchars($_SESSION['admin_username']); ?></p>
-                        <p class="text-xs text-gray-300"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></p>
-                    </div>
+            <nav class="space-y-2">
+                <a href="dashboard.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
+                    <i class="fas fa-grid-2 text-lg"></i><span>Dashboard</span>
+                </a>
+                <a href="events.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
+                    <i class="fas fa-calendar-alt text-lg"></i><span>Gestionar Eventos</span>
+                </a>
+                <a href="tickets.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm">
+                    <i class="fas fa-ticket-alt text-lg"></i><span>Ventas & Tickets</span>
+                </a>
+                <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
+                <a href="settings.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
+                    <i class="fas fa-cog text-lg"></i><span>Configuración</span>
+                </a>
+                <?php endif; ?>
+            </nav>
+        </div>
+        <div class="mt-auto p-6 border-t border-white/5">
+            <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
+                    <i class="fas fa-user-circle text-gray-400"></i>
                 </div>
-                <a href="logout.php" class="mt-4 flex items-center space-x-2 text-sm hover:text-gray-300 transition">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Cerrar sesión</span>
+                <div class="flex-1 overflow-hidden">
+                    <p class="text-xs font-black truncate"><?php echo htmlspecialchars($_SESSION['admin_username']); ?></p>
+                    <p class="text-[10px] text-gray-500 truncate"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></p>
+                </div>
+                <a href="logout.php" class="text-gray-500 hover:text-red-400 transition-colors p-2">
+                    <i class="fas fa-power-off"></i>
                 </a>
             </div>
-        </aside>
+        </div>
+    </aside>
         
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto">
-            <!-- Header -->
-            <header class="bg-white shadow-sm px-8 py-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold text-gray-800">Gestión de Tickets</h2>
-                    <div class="flex space-x-3">
-                        <a href="?export=true" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-                            <i class="fas fa-file-excel mr-2"></i>Exportar CSV
-                        </a>
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative">
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-lime-400/5 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <!-- Header -->
+        <header class="sticky top-0 z-10 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5 px-8 h-20 flex items-center">
+            <div class="flex flex-1 justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-black tracking-tighter">Ventas & <span class="text-gradient">Tickets</span></h2>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Historial de compras y gestión de accesos</p>
+                </div>
+                <a href="?export=true" class="flex items-center gap-2 px-5 py-2.5 bg-lime-400 text-black rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
+                    <i class="fas fa-file-csv"></i>Exportar CSV
+                </a>
+            </div>
+        </header>
+
+        <div class="p-8 relative z-10">
+            <!-- Messages -->
+            <?php if ($message): ?>
+                <div class="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-6 py-4 rounded-2xl mb-8 flex items-center gap-3 shadow-lg">
+                    <i class="fas fa-check-circle"></i>
+                    <span class="font-bold text-sm"><?php echo htmlspecialchars($message); ?></span>
+                </div>
+            <?php endif; ?>
+            <?php if ($error): ?>
+                <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-4 rounded-2xl mb-8 flex items-center gap-3 shadow-lg">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span class="font-bold text-sm"><?php echo htmlspecialchars($error); ?></span>
+                </div>
+            <?php endif; ?>
+
+            <!-- Filters -->
+            <div class="glass-card rounded-[2rem] p-6 mb-8">
+                <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Buscar</label>
+                        <input type="text" name="search"
+                               placeholder="Código, nombre o email..."
+                               class="w-full px-5 py-3.5 rounded-xl outline-none transition-all text-sm"
+                               value="<?php echo htmlspecialchars($search); ?>">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Evento</label>
+                        <select name="event_id" class="w-full px-5 py-3.5 rounded-xl outline-none transition-all text-sm">
+                            <option value="">Todos los eventos</option>
+                            <?php foreach ($events as $event): ?>
+                                <option value="<?php echo $event['id']; ?>" <?php echo ($eventId == $event['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($event['title']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <button type="submit" class="flex-1 py-3.5 bg-lime-400 text-black rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.25)] transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-search"></i>Filtrar
+                        </button>
+                        <?php if ($search || $eventId): ?>
+                            <a href="tickets.php" class="py-3.5 px-4 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="glass-card rounded-[1.5rem] p-6">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Total</p>
+                    <p class="text-3xl font-black tracking-tighter"><?php echo $total; ?></p>
+                    <div class="mt-3 w-8 h-8 rounded-xl bg-blue-400/10 flex items-center justify-center text-blue-400">
+                        <i class="fas fa-ticket-alt text-sm"></i>
                     </div>
                 </div>
-            </header>
-            
-            <!-- Content -->
-            <div class="p-8">
-                <!-- Messages -->
-                <?php if ($message): ?>
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                        <div class="flex items-center">
-                            <i class="fas fa-check-circle mr-2"></i>
-                            <?php echo htmlspecialchars($message); ?>
-                        </div>
+                <div class="glass-card rounded-[1.5rem] p-6">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Válidos</p>
+                    <p class="text-3xl font-black tracking-tighter text-lime-400">
+                        <?php echo count(array_filter($tickets, fn($t) => $t['status'] === 'valid')); ?>
+                    </p>
+                    <div class="mt-3 w-8 h-8 rounded-xl bg-lime-400/10 flex items-center justify-center text-lime-400">
+                        <i class="fas fa-check text-sm"></i>
                     </div>
-                <?php endif; ?>
-                
-                <?php if ($error): ?>
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                        <div class="flex items-center">
-                            <i class="fas fa-exclamation-circle mr-2"></i>
-                            <?php echo htmlspecialchars($error); ?>
-                        </div>
+                </div>
+                <div class="glass-card rounded-[1.5rem] p-6">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Utilizados</p>
+                    <p class="text-3xl font-black tracking-tighter text-yellow-400">
+                        <?php echo count(array_filter($tickets, fn($t) => $t['status'] === 'used')); ?>
+                    </p>
+                    <div class="mt-3 w-8 h-8 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
+                        <i class="fas fa-clock text-sm"></i>
                     </div>
-                <?php endif; ?>
-                <!-- Filters -->
-                <div class="card rounded-lg shadow-sm border p-6 mb-6">
-                    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Buscar</label>
-                            <input type="text" name="search" 
-                                   placeholder="Código, nombre o email..."
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                   value="<?php echo htmlspecialchars($search); ?>">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Evento</label>
-                            <select name="event_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800">
-                                <option value="">Todos los eventos</option>
-                                <?php foreach ($events as $event): ?>
-                                    <option value="<?php echo $event['id']; ?>" <?php echo ($eventId == $event['id']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($event['title']); ?>
-                                    </option>
+                </div>
+                <div class="glass-card rounded-[1.5rem] p-6">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Cancelados</p>
+                    <p class="text-3xl font-black tracking-tighter text-red-400">
+                        <?php echo count(array_filter($tickets, fn($t) => $t['status'] === 'cancelled')); ?>
+                    </p>
+                    <div class="mt-3 w-8 h-8 rounded-xl bg-red-400/10 flex items-center justify-center text-red-400">
+                        <i class="fas fa-ban text-sm"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tickets Table -->
+            <div class="glass-card rounded-[2rem] overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-white/5">
+                                <th class="text-left py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Código</th>
+                                <th class="text-left py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Evento</th>
+                                <th class="text-left py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Asistente</th>
+                                <th class="text-left py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Contacto</th>
+                                <th class="text-left py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Fecha</th>
+                                <th class="text-left py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Estado</th>
+                                <th class="text-left py-4 px-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($displayTickets)): ?>
+                                <tr>
+                                    <td colspan="7" class="text-center py-16 text-gray-600">
+                                        <i class="fas fa-ticket-alt text-4xl mb-4 block opacity-30"></i>
+                                        <p class="font-bold text-sm">No se encontraron tickets</p>
+                                    </td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($displayTickets as $ticket): ?>
+                                    <tr>
+                                        <td class="py-4 px-6">
+                                            <code class="text-xs bg-white/5 border border-white/10 px-2 py-1 rounded-lg font-mono text-lime-400">
+                                                <?php echo htmlspecialchars($ticket['ticket_code']); ?>
+                                            </code>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <div class="text-sm font-bold"><?php echo htmlspecialchars($ticket['event_title']); ?></div>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <div class="text-sm font-bold"><?php echo htmlspecialchars($ticket['attendee_name']); ?></div>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <div class="text-xs text-gray-300"><?php echo htmlspecialchars($ticket['attendee_email']); ?></div>
+                                            <?php if ($ticket['attendee_phone']): ?>
+                                                <div class="text-[10px] text-gray-500"><?php echo htmlspecialchars($ticket['attendee_phone']); ?></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <div class="text-xs text-gray-400"><?php echo formatDate($ticket['purchase_date']); ?></div>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <?php if ($ticket['status'] === 'valid'): ?>
+                                                <span class="bg-lime-400/10 text-lime-400 border border-lime-400/20 text-[10px] font-black px-3 py-1 rounded-full">Válido</span>
+                                            <?php elseif ($ticket['status'] === 'used'): ?>
+                                                <span class="bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 text-[10px] font-black px-3 py-1 rounded-full">Utilizado</span>
+                                            <?php else: ?>
+                                                <span class="bg-red-400/10 text-red-400 border border-red-400/20 text-[10px] font-black px-3 py-1 rounded-full">Cancelado</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <div class="flex items-center gap-3">
+                                                <a href="../ticket.php?code=<?php echo urlencode($ticket['ticket_code']); ?>"
+                                                   target="_blank"
+                                                   class="text-gray-500 hover:text-blue-400 transition-colors"
+                                                   title="Ver ticket">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="?action=download_pdf&id=<?php echo $ticket['id']; ?>&code=<?php echo urlencode($ticket['ticket_code']); ?>"
+                                                   class="text-gray-500 hover:text-red-400 transition-colors"
+                                                   title="Descargar PDF">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                                <button onclick="openStatusModal(<?php echo $ticket['id']; ?>, '<?php echo $ticket['status']; ?>')"
+                                                        class="text-gray-500 hover:text-lime-400 transition-colors"
+                                                        title="Cambiar estado">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button onclick="copyTicketCode('<?php echo htmlspecialchars($ticket['ticket_code']); ?>')"
+                                                        class="text-gray-500 hover:text-white transition-colors"
+                                                        title="Copiar código">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 <?php endforeach; ?>
-                            </select>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <?php if ($pagination['total_pages'] > 1): ?>
+                    <div class="flex justify-between items-center px-6 py-5 border-t border-white/5">
+                        <div class="text-xs text-gray-500 font-bold">
+                            Mostrando <?php echo $pagination['offset'] + 1; ?>–<?php echo min($pagination['offset'] + $limit, $total); ?> de <?php echo $total; ?> tickets
                         </div>
-                        
-                        <div class="flex items-end">
-                            <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg hover:opacity-90 transition flex-1">
-                                <i class="fas fa-search mr-2"></i>Filtrar
-                            </button>
-                            <?php if ($search || $eventId): ?>
-                                <a href="tickets.php" class="ml-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                                    <i class="fas fa-times"></i>
+                        <div class="flex gap-2">
+                            <?php if ($pagination['has_prev']): ?>
+                                <a href="?page=<?php echo $page - 1; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $eventId ? '&event_id=' . $eventId : ''; ?>"
+                                   class="px-3 py-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all text-xs font-bold">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            <?php endif; ?>
+                            <?php
+                            $startPage = max(1, $page - 2);
+                            $endPage = min($pagination['total_pages'], $page + 2);
+                            for ($i = $startPage; $i <= $endPage; $i++):
+                            ?>
+                                <a href="?page=<?php echo $i; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $eventId ? '&event_id=' . $eventId : ''; ?>"
+                                   class="px-3 py-1.5 rounded-lg text-xs font-black transition-all <?php echo ($i == $page) ? 'bg-lime-400 text-black' : 'border border-white/10 text-gray-400 hover:text-white hover:bg-white/5'; ?>">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+                            <?php if ($pagination['has_next']): ?>
+                                <a href="?page=<?php echo $page + 1; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $eventId ? '&event_id=' . $eventId : ''; ?>"
+                                   class="px-3 py-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all text-xs font-bold">
+                                    <i class="fas fa-chevron-right"></i>
                                 </a>
                             <?php endif; ?>
                         </div>
-                    </form>
-                </div>
-                
-                <!-- Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="card rounded-lg p-4 border">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-600">Total Tickets</p>
-                                <p class="text-2xl font-bold"><?php echo $total; ?></p>
-                            </div>
-                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-ticket-alt text-blue-600"></i>
-                            </div>
-                        </div>
                     </div>
-                    
-                    <div class="card rounded-lg p-4 border">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-600">Válidos</p>
-                                <p class="text-2xl font-bold text-green-600">
-                                    <?php echo count(array_filter($tickets, fn($t) => $t['status'] === 'valid')); ?>
-                                </p>
-                            </div>
-                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-check text-green-600"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card rounded-lg p-4 border">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-600">Utilizados</p>
-                                <p class="text-2xl font-bold text-yellow-600">
-                                    <?php echo count(array_filter($tickets, fn($t) => $t['status'] === 'used')); ?>
-                                </p>
-                            </div>
-                            <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-clock text-yellow-600"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card rounded-lg p-4 border">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-600">Cancelados</p>
-                                <p class="text-2xl font-bold text-red-600">
-                                    <?php echo count(array_filter($tickets, fn($t) => $t['status'] === 'cancelled')); ?>
-                                </p>
-                            </div>
-                            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-times text-red-600"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Tickets Table -->
-                <div class="card rounded-lg shadow-sm border">
-                    <div class="p-6">
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead>
-                                    <tr class="border-b">
-                                        <th class="text-left py-3 px-4">Código</th>
-                                        <th class="text-left py-3 px-4">Evento</th>
-                                        <th class="text-left py-3 px-4">Asistente</th>
-                                        <th class="text-left py-3 px-4">Contacto</th>
-                                        <th class="text-left py-3 px-4">Fecha Compra</th>
-                                        <th class="text-left py-3 px-4">Estado</th>
-                                        <th class="text-left py-3 px-4">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($displayTickets)): ?>
-                                        <tr>
-                                            <td colspan="7" class="text-center py-8 text-gray-500">
-                                                No se encontraron tickets
-                                            </td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($displayTickets as $ticket): ?>
-                                            <tr class="border-b hover:bg-gray-50">
-                                                <td class="py-3 px-4">
-                                                    <code class="text-sm bg-gray-100 px-2 py-1 rounded">
-                                                        <?php echo htmlspecialchars($ticket['ticket_code']); ?>
-                                                    </code>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <div class="font-medium"><?php echo htmlspecialchars($ticket['event_title']); ?></div>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <div class="font-medium"><?php echo htmlspecialchars($ticket['attendee_name']); ?></div>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <div class="text-sm">
-                                                        <div><?php echo htmlspecialchars($ticket['attendee_email']); ?></div>
-                                                        <?php if ($ticket['attendee_phone']): ?>
-                                                            <div class="text-gray-500"><?php echo htmlspecialchars($ticket['attendee_phone']); ?></div>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <div class="text-sm"><?php echo formatDate($ticket['purchase_date']); ?></div>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <?php if ($ticket['status'] === 'valid'): ?>
-                                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Válido</span>
-                                                    <?php elseif ($ticket['status'] === 'used'): ?>
-                                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Utilizado</span>
-                                                    <?php else: ?>
-                                                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Cancelado</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                     <div class="flex space-x-2">
-                                                         <a href="../ticket.php?code=<?php echo urlencode($ticket['ticket_code']); ?>" 
-                                                            target="_blank"
-                                                            class="text-blue-600 hover:text-blue-800 transition"
-                                                            title="Ver ticket">
-                                                             <i class="fas fa-eye text-lg"></i>
-                                                         </a>
-                                                         <a href="?action=download_pdf&id=<?php echo $ticket['id']; ?>&code=<?php echo urlencode($ticket['ticket_code']); ?>" 
-                                                            class="text-red-600 hover:text-red-800 transition"
-                                                            title="Descargar PDF">
-                                                             <i class="fas fa-file-pdf text-lg"></i>
-                                                         </a>
-                                                         <button onclick="openStatusModal(<?php echo $ticket['id']; ?>, '<?php echo $ticket['status']; ?>')" 
-                                                                 class="text-yellow-600 hover:text-yellow-800 transition"
-                                                                 title="Cambiar estado">
-                                                             <i class="fas fa-edit text-lg"></i>
-                                                         </button>
-                                                         <button onclick="copyTicketCode('<?php echo htmlspecialchars($ticket['ticket_code']); ?>')" 
-                                                                 class="text-green-600 hover:text-green-800 transition"
-                                                                 title="Copiar código">
-                                                             <i class="fas fa-copy text-lg"></i>
-                                                         </button>
-                                                     </div>
-                                                 </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- Pagination -->
-                        <?php if ($pagination['total_pages'] > 1): ?>
-                            <div class="flex justify-between items-center mt-6">
-                                <div class="text-sm text-gray-600">
-                                    Mostrando <?php echo $pagination['offset'] + 1; ?> - 
-                                    <?php echo min($pagination['offset'] + $limit, $total); ?> 
-                                    de <?php echo $total; ?> tickets
-                                </div>
-                                
-                                <div class="flex space-x-2">
-                                    <?php if ($pagination['has_prev']): ?>
-                                        <a href="?page=<?php echo $page - 1; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $eventId ? '&event_id=' . $eventId : ''; ?>" 
-                                           class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 transition">
-                                            <i class="fas fa-chevron-left"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                    
-                                    <?php 
-                                    $startPage = max(1, $page - 2);
-                                    $endPage = min($pagination['total_pages'], $page + 2);
-                                    
-                                    for ($i = $startPage; $i <= $endPage; $i++): 
-                                    ?>
-                                        <a href="?page=<?php echo $i; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $eventId ? '&event_id=' . $eventId : ''; ?>" 
-                                           class="px-3 py-1 border <?php echo ($i == $page) ? 'bg-gray-800 text-white' : 'border-gray-300 hover:bg-gray-50'; ?> rounded transition">
-                                            <?php echo $i; ?>
-                                        </a>
-                                    <?php endfor; ?>
-                                    
-                                    <?php if ($pagination['has_next']): ?>
-                                        <a href="?page=<?php echo $page + 1; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $eventId ? '&event_id=' . $eventId : ''; ?>" 
-                                           class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 transition">
-                                            <i class="fas fa-chevron-right"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
+</div>
 
-    <!-- Status Modal -->
-    <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg w-full max-w-md p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold">Cambiar Estado del Ticket</h3>
-                <button onclick="closeStatusModal()" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
+<!-- Status Modal -->
+<div id="statusModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+    <div class="glass-card rounded-[2rem] w-full max-w-md p-8 border border-white/10">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-black tracking-tighter">Cambiar Estado</h3>
+            <button onclick="closeStatusModal()" class="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="update_status">
+            <input type="hidden" name="ticket_id" id="statusTicketId">
+            <div class="mb-8 space-y-1">
+                <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Nuevo Estado</label>
+                <select name="status" id="statusSelect" class="w-full px-5 py-4 rounded-xl outline-none transition-all">
+                    <option value="valid">Válido</option>
+                    <option value="used">Utilizado</option>
+                    <option value="cancelled">Cancelado</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="closeStatusModal()" class="flex-1 py-4 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all font-black text-xs">
+                    Cancelar
+                </button>
+                <button type="submit" class="flex-1 py-4 bg-lime-400 text-black rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
+                    Actualizar
                 </button>
             </div>
-            
-            <form method="POST">
-                <input type="hidden" name="action" value="update_status">
-                <input type="hidden" name="ticket_id" id="statusTicketId">
-                
-                <div class="mb-4">
-                    <label class="block text-gray-700 font-medium mb-2">Nuevo Estado</label>
-                    <select name="status" id="statusSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800">
-                        <option value="valid">Válido</option>
-                        <option value="used">Utilizado</option>
-                        <option value="cancelled">Cancelado</option>
-                    </select>
-                </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeStatusModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg hover:opacity-90">
-                        Actualizar
-                    </button>
-                </div>
-            </form>
-        </div>
+        </form>
     </div>
-    
-    <script>
-        function copyTicketCode(code) {
-            navigator.clipboard.writeText(code).then(function() {
-                showNotification('Código copiado al portapapeles');
-            });
-        }
+</div>
 
-        function openStatusModal(id, currentStatus) {
-            document.getElementById('statusTicketId').value = id;
-            document.getElementById('statusSelect').value = currentStatus;
-            document.getElementById('statusModal').classList.remove('hidden');
-        }
-
-        function closeStatusModal() {
-            document.getElementById('statusModal').classList.add('hidden');
-        }
-        
-        // Cerrar modal al hacer clic fuera
-        document.getElementById('statusModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeStatusModal();
-            }
+<script>
+    function copyTicketCode(code) {
+        navigator.clipboard.writeText(code).then(function() {
+            showNotification('Código copiado al portapapeles');
         });
-        
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 2000);
-        }
-    </script>
+    }
+    function openStatusModal(id, currentStatus) {
+        document.getElementById('statusTicketId').value = id;
+        document.getElementById('statusSelect').value = currentStatus;
+        document.getElementById('statusModal').classList.remove('hidden');
+    }
+    function closeStatusModal() {
+        document.getElementById('statusModal').classList.add('hidden');
+    }
+    document.getElementById('statusModal').addEventListener('click', function(e) {
+        if (e.target === this) closeStatusModal();
+    });
+    function showNotification(message) {
+        const n = document.createElement('div');
+        n.className = 'fixed top-6 right-6 bg-lime-400 text-black px-5 py-3 rounded-2xl shadow-lg z-50 font-black text-sm';
+        n.textContent = message;
+        document.body.appendChild(n);
+        setTimeout(() => document.body.removeChild(n), 2000);
+    }
+</script>
 </body>
 </html>

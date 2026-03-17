@@ -51,294 +51,322 @@ $currentConfig = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración - Admin Tickets</title>
+    <title>Configuración - Admin <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --color-gray-light: #d9d9d9;
-            --color-gray-dark: #363c40;
-            --color-gray-medium: #babebf;
-            --color-gray-muted: #848b8c;
-            --color-black: #202426;
+        body { 
+            background-color: #0A0E14;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
         }
-        
-        body { background-color: var(--color-gray-light); }
-        .sidebar { background-color: var(--color-gray-dark); }
-        .btn-primary { background-color: var(--color-gray-dark); }
-        .btn-primary:hover { background-color: var(--color-black); }
-        .card { background: white; }
+
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-link {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-link.active {
+            background: rgba(218, 251, 113, 0.1);
+            color: #DAFB71;
+        }
+
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20%;
+            bottom: 20%;
+            width: 3px;
+            background: #DAFB71;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #DAFB71, #60A5FA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        input, select {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: white !important;
+        }
+
+        input:focus, select:focus {
+            border-color: rgba(218, 251, 113, 0.5) !important;
+            box-shadow: 0 0 15px rgba(218, 251, 113, 0.1) !important;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
     </style>
 </head>
-<body class="font-sans">
+<body class="overflow-hidden">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <aside class="sidebar w-64 text-white">
-            <div class="p-6">
-                <div class="flex items-center space-x-2 mb-8">
-                    <i class="fas fa-ticket-alt text-2xl"></i>
-                    <h1 class="text-xl font-bold">Admin Panel</h1>
+        <aside class="glass-sidebar w-72 flex flex-col z-20">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-10">
+                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center shadow-lg shadow-lime-400/20">
+                        <i class="fas fa-ticket-alt text-black text-xl"></i>
+                    </div>
+                    <span class="text-xl font-black tracking-tighter">TICKET<span class="text-lime-400">APP</span></span>
                 </div>
                 
                 <nav class="space-y-2">
-                    <a href="dashboard.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
-                        <i class="fas fa-tachometer-alt"></i>
+                    <a href="dashboard.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
+                        <i class="fas fa-grid-2 text-lg"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="events.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Eventos</span>
+                    <a href="events.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
+                        <i class="fas fa-calendar-alt text-lg"></i>
+                        <span>Gestionar Eventos</span>
                     </a>
-                    <a href="tickets.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white hover:bg-opacity-10 transition">
-                        <i class="fas fa-ticket-alt"></i>
-                        <span>Tickets</span>
+                    <a href="tickets.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
+                        <i class="fas fa-ticket-alt text-lg"></i>
+                        <span>Ventas & Tickets</span>
                     </a>
                     <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
-                    <a href="settings.php" class="flex items-center space-x-3 p-3 rounded-lg bg-white bg-opacity-10">
-                        <i class="fas fa-cog"></i>
+                    <a href="settings.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm whitespace-nowrap">
+                        <i class="fas fa-cog text-lg"></i>
                         <span>Configuración</span>
                     </a>
                     <?php endif; ?>
                 </nav>
             </div>
             
-            <!-- User Info -->
-            <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-600">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user"></i>
+            <div class="mt-auto p-6 border-t border-white/5">
+                <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
+                        <i class="fas fa-user-circle text-gray-400"></i>
                     </div>
-                    <div>
-                        <p class="font-semibold"><?php echo htmlspecialchars($_SESSION['admin_username']); ?></p>
-                        <p class="text-xs text-gray-300"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></p>
+                    <div class="flex-1 overflow-hidden">
+                        <p class="text-xs font-black truncate"><?php echo htmlspecialchars($_SESSION['admin_username']); ?></p>
+                        <p class="text-[10px] text-gray-500 truncate"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></p>
                     </div>
+                    <a href="logout.php" class="text-gray-500 hover:text-red-400 transition-colors p-2">
+                        <i class="fas fa-power-off"></i>
+                    </a>
                 </div>
-                <a href="logout.php" class="mt-4 flex items-center space-x-2 text-sm hover:text-gray-300 transition">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Cerrar sesión</span>
-                </a>
             </div>
         </aside>
         
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto">
+        <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative">
+            <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-lime-400/5 blur-[120px] rounded-full pointer-events-none"></div>
+
             <!-- Header -->
-            <header class="bg-white shadow-sm px-8 py-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold text-gray-800">Configuración del Sistema</h2>
+            <header class="sticky top-0 z-10 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5 px-8 h-20 flex items-center">
+                <div class="flex flex-1 justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-black tracking-tighter">Ajustes del <span class="text-gradient">Sistema</span></h2>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Configuración global y diagnóstico</p>
+                    </div>
                 </div>
             </header>
             
-            <!-- Content -->
-            <div class="p-8">
+            <div class="p-8 relative z-10">
                 <!-- Messages -->
                 <?php if ($message): ?>
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                        <div class="flex items-center">
-                            <i class="fas fa-check-circle mr-2"></i>
-                            <?php echo htmlspecialchars($message); ?>
-                        </div>
+                    <div class="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-6 py-4 rounded-2xl mb-8 flex items-center gap-3 animate-fade-in shadow-lg">
+                        <i class="fas fa-check-circle"></i>
+                        <span class="font-bold text-sm"><?php echo htmlspecialchars($message); ?></span>
                     </div>
                 <?php endif; ?>
                 
                 <?php if ($error): ?>
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                        <div class="flex items-center">
-                            <i class="fas fa-exclamation-circle mr-2"></i>
-                            <?php echo htmlspecialchars($error); ?>
-                        </div>
+                    <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-4 rounded-2xl mb-8 flex items-center gap-3 animate-fade-in shadow-lg">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span class="font-bold text-sm"><?php echo htmlspecialchars($error); ?></span>
                     </div>
                 <?php endif; ?>
-                
-                <!-- Configuration Form -->
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- General Settings -->
-                    <div class="card rounded-lg shadow-sm border">
-                        <div class="p-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                                <i class="fas fa-cog mr-2"></i>Configuración General
-                            </h3>
-                            
-                            <form method="POST">
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Nombre del Sitio</label>
-                                        <input type="text" name="site_name" required
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo htmlspecialchars($currentConfig['site_name']); ?>">
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Email del Administrador</label>
-                                        <input type="email" name="admin_email" required
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo htmlspecialchars($currentConfig['admin_email']); ?>">
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">URL del Sitio</label>
-                                        <input type="url" name="site_url" 
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo htmlspecialchars(SITE_URL); ?>"
-                                               readonly>
-                                        <p class="text-sm text-gray-500 mt-1">Este valor se configura en el archivo config.php</p>
-                                    </div>
+                    <!-- Configuration Form -->
+                    <div class="glass-card rounded-[2.5rem] p-10">
+                        <h3 class="text-xl font-black tracking-tighter mb-8 flex items-center gap-3">
+                            <i class="fas fa-sliders-h text-lime-400"></i>
+                            General & SMTP
+                        </h3>
+                        
+                        <form method="POST" class="space-y-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Nombre del Sitio</label>
+                                    <input type="text" name="site_name" required value="<?php echo htmlspecialchars($currentConfig['site_name']); ?>"
+                                           class="w-full px-6 py-4 rounded-2xl outline-none transition-all">
                                 </div>
-                                
-                                <!-- Email Settings -->
-                                <h4 class="text-md font-semibold text-gray-800 mt-6 mb-4">
-                                    <i class="fas fa-envelope mr-2"></i>Configuración de Email
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Email Administrador</label>
+                                    <input type="email" name="admin_email" required value="<?php echo htmlspecialchars($currentConfig['admin_email']); ?>"
+                                           class="w-full px-6 py-4 rounded-2xl outline-none transition-all">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">URL del Sitio</label>
+                                <input type="url" value="<?php echo htmlspecialchars(SITE_URL); ?>" readonly
+                                       class="w-full px-6 py-4 rounded-2xl outline-none transition-all opacity-50 cursor-not-allowed">
+                                <p class="text-[9px] text-gray-600 font-bold uppercase mt-1 italic">Editable solo en config.php</p>
+                            </div>
+
+                            <div class="pt-6 border-t border-white/5">
+                                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 flex items-center gap-2">
+                                    <i class="fas fa-envelope-open-text text-lime-400/50"></i>
+                                    CONFIGURACIÓN DE ENVÍO (SMTP)
                                 </h4>
                                 
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Servidor SMTP</label>
-                                        <input type="text" name="smtp_host" required
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo htmlspecialchars($currentConfig['smtp_host']); ?>">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                    <div class="md:col-span-3 space-y-2">
+                                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Servidor Host</label>
+                                        <input type="text" name="smtp_host" required value="<?php echo htmlspecialchars($currentConfig['smtp_host']); ?>"
+                                               class="w-full px-6 py-4 rounded-2xl outline-none transition-all">
                                     </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Puerto SMTP</label>
-                                        <input type="number" name="smtp_port" required
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo $currentConfig['smtp_port']; ?>">
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Usuario SMTP</label>
-                                        <input type="text" name="smtp_username" required
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo htmlspecialchars($currentConfig['smtp_username']); ?>">
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Contraseña SMTP</label>
-                                        <input type="password" name="smtp_password"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               placeholder="••••••••">
-                                        <p class="text-sm text-gray-500 mt-1">Deja en blanco para mantener la contraseña actual</p>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Email Remitente</label>
-                                        <input type="email" name="smtp_from_email" required
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo htmlspecialchars($currentConfig['smtp_from_email']); ?>">
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Nombre Remitente</label>
-                                        <input type="text" name="smtp_from_name" required
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800"
-                                               value="<?php echo htmlspecialchars($currentConfig['smtp_from_name']); ?>">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Puerto</label>
+                                        <input type="number" name="smtp_port" required value="<?php echo $currentConfig['smtp_port']; ?>"
+                                               class="w-full px-6 py-4 rounded-2xl outline-none transition-all text-center">
                                     </div>
                                 </div>
-                                
-                                <div class="mt-6">
-                                    <button type="submit" class="btn-primary text-white px-6 py-2 rounded-lg hover:opacity-90 transition">
-                                        <i class="fas fa-save mr-2"></i>Guardar Cambios
-                                    </button>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Usuario</label>
+                                        <input type="text" name="smtp_username" required value="<?php echo htmlspecialchars($currentConfig['smtp_username']); ?>"
+                                               class="w-full px-6 py-4 rounded-2xl outline-none transition-all">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Contraseña</label>
+                                        <input type="password" name="smtp_password" placeholder="••••••••"
+                                               class="w-full px-6 py-4 rounded-2xl outline-none transition-all">
+                                    </div>
                                 </div>
-                            </form>
-                        </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Email Remitente</label>
+                                        <input type="email" name="smtp_from_email" required value="<?php echo htmlspecialchars($currentConfig['smtp_from_email']); ?>"
+                                               class="w-full px-6 py-4 rounded-2xl outline-none transition-all">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Nombre Remitente</label>
+                                        <input type="text" name="smtp_from_name" required value="<?php echo htmlspecialchars($currentConfig['smtp_from_name']); ?>"
+                                               class="w-full px-6 py-4 rounded-2xl outline-none transition-all">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full py-5 bg-lime-400 text-black rounded-[1.5rem] font-black text-xs hover:shadow-[0_0_30px_rgba(218,251,113,0.3)] transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-save"></i>
+                                GUARDAR TODA LA CONFIGURACIÓN
+                            </button>
+                        </form>
                     </div>
-                    
-                    <!-- System Information -->
-                    <div class="space-y-6">
-                        <!-- System Info -->
-                        <div class="card rounded-lg shadow-sm border">
-                            <div class="p-6">
-                                <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-info-circle mr-2"></i>Información del Sistema
-                                </h3>
-                                
-                                <div class="space-y-3">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Versión PHP:</span>
-                                        <span class="font-medium"><?php echo PHP_VERSION; ?></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Servidor Web:</span>
-                                        <span class="font-medium"><?php echo $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown'; ?></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Base de Datos:</span>
-                                        <span class="font-medium">MySQL</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Zona Horaria:</span>
-                                        <span class="font-medium"><?php echo date_default_timezone_get(); ?></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Memoria Límite:</span>
-                                        <span class="font-medium"><?php echo ini_get('memory_limit'); ?></span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Upload Max Filesize:</span>
-                                        <span class="font-medium"><?php echo ini_get('upload_max_filesize'); ?></span>
-                                    </div>
+
+                    <!-- Side Info Panels -->
+                    <div class="space-y-8">
+                        <!-- Diagnostics -->
+                        <div class="glass-card rounded-[2.5rem] p-10">
+                            <h3 class="text-xl font-black tracking-tighter mb-8 flex items-center gap-3">
+                                <i class="fas fa-vial text-lime-400"></i>
+                                Diagnóstico
+                            </h3>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white/5 rounded-2xl p-6 border border-white/5">
+                                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">PHP Version</p>
+                                    <p class="text-lg font-black text-lime-400 tracking-tighter"><?php echo PHP_VERSION; ?></p>
+                                </div>
+                                <div class="bg-white/5 rounded-2xl p-6 border border-white/5">
+                                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">DB Engine</p>
+                                    <p class="text-lg font-black text-white tracking-tighter">MySQL 8.0+</p>
+                                </div>
+                                <div class="bg-white/5 rounded-2xl p-6 border border-white/5">
+                                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Max Upload</p>
+                                    <p class="text-lg font-black text-white tracking-tighter"><?php echo ini_get('upload_max_filesize'); ?></p>
+                                </div>
+                                <div class="bg-white/5 rounded-2xl p-6 border border-white/5">
+                                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Memory Limit</p>
+                                    <p class="text-lg font-black text-white tracking-tighter"><?php echo ini_get('memory_limit'); ?></p>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Quick Actions -->
-                        <div class="card rounded-lg shadow-sm border">
-                            <div class="p-6">
-                                <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-tools mr-2"></i>Acciones Rápidas
-                                </h3>
+
+                            <div class="mt-8 space-y-4">
+                                <a href="?action=test_email" class="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-blue-400/10 flex items-center justify-center text-blue-400">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-black">TEST ENVÍO EMAIL</p>
+                                            <p class="text-[10px] text-gray-500 font-bold italic">Envía correo de prueba</p>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-gray-700 group-hover:text-white transition-colors"></i>
+                                </a>
                                 
-                                <div class="space-y-3">
-                                    <a href="?action=clear_cache" class="block w-full text-left px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                        <i class="fas fa-trash-alt mr-2 text-gray-600"></i>
-                                        Limpiar Caché
-                                    </a>
-                                    
-                                    <a href="?action=test_email" class="block w-full text-left px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                        <i class="fas fa-envelope mr-2 text-gray-600"></i>
-                                        Probar Configuración Email
-                                    </a>
-                                    
-                                    <a href="?action=backup_db" class="block w-full text-left px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                        <i class="fas fa-download mr-2 text-gray-600"></i>
-                                        Respaldar Base de Datos
-                                    </a>
-                                    
-                                    <a href="../" target="_blank" class="block w-full text-left px-4 py-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition">
-                                        <i class="fas fa-external-link-alt mr-2"></i>
-                                        Ver Sitio Público
-                                    </a>
-                                </div>
+                                <a href="?action=clear_cache" class="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-orange-400/10 flex items-center justify-center text-orange-400">
+                                            <i class="fas fa-broom"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-black">LIMPIAR CACHÉ</p>
+                                            <p class="text-[10px] text-gray-500 font-bold italic">Purga archivos temporales</p>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-gray-700 group-hover:text-white transition-colors"></i>
+                                </a>
+
+                                <a href="?action=backup_db" class="flex items-center justify-between p-5 rounded-2xl bg-lime-400/5 border border-lime-400/10 hover:bg-lime-400/10 transition-all group">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center text-lime-400">
+                                            <i class="fas fa-database"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-black">BACKUP DB</p>
+                                            <p class="text-[10px] text-gray-500 font-bold italic">Descarga copia de seguridad</p>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-download text-lime-400 tracking-tighter"></i>
+                                </a>
                             </div>
                         </div>
-                        
-                        <!-- Security Notes -->
-                        <div class="card rounded-lg shadow-sm border border-yellow-200 bg-yellow-50">
-                            <div class="p-6">
-                                <h3 class="text-lg font-semibold text-yellow-800 mb-4">
-                                    <i class="fas fa-shield-alt mr-2"></i>Notas de Seguridad
-                                </h3>
-                                
-                                <ul class="space-y-2 text-sm text-yellow-700">
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle mr-2 mt-1 text-yellow-600"></i>
-                                        <span>Las credenciales están protegidas por .gitignore</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-exclamation-triangle mr-2 mt-1 text-yellow-600"></i>
-                                        <span>Cambia la contraseña del administrador por defecto</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-check-circle mr-2 mt-1 text-yellow-600"></i>
-                                        <span>Los inputs están validados contra XSS y SQL Injection</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fas fa-info-circle mr-2 mt-1 text-yellow-600"></i>
-                                        <span>Usa HTTPS en producción</span>
-                                    </li>
-                                </ul>
-                            </div>
+
+                        <!-- Info Card -->
+                        <div class="glass-card rounded-[2.5rem] p-10 bg-lime-400/[0.02]">
+                            <h3 class="text-lg font-black tracking-tighter mb-4 text-lime-400/80 italic">Aviso de Seguridad</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-start gap-4">
+                                    <div class="mt-1 w-5 h-5 rounded-full bg-lime-400/10 flex items-center justify-center text-[8px] text-lime-400 font-bold border border-lime-400/20">01</div>
+                                    <p class="text-xs text-gray-400 leading-relaxed">Los cambios SMTP afectan a la recuperación de contraseñas y envío de tickets.</p>
+                                </li>
+                                <li class="flex items-start gap-4">
+                                    <div class="mt-1 w-5 h-5 rounded-full bg-lime-400/10 flex items-center justify-center text-[8px] text-lime-400 font-bold border border-lime-400/20">02</div>
+                                    <p class="text-xs text-gray-400 leading-relaxed">Asegúrate de que el servidor SMTP permita conexiones desde esta IP.</p>
+                                </li>
+                                <li class="flex items-start gap-4">
+                                    <div class="mt-1 w-5 h-5 rounded-full bg-lime-400/10 flex items-center justify-center text-[8px] text-lime-400 font-bold border border-lime-400/20">03</div>
+                                    <p class="text-xs text-gray-400 leading-relaxed">Usa exclusivamente SSL/TLS para entornos de producción seguros.</p>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>

@@ -39,136 +39,150 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Tickets</title>
+    <title>Admin Login - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --color-gray-light: #d9d9d9;
-            --color-gray-dark: #363c40;
-            --color-gray-medium: #babebf;
-            --color-gray-muted: #848b8c;
-            --color-black: #202426;
-        }
-        
         body { 
-            background-color: var(--color-gray-light);
+            background-color: #0A0E14;
+            color: white;
+            font-family: 'Outfit', sans-serif;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+            position: relative;
         }
-        
-        .login-container {
-            background: white;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+
+        .bg-accent {
+            position: absolute;
+            width: 40vw;
+            height: 40vw;
+            background: radial-gradient(circle, rgba(218, 251, 113, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
         }
-        
-        .btn-primary { 
-            background-color: var(--color-gray-dark); 
-            transition: background-color 0.3s ease;
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-        
-        .btn-primary:hover { 
-            background-color: var(--color-black); 
+
+        .text-gradient {
+            background: linear-gradient(to right, #DAFB71, #60A5FA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        input {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: white !important;
+        }
+
+        input:focus {
+            border-color: rgba(218, 251, 113, 0.5) !important;
+            box-shadow: 0 0 15px rgba(218, 251, 113, 0.1) !important;
         }
     </style>
 </head>
 <body>
-    <div class="login-container rounded-lg p-8 w-full max-w-md">
+    <div class="bg-accent top-[-10%] left-[-10%]"></div>
+    <div class="bg-accent bottom-[-10%] right-[-10%]"></div>
+
+    <div class="glass-card rounded-[2.5rem] p-10 w-full max-w-md relative z-10 animate-fade-in">
         <!-- Logo y Título -->
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full mb-4">
-                <i class="fas fa-user-shield text-white text-2xl"></i>
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-lime-400 rounded-3xl mb-6 shadow-lg shadow-lime-400/20">
+                <i class="fas fa-ticket-alt text-black text-3xl"></i>
             </div>
-            <h1 class="text-2xl font-bold text-gray-800">Panel de Administración</h1>
-            <p class="text-gray-600 mt-2">Tickets System</p>
+            <h1 class="text-3xl font-black text-white tracking-tighter">Panel <span class="text-gradient">Admin</span></h1>
+            <p class="text-gray-500 mt-2 font-medium uppercase tracking-widest text-[10px]">Acceso Restringido</p>
         </div>
         
         <!-- Formulario de Login -->
-        <form method="POST" action="">
+        <form method="POST" action="" class="space-y-6">
             <?php if ($error): ?>
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                    <div class="flex items-center">
-                        <i class="fas fa-exclamation-circle mr-2"></i>
-                        <?php echo htmlspecialchars($error); ?>
-                    </div>
+                <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-5 py-4 rounded-2xl text-sm flex items-center gap-3">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?php echo htmlspecialchars($error); ?>
                 </div>
             <?php endif; ?>
             
-            <div class="mb-6">
-                <label class="block text-gray-700 font-semibold mb-2">
-                    <i class="fas fa-user mr-2"></i>Usuario
+            <div class="space-y-2">
+                <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                    Usuario
                 </label>
-                <input type="text" name="username" required
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800 transition"
-                       placeholder="Ingresa tu usuario"
-                       value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
+                <div class="relative group">
+                    <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-lime-400 transition-colors"></i>
+                    <input type="text" name="username" required
+                           class="w-full pl-12 pr-4 py-4 rounded-2xl outline-none focus:border-lime-400/50 transition-all placeholder:text-gray-600"
+                           placeholder="Tu usuario"
+                           value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
+                </div>
             </div>
             
-            <div class="mb-6">
-                <label class="block text-gray-700 font-semibold mb-2">
-                    <i class="fas fa-lock mr-2"></i>Contraseña
+            <div class="space-y-2">
+                <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                    Contraseña
                 </label>
-                <input type="password" name="password" required
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-800 transition"
-                       placeholder="Ingresa tu contraseña">
+                <div class="relative group">
+                    <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-lime-400 transition-colors"></i>
+                    <input type="password" name="password" required
+                           class="w-full pl-12 pr-4 py-4 rounded-2xl outline-none focus:border-lime-400/50 transition-all placeholder:text-gray-600"
+                           placeholder="••••••••">
+                </div>
             </div>
             
-            <div class="mb-6">
-                <label class="flex items-center">
-                    <input type="checkbox" class="mr-2">
-                    <span class="text-sm text-gray-600">Recordar sesión</span>
+            <div class="flex items-center justify-between px-1">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" class="w-4 h-4 rounded border-gray-700 bg-gray-800 text-lime-400 focus:ring-lime-400/20">
+                    <span class="text-xs text-gray-500 group-hover:text-gray-400 transition">Recordar</span>
                 </label>
+                <a href="#" class="text-xs text-lime-400/70 hover:text-lime-400 transition">¿Olvidaste tu clave?</a>
             </div>
             
-            <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
-                <i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión
+            <button type="submit" class="w-full bg-lime-400 text-black py-4 rounded-2xl font-black text-lg hover:shadow-[0_0_30px_rgba(218,251,113,0.3)] transition-all flex items-center justify-center gap-2 group mt-4">
+                Entrar
+                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
             </button>
         </form>
         
         <!-- Enlace a Registro -->
-        <div class="mt-6 text-center">
-            <p class="text-sm text-gray-600 mb-2">¿Eres organizador y no tienes cuenta?</p>
-            <a href="register.php" class="text-blue-600 font-semibold hover:text-blue-800 transition">
-                <i class="fas fa-user-plus mr-1"></i>Regístrate aquí
+        <div class="mt-10 text-center border-t border-white/5 pt-8">
+            <p class="text-xs text-gray-500 mb-4">¿Deseas organizar un evento?</p>
+            <a href="register.php" class="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-white hover:bg-white/10 transition">
+                <i class="fas fa-user-plus text-[10px]"></i>
+                Crear cuenta de Organizador
             </a>
         </div>
         
-        <!-- Información de ayuda -->
-        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 class="font-semibold text-gray-700 mb-2">¿Necesitas ayuda?</h4>
-            <p class="text-sm text-gray-600 mb-2">
-                Contacta al administrador del sistema para obtener acceso.
-            </p>
-            <p class="text-xs text-gray-500">
-                Usuario por defecto: <code>admin</code><br>
-                Contraseña por defecto: <code>admin123</code>
-            </p>
-        </div>
-        
-        <div class="mt-6 text-center">
-            <a href="../" class="text-sm text-gray-600 hover:text-gray-800 transition">
-                <i class="fas fa-arrow-left mr-1"></i>Volver al sitio
+        <div class="mt-8 text-center pt-2">
+            <a href="../" class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition text-xs font-bold uppercase tracking-widest">
+                <i class="fas fa-arrow-left text-[10px]"></i>
+                Volver al sitio
             </a>
         </div>
     </div>
-    
+
     <script>
-        // Enfocar en el primer campo
-        document.addEventListener('DOMContentLoaded', function() {
-            const usernameField = document.querySelector('input[name="username"]');
-            if (usernameField && !usernameField.value) {
-                usernameField.focus();
-            } else {
-                const passwordField = document.querySelector('input[name="password"]');
-                if (passwordField) {
-                    passwordField.focus();
-                }
-            }
-        });
+        // Simple entry animation
+        document.querySelector('.animate-fade-in').style.opacity = '0';
+        document.querySelector('.animate-fade-in').style.transform = 'translateY(20px)';
         
-        // Prevenir envío múltiple
+        window.addEventListener('load', () => {
+            const el = document.querySelector('.animate-fade-in');
+            el.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        });
+
+        // Form handling
         let formSubmitted = false;
         document.querySelector('form').addEventListener('submit', function(e) {
             if (formSubmitted) {
@@ -177,10 +191,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             formSubmitted = true;
             
-            // Deshabilitar botón
             const submitBtn = document.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Iniciando sesión...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Verificando...';
         });
     </script>
 </body>
