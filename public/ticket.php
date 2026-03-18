@@ -67,12 +67,13 @@ if (!isset($ticket['image_url'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { 
+            background: #0A0E14;
             background: linear-gradient(180deg, #0A0E14 0%, #171E26 100%);
             min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            flex-direction: column;
+            padding: 0;
+            margin: 0;
         }
         .status-badge {
             position: absolute;
@@ -90,6 +91,18 @@ if (!isset($ticket['image_url'])) {
         .status-valid { background: #DAFB71; color: #000; }
         .status-used { background: #EE3D5A; color: #fff; }
         .status-cancelled { background: #666; color: #fff; }
+        
+        .ticket-container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 640px) {
+            .ticket-container {
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -129,7 +142,7 @@ if (!isset($ticket['image_url'])) {
 
 <?php if ($isAdmin): ?>
     <!-- Admin Toolbar -->
-    <div class="fixed top-24 left-0 right-0 z-40 px-4 no-print flex justify-center">
+    <div class="sticky top-20 left-0 right-0 z-40 px-4 py-4 no-print flex justify-center bg-[#0A0E14]/50 backdrop-blur-md border-b border-white/5">
         <div class="bg-gray-900/90 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6">
             <div class="flex items-center gap-2">
                 <div class="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
@@ -152,29 +165,29 @@ if (!isset($ticket['image_url'])) {
     </div>
 <?php endif; ?>
 
-    <div class="w-full flex-1 flex flex-col items-center justify-center py-12 min-h-[70vh]">
-        <?php if ($validationSuccess): ?>
-            <div class="w-full max-w-lg mb-6 animate-bounce">
-                <div class="bg-lime-400 text-black px-6 py-4 rounded-2xl flex items-center justify-center gap-3 shadow-2xl shadow-lime-400/30">
-                    <i class="fas fa-check-double text-2xl"></i>
-                    <span class="font-black uppercase tracking-tight text-lg">¡Ticket Validado con Éxito!</span>
+    <div class="w-full flex-1 flex flex-col items-center justify-center py-12 px-4">
+        <div class="ticket-container">
+            <?php if ($validationSuccess): ?>
+                <div class="mb-6 animate-bounce">
+                    <div class="bg-lime-400 text-black px-6 py-4 rounded-2xl flex items-center justify-center gap-3 shadow-2xl shadow-lime-400/30">
+                        <i class="fas fa-check-double text-2xl"></i>
+                        <span class="font-black uppercase tracking-tight text-lg">¡Ticket Validado!</span>
+                    </div>
                 </div>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
 
-        <?php if ($errorMsg): ?>
-            <div class="w-full max-w-lg mb-6">
-                <div class="bg-red-500 text-white px-6 py-4 rounded-2xl flex items-center justify-center gap-3 shadow-2xl">
-                    <i class="fas fa-exclamation-triangle text-2xl"></i>
-                    <span class="font-black uppercase tracking-tight text-lg"><?php echo $errorMsg; ?></span>
+            <?php if ($errorMsg): ?>
+                <div class="mb-6">
+                    <div class="bg-red-500 text-white px-6 py-4 rounded-2xl flex items-center justify-center gap-3 shadow-2xl">
+                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+                        <span class="font-black uppercase tracking-tight text-lg"><?php echo $errorMsg; ?></span>
+                    </div>
                 </div>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
 
-            <div class="w-full max-w-lg">
-                <!-- Ticket Card Container -->
-                <div class="bg-white/5 border border-white/10 p-1.5 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl">
-                    <div class="ticket-main-card shadow-2xl relative">
+            <!-- Ticket Card Container -->
+            <div class="bg-white/5 border border-white/10 p-1.5 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl">
+                <div class="ticket-main-card shadow-2xl relative">
             <!-- Status Badge -->
             <div class="status-badge status-<?php echo $ticket['status']; ?>">
                 <?php 
