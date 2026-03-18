@@ -147,37 +147,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function generateEmailBody($event, $tickets, $name, $totalPrice) {
-    $date = formatDate($event['date_event'], 'd/m/Y H:i');
+    $date = formatDate($event['date_event'], 'd M, Y');
     $quantity = count($tickets);
     $price = formatCurrency($totalPrice);
+    $siteUrl = SITE_URL;
+    $accentColor = '#DAFB71'; // Lime
+    $bgDark = '#0A0E14';
+    $bgCard = '#171E26';
     
+    $ticketsHtml = '';
+    foreach ($tickets as $t) {
+        $ticketsHtml .= "
+        <div style='background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 10px;'>
+            <div style='color: #888; font-size: 10px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;'>Asistente</div>
+            <div style='color: #fff; font-size: 14px; font-weight: bold;'>{$t['name']}</div>
+            <div style='color: #555; font-size: 10px; font-family: monospace; margin-top: 5px;'>CÓDIGO: {$t['code']}</div>
+        </div>";
+    }
+
     $body = "
-    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; color: #333;'>
-        <div style='text-align: center; margin-bottom: 30px;'>
-            <h1 style='color: #202426; margin-bottom: 5px;'>¡Hola, $name!</h1>
-            <p style='font-size: 16px; color: #666; margin-top: 0;'>Aquí tienes tus tickets para tu próximo evento.</p>
-        </div>
-        
-        <div style='background-color: #f9f9f9; padding: 25px; border-radius: 10px; margin-bottom: 30px;'>
-            <h2 style='margin-top: 0; color: #202426; border-bottom: 2px solid #ebcf94; padding-bottom: 10px; display: inline-block;'>{$event['title']}</h2>
-            <div style='margin-top: 15px;'>
-                <p><strong>📅 Fecha:</strong> $date</p>
-                <p><strong>📍 Lugar:</strong> {$event['location']}</p>
-                <p><strong>🎟️ Cantidad:</strong> $quantity ticket(s)</p>
-                <p><strong>💰 Total pagado:</strong> $price</p>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='utf-8'>
+        <style>
+            body { margin: 0; padding: 0; background-color: $bgDark; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+            .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+            .card { background-color: $bgCard; border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+            .header { padding: 40px; text-align: center; background: linear-gradient(180deg, rgba(218,251,113,0.1) 0%, transparent 100%); }
+            .content { padding: 0 40px 40px; }
+            .title { color: #fff; font-size: 28px; font-weight: 800; margin-bottom: 10px; tracking-tighter: -1px; }
+            .subtitle { color: #888; font-size: 16px; margin-bottom: 30px; }
+            .event-info { background: rgba(255,255,255,0.02); border-radius: 20px; padding: 25px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05); }
+            .label { color: $accentColor; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+            .value { color: #fff; font-size: 16px; font-weight: bold; margin-bottom: 15px; }
+            .footer { padding: 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+            .btn { display: inline-block; background-color: $accentColor; color: #000; padding: 15px 30px; border-radius: 100px; font-weight: bold; text-decoration: none; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='card'>
+                <div class='header'>
+                    <div style='font-size: 40px; margin-bottom: 20px;'>🎉</div>
+                    <div class='title'>¡Tus entradas están listas!</div>
+                    <div class='subtitle'>Hola $name, prepárate para una gran experiencia.</div>
+                </div>
+                
+                <div class='content'>
+                    <div class='event-info'>
+                        <div class='label' style='color: #DAFB71;'>Evento</div>
+                        <div class='value' style='font-size: 22px; color: #DAFB71;'>{$event['title']}</div>
+                        
+                        <table width='100%' cellpadding='0' cellspacing='0'>
+                            <tr>
+                                <td width='50%' style='vertical-align: top;'>
+                                    <div class='label'>Fecha</div>
+                                    <div class='value'>$date</div>
+                                </td>
+                                <td width='50%' style='vertical-align: top;'>
+                                    <div class='label'>Lugar</div>
+                                    <div class='value'>{$event['location']}</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td width='50%' style='vertical-align: top;'>
+                                    <div class='label'>Total Pagado</div>
+                                    <div class='value' style='font-size: 20px;'>$price</div>
+                                </td>
+                                <td width='50%' style='vertical-align: top;'>
+                                    <div class='label'>Entradas</div>
+                                    <div class='value'>$quantity</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div style='margin-bottom: 30px;'>
+                        <div class='label' style='margin-bottom: 15px;'>Tus Entradas</div>
+                        $ticketsHtml
+                    </div>
+
+                    <div style='text-align: center;'>
+                        <p style='color: #666; font-size: 13px;'>Hemos adjuntado tus entradas en formato PDF a este correo.</p>
+                        <a href='$siteUrl' class='btn'>Visitar TicketApp</a>
+                    </div>
+                </div>
+                
+                <div class='footer'>
+                    &copy; " . date('Y') . " TicketApp. Todos los derechos reservados.
+                </div>
             </div>
         </div>
-        
-        <div style='text-align: center; padding: 20px; background-color: #ebcf94; border-radius: 8px; color: #202426;'>
-            <p style='margin: 0; font-weight: bold; font-size: 18px;'>📄 Tus tickets están adjuntos en formato PDF</p>
-            <p style='margin: 10px 0 0 0; font-size: 14px;'>Por favor, descarga el archivo adjunto y preséntalo en la entrada.</p>
-        </div>
-        
-        <div style='margin-top: 40px; text-align: center; font-size: 12px; color: #999;'>
-            <p>Este es un correo automático, por favor no respondas a este mensaje.</p>
-            <p>&copy; " . date('Y') . " Tickets - En Su Presencia</p>
-        </div>
-    </div>";
+    </body>
+    </html>";
     
     return $body;
 }

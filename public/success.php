@@ -90,20 +90,22 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <!-- Success Status -->
-        <div class="flex items-center gap-6 mb-12 py-8 bg-lime-400/5 border border-lime-400/10 rounded-3xl px-8">
-            <div class="h-16 w-16 bg-lime-400 rounded-2xl flex items-center justify-center text-black shadow-lg shadow-lime-400/20 flex-shrink-0">
-                <i class="fas fa-check text-3xl"></i>
+        <div class="flex flex-col md:flex-row items-center gap-8 mb-12 py-10 bg-lime-400/5 border border-lime-400/10 rounded-[2.5rem] px-10 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-lime-400/10 blur-[100px] -mr-32 -mt-32"></div>
+            <div class="h-20 w-20 bg-lime-400 rounded-3xl flex items-center justify-center text-black shadow-2xl shadow-lime-400/30 flex-shrink-0 animate-bounce">
+                <i class="fas fa-check text-4xl"></i>
             </div>
-            <div>
-                <h2 class="text-3xl font-black text-white mb-1">¡Compra Completada!</h2>
-                <p class="text-gray-400 font-medium">Tus tickets están listos y han sido enviados por correo.</p>
+            <div class="text-center md:text-left">
+                <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Compra Completada!</h2>
+                <p class="text-gray-400 font-medium text-lg">Tus tickets están listos. Hemos enviado un correo a <span class="text-white"><?php echo htmlspecialchars($purchase['email']); ?></span></p>
             </div>
-        </div>
-
-        <!-- Notification -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold mb-2">¡Todo listo!</h1>
-            <p class="text-gray-400 text-sm">Tus tickets han sido enviados a <span class="text-white font-medium"><?php echo htmlspecialchars($purchase['email']); ?></span></p>
+            <div class="md:ml-auto flex flex-col items-center gap-2">
+                 <div id="whatsappStatus" class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-gray-400">
+                    <div class="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
+                    Enviando por WhatsApp...
+                 </div>
+                 <button onclick="shareOnWhatsApp()" class="text-[10px] text-lime-400 uppercase font-black tracking-widest hover:underline">¿No se abrió? Reenviar</button>
+            </div>
         </div>
 
         <?php if ($emailError): ?>
@@ -113,12 +115,14 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
         <?php endif; ?>
 
         <!-- Tickets Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-12">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             <?php foreach ($purchase['tickets'] as $index => $ticket): ?>
                 <div class="ticket-main-card shadow-2xl animate-ticket">
                     <!-- Top Section: Image -->
                     <?php if ($imgUrl): ?>
-                        <img src="<?php echo $imgUrl; ?>" class="ticket-image" alt="">
+                        <div class="p-2">
+                             <img src="<?php echo $imgUrl; ?>" class="ticket-image rounded-2xl shadow-lg" alt="">
+                        </div>
                     <?php else: ?>
                         <div class="ticket-image bg-gray-200 flex items-center justify-center text-gray-400">
                              <i class="fas fa-ticket-alt text-5xl"></i>
@@ -126,7 +130,7 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                     <?php endif; ?>
 
                     <div class="ticket-content">
-                        <h3 class="text-2xl font-bold text-center mb-6"><?php echo htmlspecialchars($purchase['event_title']); ?></h3>
+                        <h3 class="text-2xl font-bold text-center mb-6 leading-tight"><?php echo htmlspecialchars($purchase['event_title']); ?></h3>
                         
                         <div class="grid grid-cols-2 gap-y-6 gap-x-4 mb-2">
                             <div>
@@ -135,7 +139,7 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                             </div>
                             <div class="text-right">
                                 <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">HORA</p>
-                                <p class="text-sm font-bold text-gray-800">19:30 PM</p> <!-- Mocking time if not in schema -->
+                                <p class="text-sm font-bold text-gray-800">19:30 PM</p>
                             </div>
                             <div>
                                 <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">LUGAR</p>
@@ -150,29 +154,29 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                         <div class="ticket-divider"></div>
 
                         <div class="flex flex-col items-center">
-                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-4">NOMBRE ASISTENTE</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-4">ASISTENTE</p>
                             <p class="text-lg font-bold text-gray-900 mb-6"><?php echo htmlspecialchars($ticket['name']); ?></p>
                             
                             <!-- QR Visual -->
-                            <div class="p-2 border-2 border-dashed border-gray-200 rounded-2xl mb-4">
+                            <div class="p-2 border-2 border-dashed border-gray-200 rounded-2xl mb-4 bg-white">
                                 <?php 
                                 $qrWebPath = SITE_URL . '/qrcodes/' . basename($ticket['qr_path']);
                                 ?>
-                                <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-32 h-32 grayscale contrast-125">
+                                <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-32 h-32 contrast-125">
                             </div>
                             <p class="text-xs font-mono text-gray-400 tracking-tighter uppercase"><?php echo $ticket['code']; ?></p>
                         </div>
                     </div>
 
                     <!-- Action Floating Bar -->
-                    <div class="flex gap-2 justify-center pb-6">
+                    <div class="flex flex-col gap-2 p-6 pt-0">
                         <button onclick="shareIndividualTicket('<?php echo $ticket['code']; ?>', '<?php echo htmlspecialchars($purchase['event_title']); ?>')" 
-                                class="glass-pill px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 border-none hover:bg-lime-400 hover:text-black transition">
-                            <i class="fab fa-whatsapp mr-1"></i> Enviar
+                                class="btn-modern btn-lime w-full text-xs py-3">
+                            <i class="fab fa-whatsapp mr-2"></i> Compartir Ticket
                         </button>
                         <a href="ticket.php?code=<?php echo $ticket['code']; ?>" target="_blank"
-                           class="glass-pill px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 border-none hover:bg-blue-500 hover:text-white transition">
-                            <i class="fas fa-external-link-alt mr-1"></i> Ver
+                           class="btn-modern bg-gray-100 text-gray-800 w-full text-xs py-3">
+                            <i class="fas fa-external-link-alt mr-2"></i> Ver Ticket Online
                         </a>
                     </div>
                 </div>
@@ -207,6 +211,11 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                           `Puedes ver tu entrada principal aquí:\n${ticketUrl}\n\n` +
                           `¡Gracias por tu compra! 🎪`;
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+            
+            const statusDiv = document.getElementById('whatsappStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = '<i class="fas fa-check text-lime-400 mr-2"></i> Enviado correctamente';
+            }
         }
 
         function shareIndividualTicket(code, eventTitle) {
@@ -217,6 +226,13 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                           `Presenta el QR al llegar:\n${ticketUrl}`;
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
         }
+
+        // Auto-trigger WhatsApp after 2 seconds
+        document.addEventListener('DOMContentLoaded', () => {
+             setTimeout(() => {
+                 shareOnWhatsApp();
+             }, 2000);
+        });
     </script>
 
     <style>
