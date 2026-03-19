@@ -230,4 +230,81 @@ function uploadImage($file, $destination) {
     
     return false;
 }
+
+// Completar la compra (crear tickets, descontar stock, enviar email)
+function completePurchase($data, $db) {
+    $eventId = $data['event_id'];
+    $ticketTypeId = $data['ticket_type_id'];
+    $quantity = $data['quantity'];
+    $attendees = $data['attendees'];
+    $phone = $data['phone'];
+    $totalPrice = $data['total_price'];
+    
+    $event = $db->getEventById($eventId);
+    if (!$event) throw new Exception("Evento no encontrado");
+    
+    $ticketTypeName = '';
+    if ($ticketTypeId) {
+        $tt = $db->getTicketTypeById($ticketTypeId);
+        $ticketTypeName = $tt['name'] ?? '';
+    }
+
+    $pdo = $db->getPdo();
+    $pdo->beginTransaction();
+    
+    try {
+        $primary_email = cleanInput($attendees[0]['email']);
+        $primary_name = cleanInput($attendees[0]['name']) . ' ' . cleanInput($attendees[0]['surname']);
+        $tickets = [];
+
+        foreach ($attendees as $attendee) {
+            $a_name = cleanInput($attendee['name']) . ' ' . cleanInput($attendee['surname']);
+            $a_email = cleanInput($attendee['email']);
+            
+            $ticketCode = generateTicketCode();
+            $qrFilename = $ticketCode;
+            $qrData = SITE_URL . "/ticket.php?code=" . $ticketCode;
+            $qrPath = generateQRCode($qrData, $qrFilename);
+            
+            $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId);
+            $tickets[] = [
+                'code' => $ticketCode,
+                'qr_path' => $qrPath,
+                'name' => $a_name,
+                'email' => $a_email,
+                'type_name' => $ticketTypeName
+            ];
+        }
+        
+        $db->updateAvailableTickets($eventId, $quantity);
+        if ($ticketTypeId) {
+            $db->updateAvailableTicketType($ticketTypeId, $quantity);
+        }
+        
+        $pdo->commit();
+        
+        // Enviar email
+        $subject = "Tus tickets para " . $event['title'];
+        $emailBody = generateEmailBody($event, $tickets, $primary_name, $totalPrice);
+        $pdfPath = generateTicketPDF($event, $tickets, $totalPrice);
+        
+        try {
+            sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
+        } catch (Exception $mailEx) {
+            $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
+        }
+        
+        return [
+            'event_id' => $eventId,
+            'event_title' => $event['title'],
+            'tickets' => $tickets,
+            'total_price' => $totalPrice,
+            'email' => $primary_email,
+            'phone' => $phone
+        ];
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
 ?>

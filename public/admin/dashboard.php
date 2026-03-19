@@ -116,6 +116,10 @@ $stats = [
                         <i class="fas fa-ticket-alt text-lg"></i>
                         <span>Ventas & Tickets</span>
                     </a>
+                    <a href="payment_settings.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5 whitespace-nowrap">
+                        <i class="fas fa-wallet text-lg"></i>
+                        <span>Métodos de Pago</span>
+                    </a>
                     <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
                     <a href="settings.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5 whitespace-nowrap">
                         <i class="fas fa-cog text-lg"></i>

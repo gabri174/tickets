@@ -3,6 +3,8 @@ session_start();
 require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
+require_once '../includes/classes/PaymentGateway.php';
+require_once '../includes/classes/FinassetsGateway.php';
 
 $db = new Database();
 
@@ -77,69 +79,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
             $totalPrice = $unitPrice * $quantity;
-            $paymentSuccess = true; // Simulación de pago
-        
         try {
             $pdo = $db->getPdo();
-            $pdo->beginTransaction();
             
-            $primary_email = cleanInput($attendees[0]['email']); // Usamos el primer email como principal para el envío
-            $primary_name = cleanInput($attendees[0]['name']) . ' ' . cleanInput($attendees[0]['surname']);
+            // Obtener configuración de pago del organizador
+            $stmt = $pdo->prepare("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?");
+            $stmt->execute([$event['admin_id']]);
+            $admin = $stmt->fetch();
+            
+            $paymentMethod = $admin['preferred_payment_method'] ?? 'none';
+            $paymentConfig = json_decode($admin['payment_config'] ?? '{}', true);
 
-            foreach ($attendees as $attendee) {
-                $a_name = cleanInput($attendee['name']) . ' ' . cleanInput($attendee['surname']);
-                $a_email = cleanInput($attendee['email']);
+            // Si el precio es 0, omitimos el pago
+            if ($totalPrice <= 0) {
+                $paymentMethod = 'none';
+            }
+
+            if ($paymentMethod === 'none') {
+                $result = completePurchase([
+                    'event_id' => $eventId,
+                    'ticket_type_id' => $ticketTypeId,
+                    'quantity' => $quantity,
+                    'attendees' => $attendees,
+                    'phone' => $phone,
+                    'total_price' => $totalPrice
+                ], $db);
                 
-                $ticketCode = generateTicketCode();
-                $qrFilename = $ticketCode;
-                $qrData = SITE_URL . "/ticket.php?code=" . $ticketCode;
-                $qrPath = generateQRCode($qrData, $qrFilename);
+                $_SESSION['purchase_success'] = $result;
                 
-                $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId);
-                $tickets[] = [
-                    'code' => $ticketCode,
-                    'qr_path' => $qrPath,
-                    'name' => $a_name,
-                    'email' => $a_email,
-                    'type_name' => $ticketTypeName
+                header('Location: success.php');
+                exit();
+            } elseif ($paymentMethod === 'finassets') {
+                $gateway = new FinassetsGateway($paymentConfig);
+                
+                // Guardamos datos temporales en la sesión para completar la compra tras el pago
+                $_SESSION['pending_purchase'] = [
+                    'event_id' => $eventId,
+                    'ticket_type_id' => $ticketTypeId,
+                    'quantity' => $quantity,
+                    'attendees' => $attendees,
+                    'phone' => $phone,
+                    'total_price' => $totalPrice
                 ];
+
+                $cancelUrl = SITE_URL . "/buy.php?id=" . $eventId . "&error=payment_cancelled";
+                $successUrl = SITE_URL . "/callback_finassets.php";
+                
+                $paymentUrl = $gateway->createPaymentRequest($totalPrice, "Entradas para " . $event['title'], $cancelUrl, $successUrl);
+                
+                header('Location: ' . $paymentUrl);
+                exit();
+            } else {
+                $errors[] = 'El método de pago configurado (' . $paymentMethod . ') aún no está plenamente integrado. Por favor, contacta con el organizador.';
             }
-            
-            // Actualizar tickets disponibles
-            $db->updateAvailableTickets($eventId, $quantity);
-            if ($ticketTypeId) {
-                $db->updateAvailableTicketType($ticketTypeId, $quantity);
-            }
-            
-            $pdo->commit();
-            
-            // Enviar email
-            $subject = "Tus tickets para " . $event['title'];
-            $emailBody = generateEmailBody($event, $tickets, $primary_name, $totalPrice);
-            
-            // Generar PDF y adjuntar
-            $pdfPath = generateTicketPDF($event, $tickets, $totalPrice);
-            try {
-                sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
-            } catch (Exception $mailEx) {
-                $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
-            }
-            
-            // Redirigir a página de confirmación
-            $_SESSION['purchase_success'] = [
-                'event_id' => $eventId,
-                'event_title' => $event['title'],
-                'tickets' => $tickets,
-                'total_price' => $totalPrice,
-                'email' => $primary_email,
-                'phone' => $phone
-            ];
-            
-            header('Location: success.php');
-            exit();
             
         } catch (Exception $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) $pdo->rollBack();
             $errors[] = 'Error al procesar la compra: ' . $e->getMessage();
         }
         }
