@@ -214,6 +214,79 @@ function checkAdminSession() {
     }
 }
 
+function generateEmailBody($event, $tickets, $name, $totalPrice) {
+    $eventDate = date('d/m/Y', strtotime($event['date_event']));
+    $eventTime = date('H:i', strtotime($event['date_event']));
+    
+    $ticketsHtml = '';
+    foreach ($tickets as $t) {
+        $ticketsHtml .= "
+        <div style='background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 15px; margin-bottom: 10px;'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Asistente</s p>
+                    <p style='margin: 5px 0 0 0; color: #fff; font-weight: bold;'>" . $t['name'] . "</p>
+                </div>
+                <div style='text-align: right;'>
+                    <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Tipo</p>
+                    <p style='margin: 5px 0 0 0; color: #DAFB71; font-weight: bold;'>" . ($t['type_name'] ?: 'General') . "</p>
+                </div>
+            </div>
+            <div style='margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);'>
+                <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Código de Ticket</p>
+                <p style='margin: 5px 0 0 0; color: #fff; font-family: monospace; font-size: 14px;'>" . $t['code'] . "</p>
+            </div>
+        </div>";
+    }
+
+    $body = "
+    <div style='background-color: #0A0E14; color: #ffffff; font-family: sans-serif; padding: 40px 20px;'>
+        <div style='max-width: 600px; margin: 0 auto; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 30px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4);'>
+            <div style='background: #DAFB71; padding: 40px 20px; text-align: center;'>
+                <h1 style='color: #000; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px;'>¡TUS TICKETS ESTÁN AQUÍ!</h1>
+                <p style='color: #000; opacity: 0.7; margin: 10px 0 0 0; font-weight: bold;'>Prepárate para una experiencia inolvidable</p>
+            </div>
+            
+            <div style='padding: 30px;'>
+                <p style='color: #888; margin: 0 0 20px 0;'>Hola <strong>$name</strong>,</p>
+                <p style='color: #ccc; line-height: 1.6; margin-bottom: 30px;'>Tu compra para <strong>" . $event['title'] . "</strong> ha sido confirmada. Aquí tienes los detalles de tus entradas:</p>
+                
+                <div style='background: rgba(0,0,0,0.2); border-radius: 20px; padding: 20px; margin-bottom: 30px;'>
+                    <div style='margin-bottom: 15px;'>
+                        <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Evento</p>
+                        <p style='margin: 5px 0 0 0; color: #fff; font-size: 18px; font-weight: bold;'>" . $event['title'] . "</p>
+                    </div>
+                    <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 20px;'>
+                        <div>
+                            <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Fecha y Hora</p>
+                            <p style='margin: 5px 0 0 0; color: #fff; font-weight: bold;'>$eventDate - $eventTime</p>
+                        </div>
+                        <div>
+                            <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Lugar</p>
+                            <p style='margin: 5px 0 0 0; color: #fff; font-weight: bold;'>" . $event['location'] . "</p>
+                        </div>
+                    </div>
+                </div>
+
+                $ticketsHtml
+
+                <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;'>
+                    <p style='color: #DAFB71; font-weight: bold; margin-bottom: 10px;'>Total Pagado: $totalPrice €</p>
+                    <p style='color: #555; font-size: 12px;'>Adjuntamos un PDF con tus entradas y códigos QR para el acceso.</p>
+                </div>
+            </div>
+            
+            <div style='background: rgba(255,255,255,0.01); padding: 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);'>
+                <p style='color: #444; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; margin: 0;'>
+                    Created by <span style='color: #DAFB71;'>Creative Technologies</span> by Gabriel Guerra
+                </p>
+            </div>
+        </div>
+    </div>";
+    
+    return $body;
+}
+
 // Paginación
 function paginate($total, $page, $limit = 10) {
     $total_pages = ceil($total / $limit);
