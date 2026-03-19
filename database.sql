@@ -11,6 +11,11 @@ CREATE TABLE IF NOT EXISTS admins (
     role ENUM('superadmin', 'organizer') NOT NULL DEFAULT 'organizer',
     preferred_payment_method ENUM('none', 'finassets', 'stripe', 'paypal', 'checkout', 'redsys') DEFAULT 'finassets',
     payment_config TEXT,
+    company_name VARCHAR(255) DEFAULT NULL,
+    company_vat VARCHAR(50) DEFAULT NULL,
+    company_address TEXT DEFAULT NULL,
+    company_phone VARCHAR(20) DEFAULT NULL,
+    profile_photo VARCHAR(500) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -84,33 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input:focus, select:focus { border-color: rgba(218, 251, 113, 0.5) !important; box-shadow: 0 0 15px rgba(218, 251, 113, 0.1) !important; }
     </style>
 </head>
-<body class="overflow-x-hidden">
-    <div class="flex h-screen">
-        <!-- Sidebar Copy -->
-        <aside class="glass-sidebar w-72 flex flex-col z-20">
-            <div class="p-8">
-                <div class="flex items-center gap-3 mb-10">
-                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-ticket-alt text-black text-xl"></i>
-                    </div>
-                    <span class="text-xl font-black tracking-tighter">TICKET<span class="text-lime-400">APP</span></span>
-                </div>
-                <nav class="space-y-2">
-                    <a href="dashboard.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white">
-                        <i class="fas fa-grid-2"></i><span>Dashboard</span>
-                    </a>
-                    <a href="events.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white">
-                        <i class="fas fa-calendar-alt"></i><span>Eventos</span>
-                    </a>
-                    <a href="payment_settings.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm">
-                        <i class="fas fa-wallet"></i><span>Métodos de Pago</span>
-                    </a>
-                </nav>
-            </div>
-        </aside>
+<body class="flex flex-col lg:flex-row min-h-screen overflow-x-hidden">
+    <?php include '../../includes/templates/sidebar.php'; ?>
 
-        <!-- Main -->
-        <main class="flex-1 overflow-y-auto p-8 relative">
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-4 lg:p-8 relative">
             <div class="max-w-4xl mx-auto">
                 <header class="mb-10">
                     <h2 class="text-3xl font-black tracking-tighter">Configuración de <span class="text-gradient">Pagos</span></h2>

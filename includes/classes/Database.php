@@ -206,6 +206,48 @@ class Database {
         }
     }
 
+    public function getTicketById($id) {
+        $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title, tt.name as type_name 
+                                    FROM tickets t 
+                                    JOIN events e ON t.event_id = e.id 
+                                    LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
+                                    WHERE t.id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateTicketData($id, $name, $email, $phone, $adminId = null) {
+        if ($adminId) {
+            $stmt = $this->pdo->prepare("UPDATE tickets t 
+                                        JOIN events e ON t.event_id = e.id 
+                                        SET t.attendee_name = ?, t.attendee_email = ?, t.attendee_phone = ? 
+                                        WHERE t.id = ? AND e.admin_id = ?");
+            return $stmt->execute([$name, $email, $phone, $id, $adminId]);
+        } else {
+            $stmt = $this->pdo->prepare("UPDATE tickets SET attendee_name = ?, attendee_email = ?, attendee_phone = ? WHERE id = ?");
+            return $stmt->execute([$name, $email, $phone, $id]);
+        }
+    }
+
+    public function getAdminById($id) {
+        $stmt = $this->pdo->prepare("SELECT * FROM admins WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateAdminProfile($id, $data) {
+        $fields = [];
+        $params = [];
+        foreach ($data as $key => $value) {
+            $fields[] = "$key = ?";
+            $params[] = $value;
+        }
+        $params[] = $id;
+        $sql = "UPDATE admins SET " . implode(", ", $fields) . " WHERE id = ?";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute($params);
+    }
+
     public function getPdo() {
         return $this->pdo;
     }

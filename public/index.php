@@ -209,8 +209,15 @@ $events = array_filter($allEvents, function($e) {
                 <a href="#" class="hover:text-white transition"><i class="fab fa-twitter"></i></a>
                 <a href="#" class="hover:text-white transition"><i class="fab fa-instagram"></i></a>
             </div>
-            <div class="pt-8 border-t border-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">
-                &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
+            <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-gray-600 text-[10px] uppercase tracking-widest font-bold">
+                    &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
+                </p>
+                <div class="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                    <span>Created by</span>
+                    <span class="text-lime-400">Creative Technologies</span>
+                    <span>by Gabriel Guerra</span>
+                </div>
             </div>
         </div>
     </footer>
@@ -268,6 +275,26 @@ $events = array_filter($allEvents, function($e) {
                     }
                 });
             });
+
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.querySelector('header button');
+            const nav = document.querySelector('header nav');
+            if (mobileMenuBtn && nav) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    nav.classList.toggle('hidden');
+                    nav.classList.toggle('flex');
+                    nav.classList.toggle('flex-col');
+                    nav.classList.toggle('absolute');
+                    nav.classList.toggle('top-20');
+                    nav.classList.toggle('left-0');
+                    nav.classList.toggle('right-0');
+                    nav.classList.toggle('bg-[#0A0E14]');
+                    nav.classList.toggle('p-6');
+                    nav.classList.toggle('border-b');
+                    nav.classList.toggle('border-white/5');
+                    nav.classList.toggle('animate-fade-in');
+                });
+            }
         });
     </script>
 </body>

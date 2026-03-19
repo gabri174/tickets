@@ -108,6 +108,51 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
     fclose($output);
     exit();
 }
+
+// Procesar reenvío de ticket
+if (isset($_GET['action']) && $_GET['action'] === 'resend' && isset($_GET['id'])) {
+    $ticketId = intval($_GET['id']);
+    $ticket = $db->getTicketById($ticketId);
+    if ($ticket) {
+        $event = $db->getEventById($ticket['event_id'], $adminId);
+        if ($event) {
+            $tickets_data = [[
+                'code' => $ticket['ticket_code'],
+                'qr_path' => $ticket['qr_code_path'],
+                'name' => $ticket['attendee_name'],
+                'email' => $ticket['attendee_email'],
+                'type_name' => $ticket['type_name'] ?? ''
+            ]];
+            $subject = "Reenvío de tus tickets para " . $event['title'];
+            $emailBody = generateEmailBody($event, $tickets_data, $ticket['attendee_name'], $event['price']);
+            $pdfContent = generateTicketPDF($event, $tickets_data, $event['price']);
+            
+            try {
+                if (sendTicketEmail($ticket['attendee_email'], $subject, $emailBody, $pdfContent)) {
+                    $message = "Ticket reenviado con éxito a " . $ticket['attendee_email'];
+                } else {
+                    $error = "No se pudo enviar el correo.";
+                }
+            } catch (Exception $e) {
+                $error = "Error al enviar: " . $e->getMessage();
+            }
+        }
+    }
+}
+
+// Procesar edición de ticket
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit_ticket') {
+    $ticketId = intval($_POST['ticket_id']);
+    $name = cleanInput($_POST['attendee_name']);
+    $email = cleanInput($_POST['attendee_email']);
+    $phone = cleanInput($_POST['attendee_phone']);
+    
+    if ($db->updateTicketData($ticketId, $name, $email, $phone, $adminId)) {
+        $message = "Datos del ticket actualizados correctamente.";
+    } else {
+        $error = "No se pudo actualizar el ticket.";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -164,49 +209,11 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
         tr:hover { background: rgba(255,255,255,0.02); }
     </style>
 </head>
-<body class="overflow-hidden">
-<div class="flex h-screen">
-    <!-- Sidebar -->
-    <aside class="glass-sidebar w-72 flex flex-col z-20">
-        <div class="p-8">
-            <div class="flex items-center gap-3 mb-10">
-                <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center shadow-lg shadow-lime-400/20">
-                    <i class="fas fa-ticket-alt text-black text-xl"></i>
-                </div>
-                <span class="text-xl font-black tracking-tighter">TICKET<span class="text-lime-400">APP</span></span>
-            </div>
-            <nav class="space-y-2">
-                <a href="dashboard.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
-                    <i class="fas fa-grid-2 text-lg"></i><span>Dashboard</span>
-                </a>
-                <a href="events.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
-                    <i class="fas fa-calendar-alt text-lg"></i><span>Gestionar Eventos</span>
-                </a>
-                <a href="tickets.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm">
-                    <i class="fas fa-ticket-alt text-lg"></i><span>Ventas & Tickets</span>
-                </a>
-                <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
-                <a href="settings.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
-                    <i class="fas fa-cog text-lg"></i><span>Configuración</span>
-                </a>
-                <?php endif; ?>
-            </nav>
-        </div>
-        <div class="mt-auto p-6 border-t border-white/5">
-            <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
-                <div class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
-                    <i class="fas fa-user-circle text-gray-400"></i>
-                </div>
-                <div class="flex-1 overflow-hidden">
-                    <p class="text-xs font-black truncate"><?php echo htmlspecialchars($_SESSION['admin_username']); ?></p>
-                    <p class="text-[10px] text-gray-500 truncate"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></p>
-                </div>
-                <a href="logout.php" class="text-gray-500 hover:text-red-400 transition-colors p-2">
-                    <i class="fas fa-power-off"></i>
-                </a>
-            </div>
-        </div>
-    </aside>
+<body class="flex flex-col lg:flex-row min-h-screen overflow-x-hidden">
+    <?php include '../../includes/templates/sidebar.php'; ?>
+    
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative p-4 lg:p-0">
         
     <!-- Main Content -->
     <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative">
@@ -380,10 +387,20 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
                                                    title="Descargar PDF">
                                                     <i class="fas fa-file-pdf"></i>
                                                 </a>
-                                                <button onclick="openStatusModal(<?php echo $ticket['id']; ?>, '<?php echo $ticket['status']; ?>')"
+                                                <button onclick="resendTicket(<?php echo $ticket['id']; ?>)"
                                                         class="text-gray-500 hover:text-lime-400 transition-colors"
+                                                        title="Reenviar Ticket">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                </button>
+                                                <button onclick='openEditModal(<?php echo json_encode($ticket); ?>)'
+                                                        class="text-gray-500 hover:text-blue-400 transition-colors"
+                                                        title="Editar datos">
+                                                    <i class="fas fa-user-edit"></i>
+                                                </button>
+                                                <button onclick="openStatusModal(<?php echo $ticket['id']; ?>, '<?php echo $ticket['status']; ?>')"
+                                                        class="text-gray-500 hover:text-yellow-400 transition-colors"
                                                         title="Cambiar estado">
-                                                    <i class="fas fa-edit"></i>
+                                                    <i class="fas fa-exchange-alt"></i>
                                                 </button>
                                                 <button onclick="copyTicketCode('<?php echo htmlspecialchars($ticket['ticket_code']); ?>')"
                                                         class="text-gray-500 hover:text-white transition-colors"
@@ -468,6 +485,44 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
     </div>
 </div>
 
+<!-- Edit Ticket Modal -->
+<div id="editModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+    <div class="glass-card rounded-[2rem] w-full max-w-md p-8 border border-white/10">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-black tracking-tighter">Editar Asistente</h3>
+            <button onclick="closeEditModal()" class="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="edit_ticket">
+            <input type="hidden" name="ticket_id" id="editTicketId">
+            <div class="space-y-4 mb-8">
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Nombre Completo</label>
+                    <input type="text" name="attendee_name" id="editAttendeeName" required class="w-full px-5 py-4 rounded-xl outline-none transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Correo Electrónico</label>
+                    <input type="email" name="attendee_email" id="editAttendeeEmail" required class="w-full px-5 py-4 rounded-xl outline-none transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Teléfono</label>
+                    <input type="text" name="attendee_phone" id="editAttendeePhone" class="w-full px-5 py-4 rounded-xl outline-none transition-all">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="closeEditModal()" class="flex-1 py-4 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all font-black text-xs">
+                    Cancelar
+                </button>
+                <button type="submit" class="flex-1 py-4 bg-lime-400 text-black rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     function copyTicketCode(code) {
         navigator.clipboard.writeText(code).then(function() {
@@ -482,16 +537,45 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
     function closeStatusModal() {
         document.getElementById('statusModal').classList.add('hidden');
     }
+    
+    function openEditModal(ticket) {
+        document.getElementById('editTicketId').value = ticket.id;
+        document.getElementById('editAttendeeName').value = ticket.attendee_name;
+        document.getElementById('editAttendeeEmail').value = ticket.attendee_email;
+        document.getElementById('editAttendeePhone').value = ticket.attendee_phone || '';
+        document.getElementById('editModal').classList.remove('hidden');
+    }
+    function closeEditModal() {
+        document.getElementById('editModal').classList.add('hidden');
+    }
+    
+    function resendTicket(id) {
+        if (confirm('¿Estás seguro de que quieres reenviar este ticket?')) {
+            window.location.href = '?action=resend&id=' + id;
+        }
+    }
+
     document.getElementById('statusModal').addEventListener('click', function(e) {
         if (e.target === this) closeStatusModal();
     });
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+    
     function showNotification(message) {
         const n = document.createElement('div');
-        n.className = 'fixed top-6 right-6 bg-lime-400 text-black px-5 py-3 rounded-2xl shadow-lg z-50 font-black text-sm';
+        n.className = 'fixed top-6 right-6 bg-lime-400 text-black px-5 py-3 rounded-2xl shadow-lg z-50 font-black text-sm animate-fade-in';
         n.textContent = message;
         document.body.appendChild(n);
-        setTimeout(() => document.body.removeChild(n), 2000);
+        setTimeout(() => {
+            n.classList.replace('animate-fade-in', 'animate-fade-out');
+            setTimeout(() => document.body.removeChild(n), 300);
+        }, 2000);
     }
+
+    // Si hay un mensaje o error en la URL, mostrar notificación
+    <?php if ($message): ?> showNotification("<?php echo $message; ?>"); <?php endif; ?>
+    <?php if ($error): ?> showNotification("<?php echo $error; ?>"); <?php endif; ?>
 </script>
 </body>
 </html>

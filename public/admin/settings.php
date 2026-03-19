@@ -118,58 +118,11 @@ $currentConfig = [
         ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
     </style>
 </head>
-<body class="overflow-hidden">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <aside class="glass-sidebar w-72 flex flex-col z-20">
-            <div class="p-8">
-                <div class="flex items-center gap-3 mb-10">
-                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center shadow-lg shadow-lime-400/20">
-                        <i class="fas fa-ticket-alt text-black text-xl"></i>
-                    </div>
-                    <span class="text-xl font-black tracking-tighter">TICKET<span class="text-lime-400">APP</span></span>
-                </div>
-                
-                <nav class="space-y-2">
-                    <a href="dashboard.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
-                        <i class="fas fa-grid-2 text-lg"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="events.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
-                        <i class="fas fa-calendar-alt text-lg"></i>
-                        <span>Gestionar Eventos</span>
-                    </a>
-                    <a href="tickets.php" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:text-white hover:bg-white/5">
-                        <i class="fas fa-ticket-alt text-lg"></i>
-                        <span>Ventas & Tickets</span>
-                    </a>
-                    <?php if ($_SESSION['admin_role'] === 'superadmin'): ?>
-                    <a href="settings.php" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm whitespace-nowrap">
-                        <i class="fas fa-cog text-lg"></i>
-                        <span>Configuración</span>
-                    </a>
-                    <?php endif; ?>
-                </nav>
-            </div>
-            
-            <div class="mt-auto p-6 border-t border-white/5">
-                <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
-                    <div class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
-                        <i class="fas fa-user-circle text-gray-400"></i>
-                    </div>
-                    <div class="flex-1 overflow-hidden">
-                        <p class="text-xs font-black truncate"><?php echo htmlspecialchars($_SESSION['admin_username']); ?></p>
-                        <p class="text-[10px] text-gray-500 truncate"><?php echo htmlspecialchars($_SESSION['admin_email']); ?></p>
-                    </div>
-                    <a href="logout.php" class="text-gray-500 hover:text-red-400 transition-colors p-2">
-                        <i class="fas fa-power-off"></i>
-                    </a>
-                </div>
-            </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative">
+<body class="flex flex-col lg:flex-row min-h-screen overflow-x-hidden">
+    <?php include '../../includes/templates/sidebar.php'; ?>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative p-4 lg:p-0">
             <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-lime-400/5 blur-[120px] rounded-full pointer-events-none"></div>
 
             <!-- Header -->
