@@ -16,7 +16,19 @@ CREATE TABLE IF NOT EXISTS admins (
     company_address TEXT DEFAULT NULL,
     company_phone VARCHAR(20) DEFAULT NULL,
     profile_photo VARCHAR(500) DEFAULT NULL,
+    is_verified TINYINT(1) DEFAULT 0,
+    verification_code VARCHAR(10) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla para recuperación de contraseña
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX (email),
+    INDEX (token)
 );
 
 -- Tabla de eventos con soporte para categorías y SEO

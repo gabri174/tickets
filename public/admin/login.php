@@ -19,6 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $admin = $db->validateAdmin($username, $password);
         
         if ($admin) {
+            if (!$admin['is_verified']) {
+                session_start();
+                $_SESSION['verify_admin_id'] = $admin['id'];
+                $_SESSION['verify_email'] = $admin['email'];
+                header('Location: verify-email.php');
+                exit();
+            }
+            
             session_start();
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_username'] = $admin['username'];
@@ -145,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="checkbox" class="w-4 h-4 rounded border-gray-700 bg-gray-800 text-lime-400 focus:ring-lime-400/20">
                     <span class="text-xs text-gray-500 group-hover:text-gray-400 transition">Recordar</span>
                 </label>
-                <a href="#" class="text-xs text-lime-400/70 hover:text-lime-400 transition">¿Olvidaste tu clave?</a>
+                <a href="forgot-password.php" class="text-xs text-lime-400/70 hover:text-lime-400 transition">¿Olvidaste tu clave?</a>
             </div>
             
             <button type="submit" class="w-full bg-lime-400 text-black py-4 rounded-2xl font-black text-lg hover:shadow-[0_0_30px_rgba(218,251,113,0.3)] transition-all flex items-center justify-center gap-2 group mt-4">

@@ -153,7 +153,10 @@ class Database {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $this->pdo->prepare("INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)");
         try {
-            return $stmt->execute([$username, $hashedPassword, $email, $role]);
+            if ($stmt->execute([$username, $hashedPassword, $email, $role])) {
+                return $this->pdo->lastInsertId();
+            }
+            return false;
         } catch (PDOException $e) {
             return false;
         }
@@ -246,6 +249,49 @@ class Database {
         $sql = "UPDATE admins SET " . implode(", ", $fields) . " WHERE id = ?";
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute($params);
+    }
+
+    public function createPasswordReset($email, $token) {
+        // Eliminar tokens previos
+        $stmt = $this->pdo->prepare("DELETE FROM password_resets WHERE email = ?");
+        $stmt->execute([$email]);
+        
+        $stmt = $this->pdo->prepare("INSERT INTO password_resets (email, token) VALUES (?, ?)");
+        return $stmt->execute([$email, $token]);
+    }
+
+    public function getPasswordReset($token) {
+        $stmt = $this->pdo->prepare("SELECT * FROM password_resets WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
+        $stmt->execute([$token]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function deletePasswordReset($email) {
+        $stmt = $this->pdo->prepare("DELETE FROM password_resets WHERE email = ?");
+        return $stmt->execute([$email]);
+    }
+
+    public function updateAdminPasswordByEmail($email, $password) {
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $this->pdo->prepare("UPDATE admins SET password = ? WHERE email = ?");
+        return $stmt->execute([$hashed, $email]);
+    }
+
+    public function setAdminVerificationCode($adminId, $code) {
+        $stmt = $this->pdo->prepare("UPDATE admins SET verification_code = ?, is_verified = 0 WHERE id = ?");
+        return $stmt->execute([$code, $adminId]);
+    }
+
+    public function verifyAdmin($adminId, $code) {
+        $stmt = $this->pdo->prepare("UPDATE admins SET is_verified = 1, verification_code = NULL WHERE id = ? AND verification_code = ?");
+        $stmt->execute([$adminId, $code]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function getAdminByEmail($email) {
+        $stmt = $this->pdo->prepare("SELECT * FROM admins WHERE email = ?");
+        $stmt->execute([$email]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function getPdo() {

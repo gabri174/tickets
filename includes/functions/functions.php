@@ -164,6 +164,41 @@ function sendTicketEmail($to, $subject, $body, $attachment = null) {
     }
 }
 
+function sendResetPasswordEmail($email, $token) {
+    if (!defined('SITE_URL')) {
+        define('SITE_URL', 'http://' . $_SERVER['HTTP_HOST'] . str_replace('/public/admin/forgot-password.php', '', $_SERVER['PHP_SELF']));
+    }
+    $resetLink = SITE_URL . "/admin/reset-password.php?token=" . $token;
+    $subject = "Recuperación de contraseña - " . SITE_NAME;
+    $body = "
+        <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2>Recuperación de contraseña</h2>
+            <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente botón para continuar:</p>
+            <div style='text-align: center; margin: 30px 0;'>
+                <a href='$resetLink' style='background: #DAFB71; color: black; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold;'>Restablecer Contraseña</a>
+            </div>
+            <p>Si no has solicitado esto, puedes ignorar este correo.</p>
+            <p>Este enlace expirará en 1 hora.</p>
+        </div>
+    ";
+    return sendTicketEmail($email, $subject, $body);
+}
+
+function sendVerificationCodeEmail($email, $code) {
+    $subject = "Verifica tu cuenta - " . SITE_NAME;
+    $body = "
+        <div style='font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2>Bienvenido a " . SITE_NAME . "</h2>
+            <p>Para completar tu registro, introduce el siguiente código de verificación:</p>
+            <div style='text-align: center; margin: 30px 0; background: #f4f4f4; padding: 20px; border-radius: 10px;'>
+                <span style='font-size: 32px; font-weight: bold; letter-spacing: 5px;'>$code</span>
+            </div>
+            <p>Si no has intentado registrarte, por favor ignora este correo.</p>
+        </div>
+    ";
+    return sendTicketEmail($email, $subject, $body);
+}
+
 // Generar enlace de WhatsApp
 function generateWhatsAppLink($phone, $message) {
     $phone = preg_replace('/[^0-9]/', '', $phone);

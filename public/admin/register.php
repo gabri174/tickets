@@ -24,10 +24,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'El formato del email es inválido';
     } else {
         // Intentar registrar (el rol por defecto será 'organizer')
-        $registered = $db->registerAdmin($username, $password, $email, 'organizer');
+        $adminId = $db->registerAdmin($username, $password, $email, 'organizer');
         
-        if ($registered) {
-            $success = 'Registro exitoso. Ahora puedes iniciar sesión como organizador.';
+        if ($adminId) {
+            $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            if ($db->setAdminVerificationCode($adminId, $code)) {
+                try {
+                    if (sendVerificationCodeEmail($email, $code)) {
+                        session_start();
+                        $_SESSION['verify_admin_id'] = $adminId;
+                        $_SESSION['verify_email'] = $email;
+                        header('Location: verify-email.php');
+                        exit();
+                    } else {
+                        $error = 'Usuario creado, pero no se pudo enviar el código de verificación.';
+                    }
+                } catch (Exception $e) {
+                    $error = 'Error al enviar código: ' . $e->getMessage();
+                }
+            } else {
+                $error = 'Error al generar el código de verificación.';
+            }
         } else {
             $error = 'El nombre de usuario o email ya existe. Intenta con otro.';
         }
