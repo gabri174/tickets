@@ -17,33 +17,36 @@ if (!$adminId) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $code = cleanInput($_POST['code']);
-    
-    if (empty($code)) {
-        $error = 'Por favor, introduce el código de verificación.';
-    } else {
-        if ($db->verifyAdmin($adminId, $code)) {
-            $success = '¡Cuenta verificada con éxito! Ya puedes iniciar sesión.';
-            unset($_SESSION['verify_admin_id']);
-            unset($_SESSION['verify_email']);
-        } else {
-            $error = 'Código de verificación incorrecto. Inténtalo de nuevo.';
-        }
-    }
-}
-
-// Reenviar código
-if (isset($_GET['resend'])) {
-    $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
-    if ($db->setAdminVerificationCode($adminId, $code)) {
-        try {
-            if (sendVerificationCodeEmail($email, $code)) {
-                $success = 'Se ha reenviado un nuevo código a tu correo.';
-            } else {
-                $error = 'No se pudo reenviar el código.';
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
+    } elseif (isset($_POST['resend'])) {
+        // Reenviar código
+        $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        if ($db->setAdminVerificationCode($adminId, $code)) {
+            try {
+                if (sendVerificationCodeEmail($email, $code)) {
+                    $success = 'Se ha reenviado un nuevo código a tu correo.';
+                } else {
+                    $error = 'No se pudo reenviar el código.';
+                }
+            } catch (Exception $e) {
+                $error = 'Error al reenviar: ' . $e->getMessage();
             }
-        } catch (Exception $e) {
-            $error = 'Error al reenviar: ' . $e->getMessage();
+        }
+    } else {
+        $code = cleanInput($_POST['code']);
+        
+        if (empty($code)) {
+            $error = 'Por favor, introduce el código de verificación.';
+        } else {
+            if ($db->verifyAdmin($adminId, $code)) {
+                $success = '¡Cuenta verificada con éxito! Ya puedes iniciar sesión.';
+                unset($_SESSION['verify_admin_id']);
+                unset($_SESSION['verify_email']);
+            } else {
+                $error = 'Código de verificación incorrecto. Inténtalo de nuevo.';
+            }
         }
     }
 }
@@ -92,6 +95,7 @@ if (isset($_GET['resend'])) {
             </div>
         <?php else: ?>
             <form method="POST" class="space-y-6">
+                <?php echo csrf_field(); ?>
                 <?php if ($error): ?>
                     <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-5 py-4 rounded-2xl text-sm flex items-center gap-3">
                         <i class="fas fa-exclamation-circle"></i>
@@ -114,9 +118,12 @@ if (isset($_GET['resend'])) {
 
             <div class="mt-8 text-center">
                 <p class="text-xs text-gray-500 mb-2">¿No has recibido el código?</p>
-                <a href="?resend=1" class="text-lime-400/70 hover:text-lime-400 transition text-xs font-bold uppercase tracking-widest">
-                    Reenviar Código
-                </a>
+                <form method="POST">
+                    <?php echo csrf_field(); ?>
+                    <button type="submit" name="resend" value="1" class="text-lime-400/70 hover:text-lime-400 transition text-xs font-bold uppercase tracking-widest bg-transparent border-none cursor-pointer">
+                        Reenviar Código
+                    </button>
+                </form>
             </div>
         <?php endif; ?>
         

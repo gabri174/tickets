@@ -14,40 +14,48 @@ $error = '';
 $admin = $db->getAdminById($adminId);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = [
-        'username' => cleanInput($_POST['username']),
-        'email' => cleanInput($_POST['email']),
-        'company_name' => cleanInput($_POST['company_name']),
-        'company_vat' => cleanInput($_POST['company_vat']),
-        'company_address' => cleanInput($_POST['company_address']),
-        'company_phone' => cleanInput($_POST['company_phone'])
-    ];
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
+    } else {
+        $data = [
+            'username' => cleanInput($_POST['username']),
+            'email' => cleanInput($_POST['email']),
+            'company_name' => cleanInput($_POST['company_name']),
+            'company_vat' => cleanInput($_POST['company_vat']),
+            'company_address' => cleanInput($_POST['company_address']),
+            'company_phone' => cleanInput($_POST['company_phone'])
+        ];
 
-    // Procesar foto de perfil
-    if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
-        $photoName = uploadImage($_FILES['profile_photo'], UPLOADS_PATH);
-        if ($photoName) {
-            $data['profile_photo'] = 'uploads/' . $photoName;
-            
-            // Eliminar foto anterior si existe
-            if ($admin['profile_photo'] && file_exists(ROOT_PATH . '/public/' . $admin['profile_photo'])) {
-                unlink(ROOT_PATH . '/public/' . $admin['profile_photo']);
+        // Procesar foto de perfil
+        if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
+            $photoName = uploadImage($_FILES['profile_photo'], UPLOADS_PATH);
+            if ($photoName) {
+                $data['profile_photo'] = 'uploads/' . $photoName;
+                
+                // Eliminar foto anterior si existe
+                if ($admin['profile_photo'] && file_exists(ROOT_PATH . '/public/' . $admin['profile_photo'])) {
+                    unlink(ROOT_PATH . '/public/' . $admin['profile_photo']);
+                }
+                
+                // Actualizar sesión inmediatamente
+                $_SESSION['admin_photo'] = $data['profile_photo'];
             }
         }
-    }
 
-    if ($db->updateAdminProfile($adminId, $data)) {
-        $message = "Perfil actualizado correctamente.";
-        // Actualizar sesión
-        $_SESSION['admin_username'] = $data['username'];
-        $_SESSION['admin_email'] = $data['email'];
-        if (isset($data['profile_photo'])) {
-            $_SESSION['admin_photo'] = $data['profile_photo'];
+        if ($db->updateAdminProfile($adminId, $data)) {
+            $message = "Perfil actualizado correctamente.";
+            // Actualizar sesión
+            $_SESSION['admin_username'] = $data['username'];
+            $_SESSION['admin_email'] = $data['email'];
+            if (isset($data['profile_photo'])) {
+                $_SESSION['admin_photo'] = $data['profile_photo'];
+            }
+            // Recargar datos
+            $admin = $db->getAdminById($adminId);
+        } else {
+            $error = "Error al actualizar el perfil.";
         }
-        // Recargar datos
-        $admin = $db->getAdminById($adminId);
-    } else {
-        $error = "Error al actualizar el perfil.";
     }
 }
 ?>
@@ -90,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <?php echo csrf_field(); ?>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- Foto de Perfil -->
                     <div class="glass-card p-8 rounded-[2rem] flex flex-col items-center justify-center text-center">

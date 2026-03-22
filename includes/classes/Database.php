@@ -139,17 +139,41 @@ class Database {
     // ADMINISTRADORES
     // ─────────────────────────────────────────────
 
-    public function validateAdmin($username, $password) {
-        $stmt = $this->pdo->prepare("SELECT * FROM admins WHERE username = ?");
-        $stmt->execute([$username]);
+    public function validateAdmin($login, $password) {
+        $stmt = $this->pdo->prepare("SELECT * FROM admins WHERE username = ? OR email = ?");
+        $stmt->execute([$login, $login]);
         $admin = $stmt->fetch();
+        
         if ($admin && password_verify($password, $admin['password'])) {
             return $admin;
         }
         return false;
     }
 
+    public function getLoginAttempts($login) {
+        $stmt = $this->pdo->prepare("SELECT login_attempts, last_login_attempt FROM admins WHERE username = ? OR email = ?");
+        $stmt->execute([$login, $login]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function incrementLoginAttempts($login) {
+        $stmt = $this->pdo->prepare("UPDATE admins SET login_attempts = login_attempts + 1, last_login_attempt = NOW() WHERE username = ? OR email = ?");
+        return $stmt->execute([$login, $login]);
+    }
+
+    public function resetLoginAttempts($login) {
+        $stmt = $this->pdo->prepare("UPDATE admins SET login_attempts = 0, last_login_attempt = NULL WHERE username = ? OR email = ?");
+        return $stmt->execute([$login, $login]);
+    }
+
     public function registerAdmin($username, $password, $email, $role = 'organizer') {
+        // Verificar si existe antes de insertar
+        $stmt = $this->pdo->prepare("SELECT id, username, email FROM admins WHERE username = ? OR email = ?");
+        $stmt->execute([$username, $email]);
+        if ($stmt->fetch()) {
+            return "exists"; // Retornar mensaje específico
+        }
+
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $this->pdo->prepare("INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)");
         try {

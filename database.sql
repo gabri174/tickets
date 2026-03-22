@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS admins (
     profile_photo VARCHAR(500) DEFAULT NULL,
     is_verified TINYINT(1) DEFAULT 0,
     verification_code VARCHAR(10) DEFAULT NULL,
+    login_attempts INT DEFAULT 0,
+    last_login_attempt DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

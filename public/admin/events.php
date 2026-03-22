@@ -34,88 +34,89 @@ function generateSeo($title, $description, $location, $dateEvent) {
 
 // ─── PROCESAR ACCIONES ────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    
-    if ($action === 'create' || $action === 'update') {
-        if (!file_exists(UPLOADS_PATH)) {
-            mkdir(UPLOADS_PATH, 0777, true);
-        }
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
+    } else {
+        $action = $_POST['action'] ?? '';
         
-        $title       = cleanInput($_POST['title']);
-        $description = cleanInput($_POST['description']);
-        $dateEvent   = cleanInput($_POST['date_event']);
-        $location    = cleanInput($_POST['location']);
-        $price       = floatval($_POST['price']);
-        $maxTickets  = intval($_POST['max_tickets']);
-        $category    = cleanInput($_POST['category'] ?? 'otros');
-        
-        // SEO — si el usuario los deja vacíos, generamos automáticamente
-        $seoTitle       = cleanInput($_POST['seo_title'] ?? '');
-        $seoDescription = cleanInput($_POST['seo_description'] ?? '');
-        $seoKeywords    = cleanInput($_POST['seo_keywords'] ?? '');
-        
-        if (empty($seoTitle) || empty($seoDescription)) {
-            [$autoTitle, $autoDesc, $autoKw] = generateSeo($title, $description, $location, $dateEvent);
-            if (empty($seoTitle)) $seoTitle = $autoTitle;
-            if (empty($seoDescription)) $seoDescription = $autoDesc;
-            if (empty($seoKeywords)) $seoKeywords = $autoKw;
-        }
-        
-        // Ticket types desde JSON
-        $ticketTypesJson = $_POST['ticket_types_data'] ?? '[]';
-        $ticketTypes = json_decode($ticketTypesJson, true) ?: [];
-        
-        if (empty($title) || empty($dateEvent) || empty($location) || $price < 0 || $maxTickets <= 0) {
-            $error = 'Por favor completa todos los campos requeridos correctamente';
-        } else {
-            $imageUrl = null;
-            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $imageName = uploadImage($_FILES['image'], UPLOADS_PATH);
-                if ($imageName) {
-                    $imageUrl = 'uploads/' . $imageName;
-                }
+        if ($action === 'create' || $action === 'update') {
+            if (!file_exists(UPLOADS_PATH)) {
+                mkdir(UPLOADS_PATH, 0777, true);
             }
             
-            $adminId = $_SESSION['admin_id'];
+            $title       = cleanInput($_POST['title']);
+            $description = cleanInput($_POST['description']);
+            $dateEvent   = cleanInput($_POST['date_event']);
+            $location    = cleanInput($_POST['location']);
+            $price       = floatval($_POST['price']);
+            $maxTickets  = intval($_POST['max_tickets']);
+            $category    = cleanInput($_POST['category'] ?? 'otros');
             
-            if ($action === 'create') {
-                if ($db->createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId, $category, $seoTitle, $seoDescription, $seoKeywords)) {
-                    $newEventId = $db->getLastInsertId();
-                    // Guardar tipos de entrada
-                    foreach ($ticketTypes as $i => $tt) {
-                        if (!empty($tt['name']) && intval($tt['max']) > 0) {
-                            $db->createTicketType($newEventId, $tt['name'], $tt['desc'] ?? '', floatval($tt['price']), intval($tt['max']), $i);
-                        }
+            $seoTitle       = cleanInput($_POST['seo_title'] ?? '');
+            $seoDescription = cleanInput($_POST['seo_description'] ?? '');
+            $seoKeywords    = cleanInput($_POST['seo_keywords'] ?? '');
+            
+            if (empty($seoTitle) || empty($seoDescription)) {
+                [$autoTitle, $autoDesc, $autoKw] = generateSeo($title, $description, $location, $dateEvent);
+                if (empty($seoTitle)) $seoTitle = $autoTitle;
+                if (empty($seoDescription)) $seoDescription = $autoDesc;
+                if (empty($seoKeywords)) $seoKeywords = $autoKw;
+            }
+            
+            $ticketTypesJson = $_POST['ticket_types_data'] ?? '[]';
+            $ticketTypes = json_decode($ticketTypesJson, true) ?: [];
+            
+            if (empty($title) || empty($dateEvent) || empty($location) || $price < 0 || $maxTickets <= 0) {
+                $error = 'Por favor completa todos los campos requeridos correctamente';
+            } else {
+                $imageUrl = null;
+                if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                    $imageName = uploadImage($_FILES['image'], UPLOADS_PATH);
+                    if ($imageName) {
+                        $imageUrl = 'uploads/' . $imageName;
                     }
-                    header('Location: events.php?message=' . urlencode('Evento creado exitosamente'));
-                    exit();
-                } else {
-                    $error = 'Error al crear el evento';
                 }
-            } elseif ($action === 'update') {
-                $id = intval($_POST['id']);
-                $adminId2 = ($_SESSION['admin_role'] === 'superadmin') ? null : $adminId;
-                $currentEvent = $db->getEventById($id, $adminId2);
-                if (!$imageUrl && $currentEvent) $imageUrl = $currentEvent['image_url'];
                 
-                if ($db->updateEvent($id, $title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId2, $category, $seoTitle, $seoDescription, $seoKeywords)) {
-                    // Reemplazar ticket types
-                    $db->deleteTicketTypesByEvent($id);
-                    foreach ($ticketTypes as $i => $tt) {
-                        if (!empty($tt['name']) && intval($tt['max']) > 0) {
-                            $db->createTicketType($id, $tt['name'], $tt['desc'] ?? '', floatval($tt['price']), intval($tt['max']), $i);
+                $adminId = $_SESSION['admin_id'];
+                
+                if ($action === 'create') {
+                    if ($db->createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId, $category, $seoTitle, $seoDescription, $seoKeywords)) {
+                        $newEventId = $db->getLastInsertId();
+                        foreach ($ticketTypes as $i => $tt) {
+                            if (!empty($tt['name']) && intval($tt['max']) > 0) {
+                                $db->createTicketType($newEventId, $tt['name'], $tt['desc'] ?? '', floatval($tt['price']), intval($tt['max']), $i);
+                            }
                         }
+                        header('Location: events.php?message=' . urlencode('Evento creado exitosamente'));
+                        exit();
+                    } else {
+                        $error = 'Error al crear el evento';
                     }
-                    header('Location: events.php?message=' . urlencode('Evento actualizado exitosamente'));
-                    exit();
-                } else {
-                    $error = 'Error al actualizar el evento';
+                } elseif ($action === 'update') {
+                    $id = intval($_POST['id']);
+                    $adminId2 = ($_SESSION['admin_role'] === 'superadmin') ? null : $adminId;
+                    $currentEvent = $db->getEventById($id, $adminId2);
+                    if (!$imageUrl && $currentEvent) $imageUrl = $currentEvent['image_url'];
+                    
+                    if ($db->updateEvent($id, $title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $adminId2, $category, $seoTitle, $seoDescription, $seoKeywords)) {
+                        $db->deleteTicketTypesByEvent($id);
+                        foreach ($ticketTypes as $i => $tt) {
+                            if (!empty($tt['name']) && intval($tt['max']) > 0) {
+                                $db->createTicketType($id, $tt['name'], $tt['desc'] ?? '', floatval($tt['price']), intval($tt['max']), $i);
+                            }
+                        }
+                        header('Location: events.php?message=' . urlencode('Evento actualizado exitosamente'));
+                        exit();
+                    } else {
+                        $error = 'Error al actualizar el evento';
+                    }
                 }
             }
         }
     }
-} elseif (isset($_GET['action']) && $_GET['action'] === 'delete') {
-    $id = intval($_GET['id']);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
+    $id = intval($_POST['id']);
     $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
     if ($db->deleteEvent($id, $adminId)) {
         header('Location: events.php?message=' . urlencode('Evento eliminado exitosamente'));
@@ -398,6 +399,7 @@ foreach ($events as $ev) {
             </div>
 
             <form method="POST" enctype="multipart/form-data" id="eventForm" class="space-y-6">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" id="formAction" value="create">
                 <input type="hidden" name="id" id="eventId">
                 <input type="hidden" name="ticket_types_data" id="ticketTypesData" value="[]">
@@ -526,6 +528,13 @@ foreach ($events as $ev) {
                     </button>
                 </div>
             </form>
+            
+            <!-- Formulario oculto para eliminar -->
+            <form id="deleteForm" method="POST" style="display:none;">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" id="deleteId">
+            </form>
         </div>
     </div>
     
@@ -579,7 +588,9 @@ foreach ($events as $ev) {
 
         function deleteEvent(id) {
             if (confirm('¿Estás seguro de que deseas eliminar este evento?')) {
-                window.location.href = 'events.php?action=delete&id=' + id;
+                const form = document.getElementById('deleteForm');
+                document.getElementById('deleteId').value = id;
+                form.submit();
             }
         }
 

@@ -10,34 +10,64 @@ $error = '';
 
 // Procesar login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = cleanInput($_POST['username']);
-    $password = $_POST['password'];
-    
-    if (empty($username) || empty($password)) {
-        $error = 'Por favor completa todos los campos';
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
     } else {
-        $admin = $db->validateAdmin($username, $password);
+        $login = cleanInput($_POST['username']); // Puede ser username o email
+        $password = $_POST['password'];
         
-        if ($admin) {
-            if (!$admin['is_verified']) {
-                session_start();
-                $_SESSION['verify_admin_id'] = $admin['id'];
-                $_SESSION['verify_email'] = $admin['email'];
-                header('Location: verify-email.php');
-                exit();
-            }
-            
-            session_start();
-            $_SESSION['admin_id'] = $admin['id'];
-            $_SESSION['admin_username'] = $admin['username'];
-            $_SESSION['admin_email'] = $admin['email'];
-            $_SESSION['admin_role'] = $admin['role'];
-            $_SESSION['admin_photo'] = $admin['profile_photo'];
-            
-            header('Location: dashboard.php');
-            exit();
+        if (empty($login) || empty($password)) {
+            $error = 'Por favor completa todos los campos';
         } else {
-            $error = 'Usuario o contraseña incorrectos';
+            // Check rate limiting
+            $attempts = $db->getLoginAttempts($login);
+            if ($attempts && $attempts['login_attempts'] >= 5) {
+                $lastAttempt = strtotime($attempts['last_login_attempt']);
+                $lockoutTime = 15 * 60; // 15 minutes
+                if (time() - $lastAttempt < $lockoutTime) {
+                    $remaining = ceil(($lockoutTime - (time() - $lastAttempt)) / 60);
+                    $error = "Demasiados intentos fallidos. Por seguridad, tu cuenta ha sido bloqueada temporalmente. Intenta de nuevo en $remaining minutos.";
+                } else {
+                    // Lockout period passed, reset attempts
+                    $db->resetLoginAttempts($login);
+                    $attempts['login_attempts'] = 0;
+                }
+            }
+
+            if (empty($error)) {
+                $admin = $db->validateAdmin($login, $password);
+                
+                if ($admin) {
+                    // Reset attempts on successful login
+                    $db->resetLoginAttempts($login);
+                    
+                    if (!$admin['is_verified']) {
+                        if (session_status() === PHP_SESSION_NONE) session_start();
+                        $_SESSION['verify_admin_id'] = $admin['id'];
+                        $_SESSION['verify_email'] = $admin['email'];
+                        header('Location: verify-email.php');
+                        exit();
+                    }
+                    
+                    // Login exitoso
+                    if (session_status() === PHP_SESSION_NONE) session_start();
+                    session_regenerate_id(true);
+                    
+                    $_SESSION['admin_id'] = $admin['id'];
+                    $_SESSION['admin_username'] = $admin['username'];
+                    $_SESSION['admin_email'] = $admin['email'];
+                    $_SESSION['admin_role'] = $admin['role'];
+                    $_SESSION['admin_photo'] = $admin['profile_photo'];
+                    
+                    header('Location: index.php');
+                    exit();
+                } else {
+                    // Increment attempts on failed login
+                    $db->incrementLoginAttempts($login);
+                    $error = 'Usuario o contraseña incorrectos';
+                }
+            }
         }
     }
 }
@@ -116,6 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <!-- Formulario de Login -->
         <form method="POST" action="" class="space-y-6">
+            <?php echo csrf_field(); ?>
             <?php if ($error): ?>
                 <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-5 py-4 rounded-2xl text-sm flex items-center gap-3">
                     <i class="fas fa-exclamation-circle"></i>
@@ -131,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-lime-400 transition-colors"></i>
                     <input type="text" name="username" required
                            class="w-full pl-12 pr-4 py-4 rounded-2xl outline-none focus:border-lime-400/50 transition-all placeholder:text-gray-600"
-                           placeholder="Tu usuario"
+                           placeholder="Usuario o Email"
                            value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
                 </div>
             </div>

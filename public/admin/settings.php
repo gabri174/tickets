@@ -15,22 +15,26 @@ $error = '';
 
 // Procesar actualización de configuración
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $siteName = cleanInput($_POST['site_name']);
-    $adminEmail = cleanInput($_POST['admin_email']);
-    $smtpHost = cleanInput($_POST['smtp_host']);
-    $smtpPort = intval($_POST['smtp_port']);
-    $smtpUsername = cleanInput($_POST['smtp_username']);
-    $smtpPassword = $_POST['smtp_password'];
-    $smtpFromEmail = cleanInput($_POST['smtp_from_email']);
-    $smtpFromName = cleanInput($_POST['smtp_from_name']);
-    
-    // Validaciones básicas
-    if (empty($siteName) || empty($adminEmail) || !validateEmail($adminEmail)) {
-        $error = 'Por favor completa los campos requeridos correctamente';
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
     } else {
-        // Aquí podrías guardar la configuración en la base de datos o archivo
-        // Por ahora, solo mostramos un mensaje de éxito
-        $message = 'Configuración actualizada exitosamente. Nota: Para hacer los cambios permanentes, edita el archivo includes/config/config.php';
+        $siteName = cleanInput($_POST['site_name']);
+        $adminEmail = cleanInput($_POST['admin_email']);
+        $smtpHost = cleanInput($_POST['smtp_host']);
+        $smtpPort = intval($_POST['smtp_port']);
+        $smtpUsername = cleanInput($_POST['smtp_username']);
+        $smtpPassword = $_POST['smtp_password'];
+        $smtpFromEmail = cleanInput($_POST['smtp_from_email']);
+        $smtpFromName = cleanInput($_POST['smtp_from_name']);
+        
+        // Validaciones básicas
+        if (empty($siteName) || empty($adminEmail) || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Por favor completa los campos requeridos correctamente';
+        } else {
+            // Aquí podrías guardar la configuración en la base de datos o archivo
+            $message = 'Configuración actualizada exitosamente. Nota: Para hacer los cambios permanentes, edita el archivo includes/config/config.php';
+        }
     }
 }
 
@@ -160,6 +164,7 @@ $currentConfig = [
                         </h3>
                         
                         <form method="POST" class="space-y-8">
+                <?php echo csrf_field(); ?>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="space-y-2">
                                     <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Nombre del Sitio</label>

@@ -50,12 +50,48 @@ $events = array_filter($allEvents, function($e) {
                 </nav>
 
                 <!-- Mobile Menu Button -->
-                <button class="md:hidden text-gray-400 hover:text-white">
+                <button class="md:hidden text-gray-400 hover:text-white" onclick="toggleMobileMenu()">
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
             </div>
         </div>
+
+        <!-- Mobile Menu Drawer -->
+        <div id="mobileMenu" class="fixed inset-0 z-[60] hidden md:hidden">
+            <!-- Overlay -->
+            <div class="absolute inset-0 bg-[#0A0E14]/95 backdrop-blur-2xl" onclick="toggleMobileMenu()"></div>
+            
+            <!-- Menu Content -->
+            <nav class="relative h-full flex flex-col items-center justify-center gap-8 p-8">
+                <button class="absolute top-8 right-8 text-gray-400 hover:text-white text-2xl" onclick="toggleMobileMenu()">
+                    <i class="fas fa-times"></i>
+                </button>
+                
+                <a href="index.php" class="text-3xl font-bold text-lime-400" onclick="toggleMobileMenu()">Inicio</a>
+                <a href="about.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Nosotros</a>
+                <a href="contact.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Contacto</a>
+                
+                <div class="w-full h-px bg-white/10 my-4"></div>
+                
+                <a href="admin/" class="flex items-center gap-3 text-2xl font-bold text-gray-300 hover:text-white transition" onclick="toggleMobileMenu()">
+                    <i class="fas fa-user-shield text-xl text-lime-400"></i>
+                    Administración
+                </a>
+            </nav>
+        </div>
     </header>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+            if (!menu.classList.contains('hidden')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = 'auto';
+            }
+        }
+    </script>
 
     <!-- Hero Section -->
     <section class="relative overflow-hidden pt-16 pb-24 md:pt-32 md:pb-40">

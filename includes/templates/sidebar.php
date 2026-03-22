@@ -48,8 +48,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="mt-auto p-6 border-t border-white/5">
         <div class="glass-card p-4 rounded-2xl flex items-center gap-3">
             <div class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 overflow-hidden">
-                <?php if (isset($_SESSION['admin_photo']) && $_SESSION['admin_photo']): ?>
-                    <img src="<?php echo htmlspecialchars($_SESSION['admin_photo']); ?>" alt="Profile" class="w-full h-full object-cover">
+                <?php if (isset($_SESSION['admin_photo']) && $_SESSION['admin_photo']): 
+                    $photo_url = $_SESSION['admin_photo'];
+                    // Si no empieza por .., es una ruta desde la raíz pública
+                    if (strpos($photo_url, '../') !== 0 && strpos($photo_url, 'http') !== 0) {
+                        $photo_url = '../' . $photo_url;
+                    }
+                ?>
+                    <img src="<?php echo htmlspecialchars($photo_url); ?>" alt="Profile" class="w-full h-full object-cover">
                 <?php else: ?>
                     <i class="fas fa-user-circle text-gray-400"></i>
                 <?php endif; ?>

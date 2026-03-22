@@ -11,42 +11,50 @@ $success = '';
 
 // Procesar registro
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = cleanInput($_POST['username']);
-    $email = cleanInput($_POST['email']);
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
-    
-    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
-        $error = 'Por favor completa todos los campos';
-    } elseif ($password !== $confirm_password) {
-        $error = 'Las contraseñas no coinciden';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'El formato del email es inválido';
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
     } else {
-        // Intentar registrar (el rol por defecto será 'organizer')
-        $adminId = $db->registerAdmin($username, $password, $email, 'organizer');
+        $username = cleanInput($_POST['username']);
+        $email = cleanInput($_POST['email']);
+        $password = $_POST['password'];
+        $confirm_password = $_POST['confirm_password'];
         
-        if ($adminId) {
-            $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
-            if ($db->setAdminVerificationCode($adminId, $code)) {
-                try {
-                    if (sendVerificationCodeEmail($email, $code)) {
-                        session_start();
-                        $_SESSION['verify_admin_id'] = $adminId;
-                        $_SESSION['verify_email'] = $email;
-                        header('Location: verify-email.php');
-                        exit();
-                    } else {
-                        $error = 'Usuario creado, pero no se pudo enviar el código de verificación.';
+        if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+            $error = 'Por favor completa todos los campos';
+        } elseif ($password !== $confirm_password) {
+            $error = 'Las contraseñas no coinciden';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = 'El formato del email es inválido';
+        } else {
+            // Intentar registrar (el rol por defecto será 'organizer')
+            $registerResult = $db->registerAdmin($username, $password, $email, 'organizer');
+            
+            if ($registerResult === 'exists') {
+                $error = 'El nombre de usuario o el email ya están en uso. Por favor, elige otros.';
+            } elseif ($registerResult) {
+                $adminId = $registerResult;
+                $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+                if ($db->setAdminVerificationCode($adminId, $code)) {
+                    try {
+                        if (sendVerificationCodeEmail($email, $code)) {
+                            if (session_status() === PHP_SESSION_NONE) session_start();
+                            $_SESSION['verify_admin_id'] = $adminId;
+                            $_SESSION['verify_email'] = $email;
+                            header('Location: verify-email.php');
+                            exit();
+                        } else {
+                            $error = 'Usuario creado, pero no se pudo enviar el código de verificación.';
+                        }
+                    } catch (Exception $e) {
+                        $error = 'Error al enviar código: ' . $e->getMessage();
                     }
-                } catch (Exception $e) {
-                    $error = 'Error al enviar código: ' . $e->getMessage();
+                } else {
+                    $error = 'Error al generar el código de verificación.';
                 }
             } else {
-                $error = 'Error al generar el código de verificación.';
+                $error = 'Ocurrió un error inesperado durante el registro.';
             }
-        } else {
-            $error = 'El nombre de usuario o email ya existe. Intenta con otro.';
         }
     }
 }
@@ -123,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <!-- Formulario -->
         <form method="POST" action="" class="space-y-5">
+            <?php echo csrf_field(); ?>
             <?php if ($error): ?>
                 <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-5 py-4 rounded-2xl text-sm flex items-center gap-3">
                     <i class="fas fa-exclamation-circle"></i>

@@ -16,15 +16,63 @@ $eventId = isset($_GET['event_id']) ? intval($_GET['event_id']) : 0;
 // Obtener tickets
 $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
 
-// Procesar actualización de estado
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
-    $ticketId = intval($_POST['ticket_id']);
-    $newStatus = cleanInput($_POST['status']);
-    if (in_array($newStatus, ['valid', 'used', 'cancelled'])) {
-        if ($db->updateTicketStatus($ticketId, $newStatus, $adminId)) {
-            $message = "Estado del ticket actualizado correctamente.";
-        } else {
-            $error = "No se pudo actualizar el estado del ticket.";
+// Procesar acciones
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
+    } else {
+        $action = $_POST['action'] ?? '';
+        
+        if ($action === 'update_status') {
+            $ticketId = intval($_POST['ticket_id']);
+            $newStatus = cleanInput($_POST['status']);
+            if (in_array($newStatus, ['valid', 'used', 'cancelled'])) {
+                if ($db->updateTicketStatus($ticketId, $newStatus, $adminId)) {
+                    $message = "Estado del ticket actualizado correctamente.";
+                } else {
+                    $error = "No se pudo actualizar el estado del ticket.";
+                }
+            }
+        } elseif ($action === 'resend') {
+            $ticketId = intval($_POST['ticket_id']);
+            $ticket = $db->getTicketById($ticketId);
+            if ($ticket) {
+                $event = $db->getEventById($ticket['event_id'], $adminId);
+                if ($event) {
+                    $tickets_data = [[
+                        'code' => $ticket['ticket_code'],
+                        'qr_path' => $ticket['qr_code_path'],
+                        'name' => $ticket['attendee_name'],
+                        'email' => $ticket['attendee_email'],
+                        'type_name' => $ticket['type_name'] ?? ''
+                    ]];
+                    $subject = "Reenvío de tus tickets para " . $event['title'];
+                    $emailBody = generateEmailBody($event, $tickets_data, $ticket['attendee_name'], $event['price']);
+                    $pdfContent = generateTicketPDF($event, $tickets_data, $event['price']);
+                    
+                    try {
+                        if (sendTicketEmail($ticket['attendee_email'], $subject, $emailBody, $pdfContent)) {
+                            $message = "Ticket reenviado con éxito a " . $ticket['attendee_email'];
+                        } else {
+                            $error = "No se pudo enviar el correo.";
+                        }
+                    } catch (Exception $e) {
+                        $error = "Error al enviar: " . $e->getMessage();
+                    }
+                }
+            }
+        } elseif ($action === 'edit_ticket') {
+            $ticketId = intval($_POST['ticket_id']);
+            $name = cleanInput($_POST['attendee_name']);
+            $email = cleanInput($_POST['attendee_email']);
+            $phone = cleanInput($_POST['attendee_phone']);
+            
+            if ($db->updateTicketData($ticketId, $name, $email, $phone, $adminId)) {
+                $message = "Datos del ticket actualizados correctamente.";
+            } else {
+                $error = "No se pudo actualizar el ticket.";
+            }
         }
     }
 }
@@ -109,50 +157,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
     exit();
 }
 
-// Procesar reenvío de ticket
-if (isset($_GET['action']) && $_GET['action'] === 'resend' && isset($_GET['id'])) {
-    $ticketId = intval($_GET['id']);
-    $ticket = $db->getTicketById($ticketId);
-    if ($ticket) {
-        $event = $db->getEventById($ticket['event_id'], $adminId);
-        if ($event) {
-            $tickets_data = [[
-                'code' => $ticket['ticket_code'],
-                'qr_path' => $ticket['qr_code_path'],
-                'name' => $ticket['attendee_name'],
-                'email' => $ticket['attendee_email'],
-                'type_name' => $ticket['type_name'] ?? ''
-            ]];
-            $subject = "Reenvío de tus tickets para " . $event['title'];
-            $emailBody = generateEmailBody($event, $tickets_data, $ticket['attendee_name'], $event['price']);
-            $pdfContent = generateTicketPDF($event, $tickets_data, $event['price']);
-            
-            try {
-                if (sendTicketEmail($ticket['attendee_email'], $subject, $emailBody, $pdfContent)) {
-                    $message = "Ticket reenviado con éxito a " . $ticket['attendee_email'];
-                } else {
-                    $error = "No se pudo enviar el correo.";
-                }
-            } catch (Exception $e) {
-                $error = "Error al enviar: " . $e->getMessage();
-            }
-        }
-    }
-}
 
-// Procesar edición de ticket
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit_ticket') {
-    $ticketId = intval($_POST['ticket_id']);
-    $name = cleanInput($_POST['attendee_name']);
-    $email = cleanInput($_POST['attendee_email']);
-    $phone = cleanInput($_POST['attendee_phone']);
-    
-    if ($db->updateTicketData($ticketId, $name, $email, $phone, $adminId)) {
-        $message = "Datos del ticket actualizados correctamente.";
-    } else {
-        $error = "No se pudo actualizar el ticket.";
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -214,9 +219,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     <!-- Main Content -->
     <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative p-4 lg:p-0">
-        
-    <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto bg-[#0A0E14] relative">
         <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-lime-400/5 blur-[120px] rounded-full pointer-events-none"></div>
 
         <!-- Header -->
@@ -463,6 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </button>
         </div>
         <form method="POST">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="update_status">
             <input type="hidden" name="ticket_id" id="statusTicketId">
             <div class="mb-8 space-y-1">
@@ -495,6 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </button>
         </div>
         <form method="POST">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="edit_ticket">
             <input type="hidden" name="ticket_id" id="editTicketId">
             <div class="space-y-4 mb-8">
@@ -548,12 +552,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     function closeEditModal() {
         document.getElementById('editModal').classList.add('hidden');
     }
-    
-    function resendTicket(id) {
-        if (confirm('¿Estás seguro de que quieres reenviar este ticket?')) {
-            window.location.href = '?action=resend&id=' + id;
+        function resendTicket(id) {
+            if (confirm('¿Estás seguro de que deseas reenviar este ticket al correo del asistente?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'tickets.php';
+                
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'resend';
+                
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'ticket_id';
+                idInput.value = id;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = '<?php echo $_SESSION['csrf_token']; ?>';
+                
+                form.appendChild(actionInput);
+                form.appendChild(idInput);
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
         }
-    }
 
     document.getElementById('statusModal').addEventListener('click', function(e) {
         if (e.target === this) closeStatusModal();

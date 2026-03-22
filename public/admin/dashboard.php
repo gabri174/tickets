@@ -193,7 +193,7 @@ $stats = [
                                         <div class="group flex items-center gap-4 p-4 rounded-3xl hover:bg-white/5 transition-all">
                                             <div class="w-14 h-14 rounded-2xl overflow-hidden bg-gray-800 flex-shrink-0">
                                                 <?php if ($event['image_url']): ?>
-                                                    <img src="../<?php echo $event['image_url']; ?>" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="">
+                                                    <img src="../<?php echo htmlspecialchars($event['image_url']); ?>" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="">
                                                 <?php else: ?>
                                                     <div class="w-full h-full flex items-center justify-center">
                                                         <i class="fas fa-image text-gray-700"></i>
@@ -208,7 +208,7 @@ $stats = [
                                                         <?php echo formatDate($event['date_event'], 'd M'); ?>
                                                     </span>
                                                     <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-lime-400/10 text-lime-400/80 uppercase">
-                                                        <?php echo $event['available_tickets']; ?> Libres
+                                                        <?php echo htmlspecialchars($event['available_tickets']); ?> Libres
                                                     </span>
                                                 </div>
                                             </div>
@@ -261,7 +261,7 @@ $stats = [
                                                     </td>
                                                     <td class="px-4 py-4 text-right">
                                                         <span class="inline-block px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-mono text-gray-500">
-                                                            <?php echo substr($ticket['ticket_code'], 0, 8); ?>
+                                                            <?php echo htmlspecialchars(substr($ticket['ticket_code'], 0, 8)); ?>
                                                         </span>
                                                     </td>
                                                 </tr>

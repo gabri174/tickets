@@ -1,4 +1,12 @@
 <?php
+// Security headers
+if (!headers_sent()) {
+    header("X-Content-Type-Options: nosniff");
+    header("X-Frame-Options: SAMEORIGIN");
+    header("X-XSS-Protection: 1; mode=block");
+    header("Content-Security-Policy: default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval';");
+}
+
 // Funciones auxiliares del sistema
 
 // Generar código único para ticket
@@ -18,10 +26,35 @@ function formatCurrency($amount) {
 
 // Limpiar y sanitizar input
 function cleanInput($data) {
+    if (is_array($data)) {
+        return array_map('cleanInput', $data);
+    }
     $data = trim($data);
     $data = stripslashes($data);
-    $data = htmlspecialchars($data);
-    return $data;
+    // Usamos ENT_QUOTES para mayor seguridad en XSS
+    return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+// CSRF Protection
+function generate_csrf_token() {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function verify_csrf_token($token) {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    if (empty($_SESSION['csrf_token']) || !isset($token) || $token !== $_SESSION['csrf_token']) {
+        return false;
+    }
+    return true;
+}
+
+function csrf_field() {
+    $token = generate_csrf_token();
+    return '<input type="hidden" name="csrf_token" value="' . $token . '">';
 }
 
 // Validar email
@@ -224,17 +257,17 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
         <div style='background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 15px; margin-bottom: 10px;'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
-                    <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Asistente</s p>
-                    <p style='margin: 5px 0 0 0; color: #fff; font-weight: bold;'>" . $t['name'] . "</p>
+                    <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Asistente</p>
+                    <p style='margin: 5px 0 0 0; color: #fff; font-weight: bold;'>" . htmlspecialchars($t['name']) . "</p>
                 </div>
                 <div style='text-align: right;'>
                     <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Tipo</p>
-                    <p style='margin: 5px 0 0 0; color: #DAFB71; font-weight: bold;'>" . ($t['type_name'] ?: 'General') . "</p>
+                    <p style='margin: 5px 0 0 0; color: #DAFB71; font-weight: bold;'>" . htmlspecialchars($t['type_name'] ?: 'General') . "</p>
                 </div>
             </div>
             <div style='margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);'>
                 <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Código de Ticket</p>
-                <p style='margin: 5px 0 0 0; color: #fff; font-family: monospace; font-size: 14px;'>" . $t['code'] . "</p>
+                <p style='margin: 5px 0 0 0; color: #fff; font-family: monospace; font-size: 14px;'>" . htmlspecialchars($t['code']) . "</p>
             </div>
         </div>";
     }
@@ -248,13 +281,13 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
             </div>
             
             <div style='padding: 30px;'>
-                <p style='color: #888; margin: 0 0 20px 0;'>Hola <strong>$name</strong>,</p>
-                <p style='color: #ccc; line-height: 1.6; margin-bottom: 30px;'>Tu compra para <strong>" . $event['title'] . "</strong> ha sido confirmada. Aquí tienes los detalles de tus entradas:</p>
+                <p style='color: #888; margin: 0 0 20px 0;'>Hola <strong>" . htmlspecialchars($name) . "</strong>,</p>
+                <p style='color: #ccc; line-height: 1.6; margin-bottom: 30px;'>Tu compra para <strong>" . htmlspecialchars($event['title']) . "</strong> ha sido confirmada. Aquí tienes los detalles de tus entradas:</p>
                 
                 <div style='background: rgba(0,0,0,0.2); border-radius: 20px; padding: 20px; margin-bottom: 30px;'>
                     <div style='margin-bottom: 15px;'>
                         <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Evento</p>
-                        <p style='margin: 5px 0 0 0; color: #fff; font-size: 18px; font-weight: bold;'>" . $event['title'] . "</p>
+                        <p style='margin: 5px 0 0 0; color: #fff; font-size: 18px; font-weight: bold;'>" . htmlspecialchars($event['title']) . "</p>
                     </div>
                     <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 20px;'>
                         <div>
@@ -263,7 +296,7 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
                         </div>
                         <div>
                             <p style='margin: 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: bold;'>Lugar</p>
-                            <p style='margin: 5px 0 0 0; color: #fff; font-weight: bold;'>" . $event['location'] . "</p>
+                            <p style='margin: 5px 0 0 0; color: #fff; font-weight: bold;'>" . htmlspecialchars($event['location']) . "</p>
                         </div>
                     </div>
                 </div>

@@ -8,31 +8,35 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = cleanInput($_POST['email']);
-    
-    if (empty($email)) {
-        $error = 'Por favor, introduce tu email';
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
     } else {
-        $admin = $db->getAdminByEmail($email);
-        if ($admin) {
-            $token = bin2hex(random_bytes(32));
-            if ($db->createPasswordReset($email, $token)) {
-                try {
-                    if (sendResetPasswordEmail($email, $token)) {
-                        $message = 'Se ha enviado un enlace de recuperación a tu correo electrónico.';
-                    } else {
-                        $error = 'No se pudo enviar el correo de recuperación.';
+        $email = cleanInput($_POST['email']);
+        
+        if (empty($email)) {
+            $error = 'Por favor, introduce tu email';
+        } else {
+            $admin = $db->getAdminByEmail($email);
+            if ($admin) {
+                $token = bin2hex(random_bytes(32));
+                if ($db->createPasswordReset($email, $token)) {
+                    try {
+                        if (sendResetPasswordEmail($email, $token)) {
+                            $message = 'Se ha enviado un enlace de recuperación a tu correo electrónico.';
+                        } else {
+                            $error = 'No se pudo enviar el correo de recuperación.';
+                        }
+                    } catch (Exception $e) {
+                        $error = 'Error al enviar: ' . $e->getMessage();
                     }
-                } catch (Exception $e) {
-                    $error = 'Error al enviar: ' . $e->getMessage();
+                } else {
+                    $error = 'Error al generar el token de recuperación.';
                 }
             } else {
-                $error = 'Error al generar el token de recuperación.';
+                // No revelamos si el email existe o no por seguridad
+                $message = 'Si el correo existe, recibirás un enlace de recuperación.';
             }
-        } else {
-            // No revelamos si el email existe o no por seguridad, 
-            // pero en un entorno admin podemos ser un poco más específicos o fingir éxito.
-            $message = 'Si el correo existe, recibirás un enlace de recuperación.';
         }
     }
 }
@@ -104,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <form method="POST" class="space-y-6">
+            <?php echo csrf_field(); ?>
             <?php if ($message): ?>
                 <div class="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-5 py-4 rounded-2xl text-sm flex items-center gap-3">
                     <i class="fas fa-check-circle"></i>

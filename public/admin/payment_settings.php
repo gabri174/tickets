@@ -11,7 +11,7 @@ $message = '';
 $error = '';
 
 // Obtener configuración actual del admin
-$stmt = $pdo->prepare("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?");
+$stmt = $db->getConnection()->prepare("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?");
 $stmt->execute([$adminId]);
 $admin = $stmt->fetch();
 
@@ -19,8 +19,12 @@ $paymentMethod = $admin['preferred_payment_method'] ?? 'finassets';
 $paymentConfig = json_decode($admin['payment_config'] ?? '{}', true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $paymentMethod = cleanInput($_POST['payment_method']);
-    $config = [];
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
+    } else {
+        $paymentMethod = cleanInput($_POST['payment_method']);
+        $config = [];
     
     switch ($paymentMethod) {
         case 'finassets':
@@ -48,19 +52,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $configJson = json_encode($config);
     
-    try {
-        $stmt = $pdo->prepare("UPDATE admins SET preferred_payment_method = ?, payment_config = ? WHERE id = ?");
-        if ($stmt->execute([$paymentMethod, $configJson, $adminId])) {
-            $message = 'Configuración de pago actualizada correctamente.';
-            $paymentConfig = $config;
-        } else {
-            $error = 'Error al actualizar la configuración.';
+        try {
+            $stmt = $db->getConnection()->prepare("UPDATE admins SET preferred_payment_method = ?, payment_config = ? WHERE id = ?");
+            if ($stmt->execute([$paymentMethod, $configJson, $adminId])) {
+                $message = 'Configuración de pago actualizada correctamente.';
+                $paymentConfig = $config;
+            } else {
+                $error = 'Error al actualizar la configuración.';
+            }
+        } catch (Exception $e) {
+            $error = 'Error en la base de datos: ' . $e->getMessage();
         }
-    } catch (Exception $e) {
-        $error = 'Error en la base de datos: ' . $e->getMessage();
     }
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -108,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <form method="POST" class="space-y-8">
+                    <?php echo csrf_field(); ?>
                     <div class="glass-card p-8 rounded-[2rem]">
                         <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Método Preferido</label>
                         <select name="payment_method" id="payment_method" class="w-full p-4 rounded-2xl outline-none" onchange="toggleConfig(this.value)">

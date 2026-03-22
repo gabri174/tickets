@@ -20,20 +20,25 @@ if (!$resetRequest) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $resetRequest) {
-    $password = $_POST['password'];
-    $confirmPassword = $_POST['confirm_password'];
-    
-    if (strlen($password) < 6) {
-        $error = 'La contraseña debe tener al menos 6 caracteres.';
-    } elseif ($password !== $confirmPassword) {
-        $error = 'Las contraseñas no coinciden.';
+    // CSRF Check
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
     } else {
-        if ($db->updateAdminPasswordByEmail($resetRequest['email'], $password)) {
-            $db->deletePasswordReset($resetRequest['email']);
-            $message = 'Tu contraseña ha sido restablecida correctamente. Ya puedes iniciar sesión.';
-            $success = true;
+        $password = $_POST['password'];
+        $confirmPassword = $_POST['confirm_password'];
+        
+        if (strlen($password) < 6) {
+            $error = 'La contraseña debe tener al menos 6 caracteres.';
+        } elseif ($password !== $confirmPassword) {
+            $error = 'Las contraseñas no coinciden.';
         } else {
-            $error = 'Hubo un error al restablecer la contraseña.';
+            if ($db->updateAdminPasswordByEmail($resetRequest['email'], $password)) {
+                $db->deletePasswordReset($resetRequest['email']);
+                $message = 'Tu contraseña ha sido restablecida correctamente. Ya puedes iniciar sesión.';
+                $success = true;
+            } else {
+                $error = 'Hubo un error al restablecer la contraseña.';
+            }
         }
     }
 }
@@ -82,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $resetRequest) {
             </div>
         <?php else: ?>
             <form method="POST" class="space-y-6">
+                <?php echo csrf_field(); ?>
                 <?php if ($error): ?>
                     <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-5 py-4 rounded-2xl text-sm flex items-center gap-3">
                         <i class="fas fa-exclamation-circle"></i>
