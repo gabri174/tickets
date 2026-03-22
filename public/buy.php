@@ -21,6 +21,17 @@ if (!$event) {
     header('Location: index.php');
     exit();
 }
+
+// Analytics: Capturar Referido (ref) y Tracking de Visita
+if (!isset($_SESSION['referral']) && isset($_GET['ref'])) {
+    $_SESSION['referral'] = cleanInput($_GET['ref']);
+}
+
+// Registrar visita (funnel de conversión)
+$sessionId = session_id();
+$ipHash = hash('sha256', $_SERVER['REMOTE_ADDR']);
+$db->trackVisit($eventId, $sessionId, $ipHash);
+
 $ticketTypes = $db->getTicketTypesByEvent($eventId);
 
 // Procesar formulario
@@ -28,11 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $quantity = (int) cleanInput($_POST['quantity']);
     $attendees = isset($_POST['attendees']) ? $_POST['attendees'] : [];
     $phone = cleanInput($_POST['phone']);
+    $zipCode = cleanInput($_POST['zip_code']);
     
     // Validaciones
     $errors = [];
     
     if (empty($phone)) $errors[] = 'El teléfono de contacto es requerido';
+    if (empty($zipCode)) $errors[] = 'El código postal es requerido para la analítica del evento';
     if ($quantity < 1 || $quantity > $event['available_tickets']) $errors[] = 'Cantidad de tickets inválida';
     
     // Validar cada asistente
@@ -102,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'quantity' => $quantity,
                     'attendees' => $attendees,
                     'phone' => $phone,
+                    'zip_code' => $zipCode,
                     'total_price' => $totalPrice
                 ], $db);
                 
@@ -119,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'quantity' => $quantity,
                     'attendees' => $attendees,
                     'phone' => $phone,
+                    'zip_code' => $zipCode,
                     'total_price' => $totalPrice
                 ];
 
@@ -134,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
             $errors[] = 'Error al procesar la compra: ' . $e->getMessage();
         }
         }
@@ -455,6 +470,13 @@ function generateEmailBody($event, $tickets, $name, $totalPrice) {
                 <input type="tel" name="phone" required placeholder="Ej: +34 600 000 000"
                        value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>">
                 <p class="text-[10px] text-gray-500 mt-2">Usaremos este número para enviarte confirmaciones por WhatsApp.</p>
+            </div>
+
+            <div class="glass-card p-6">
+                <label><i class="fas fa-map-marker-alt mr-2"></i>Código Postal (CP)</label>
+                <input type="text" name="zip_code" required placeholder="Ej: 28001"
+                       value="<?php echo isset($_POST['zip_code']) ? htmlspecialchars($_POST['zip_code']) : ''; ?>">
+                <p class="text-[10px] text-gray-500 mt-2">Necesario para las analíticas de geolocalización del evento.</p>
             </div>
 
             <!-- Total and Submit -->

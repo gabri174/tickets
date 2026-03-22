@@ -61,7 +61,6 @@ class Database {
             return $stmt->execute([$id]);
         }
     }
-
     public function getAllEvents($adminId = null) {
         if ($adminId) {
             $stmt = $this->pdo->prepare("SELECT * FROM events WHERE admin_id = ? ORDER BY created_at DESC");
@@ -71,6 +70,11 @@ class Database {
             $stmt->execute();
         }
         return $stmt->fetchAll();
+    }
+
+    public function trackVisit($eventId, $sessionId, $ipHash) {
+        $stmt = $this->pdo->prepare("INSERT INTO event_visits (event_id, session_id, ip_hash) VALUES (?, ?, ?)");
+        return $stmt->execute([$eventId, $sessionId, $ipHash]);
     }
 
     // ─────────────────────────────────────────────
@@ -113,9 +117,9 @@ class Database {
     // TICKETS
     // ─────────────────────────────────────────────
 
-    public function createTicket($eventId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $ticketTypeId = null) {
-        $stmt = $this->pdo->prepare("INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([$eventId, $ticketTypeId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath]);
+    public function createTicket($eventId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $ticketTypeId = null, $referral = null, $zipCode = null) {
+        $stmt = $this->pdo->prepare("INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path, referral, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        return $stmt->execute([$eventId, $ticketTypeId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $referral, $zipCode]);
     }
 
     public function updateAvailableTickets($eventId, $quantity = 1) {

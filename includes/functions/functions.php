@@ -407,7 +407,10 @@ function completePurchase($data, $db) {
             $qrData = SITE_URL . "/ticket.php?code=" . $ticketCode;
             $qrPath = generateQRCode($qrData, $qrFilename);
             
-            $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId);
+            $referral = $_SESSION['referral'] ?? null;
+            $zipCode = $data['zip_code'] ?? null;
+
+            $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId, $referral, $zipCode);
             $tickets[] = [
                 'code' => $ticketCode,
                 'qr_path' => $qrPath,

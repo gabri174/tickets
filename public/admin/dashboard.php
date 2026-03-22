@@ -2,18 +2,31 @@
 require_once '../../includes/config/config.php';
 require_once '../../includes/functions/functions.php';
 require_once '../../includes/classes/Database.php';
+require_once '../../includes/classes/Analytics.php';
 
 checkAdminSession();
 
 $db = new Database();
+$analytics = new Analytics($db);
 $adminId = ($_SESSION['admin_role'] === 'superadmin') ? null : $_SESSION['admin_id'];
+
+// Filtrar por evento si se solicita
+$selectedEventId = isset($_GET['event_id']) && !empty($_GET['event_id']) ? (int)$_GET['event_id'] : null;
 
 $stats = [
     'total_events' => $db->countEvents($adminId),
     'total_tickets' => $db->countTickets($adminId),
     'recent_events' => array_slice($db->getAllEvents($adminId), 0, 5),
-    'recent_tickets' => array_slice($db->getAllTickets($adminId), 0, 10)
+    'recent_tickets' => array_slice($db->getAllTickets($adminId), 0, 10),
+    'all_events' => $db->getAllEvents($adminId)
 ];
+
+// Datos de Analytics
+$funnel = $analytics->getConversionFunnel($adminId, $selectedEventId);
+$attribution = $analytics->getSalesAttribution($adminId, $selectedEventId);
+$geo = $analytics->getGeolocalization($adminId, $selectedEventId);
+$recurrence = $analytics->getRecurrenceData($adminId);
+$prediction = $selectedEventId ? $analytics->getSoldOutPrediction($selectedEventId) : null;
 ?>
 
 <!DOCTYPE html>
@@ -25,6 +38,7 @@ $stats = [
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { 
             background-color: #0A0E14;
@@ -108,6 +122,16 @@ $stats = [
                         <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Resumen general de tu actividad</p>
                     </div>
                     <div class="flex items-center gap-6">
+                        <form action="" method="GET" class="hidden md:flex items-center gap-2">
+                            <select name="event_id" onchange="this.form.submit()" class="bg-white/5 border border-white/10 rounded-full px-4 py-2 text-xs font-bold text-gray-300 outline-none focus:border-lime-400/50">
+                                <option value="">Todos los eventos</option>
+                                <?php foreach ($stats['all_events'] as $e): ?>
+                                    <option value="<?php echo $e['id']; ?>" <?php echo $selectedEventId == $e['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($e['title']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
                         <div class="hidden md:block text-right">
                             <p class="text-xs font-bold"><?php echo date('l, d F'); ?></p>
                             <p class="text-[10px] text-gray-500 uppercase"><?php echo date('H:i'); ?> GMT+1</p>
@@ -166,6 +190,121 @@ $stats = [
                         </div>
                         <p class="text-4xl font-black mb-1">0</p>
                         <p class="text-xs text-gray-500 font-medium">En desarrollo</p>
+                    </div>
+                </div>
+
+                <!-- Advanced Analytics Section -->
+                <div class="mb-10">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-black tracking-tight"><i class="fas fa-chart-pie text-lime-400 mr-2"></i>Analíticas <span class="text-gradient">Avanzadas</span></h3>
+                        <?php if ($prediction): ?>
+                            <div class="px-4 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[10px] font-black text-orange-400 uppercase tracking-widest">
+                                Predicción Sold Out: <?php echo $prediction; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Funnel Card -->
+                        <div class="glass-card rounded-[2.5rem] p-8 flex flex-col justify-center">
+                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6 text-center">Embudo de Conversión</p>
+                            <div class="relative h-48 flex items-center justify-center">
+                                <canvas id="funnelChart"></canvas>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <p class="text-3xl font-black text-lime-400"><?php echo $funnel['rate']; ?>%</p>
+                                    <p class="text-[9px] text-gray-500 uppercase font-bold">Conversión</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-6">
+                                <div class="text-center">
+                                    <p class="text-lg font-black"><?php echo number_format($funnel['visits']); ?></p>
+                                    <p class="text-[9px] text-gray-500 uppercase">Visitas</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-lg font-black"><?php echo number_format($funnel['paid']); ?></p>
+                                    <p class="text-[9px] text-gray-500 uppercase">Ventas</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Attribution Card -->
+                        <div class="glass-card rounded-[2.5rem] p-8 lg:col-span-2">
+                             <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Atribución de Ventas (Afiliados)</p>
+                             <div class="overflow-hidden">
+                                 <table class="w-full">
+                                     <thead>
+                                         <tr class="text-[9px] text-gray-500 uppercase tracking-widest text-left">
+                                             <th class="pb-4">Fuente / Ref</th>
+                                             <th class="pb-4 text-center">Ventas</th>
+                                             <th class="pb-4 text-right">Ingresos Est.</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody class="divide-y divide-white/5">
+                                         <?php if (empty($attribution)): ?>
+                                             <tr><td colspan="3" class="py-10 text-center text-gray-600 text-xs italic">No hay datos de atribución disponibles</td></tr>
+                                         <?php else: ?>
+                                             <?php foreach (array_slice($attribution, 0, 5) as $attr): ?>
+                                                 <tr>
+                                                     <td class="py-4">
+                                                         <span class="px-3 py-1 bg-white/5 rounded-lg text-xs font-bold text-gray-300"><?php echo $attr['source'] ?: 'Directo / Orgánico'; ?></span>
+                                                     </td>
+                                                     <td class="py-4 text-center font-black text-sm"><?php echo $attr['sales']; ?></td>
+                                                     <td class="py-4 text-right font-black text-lime-400/80 text-sm"><?php echo formatCurrency($attr['revenue'] ?: 0); ?></td>
+                                                 </tr>
+                                             <?php endforeach; ?>
+                                         <?php endif; ?>
+                                     </tbody>
+                                 </table>
+                             </div>
+                        </div>
+
+                        <!-- Geo Card -->
+                        <div class="glass-card rounded-[2.5rem] p-8">
+                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Mapa de Calor (Top 5 CP)</p>
+                            <div class="space-y-4">
+                                <?php if (empty($geo)): ?>
+                                    <p class="text-center text-gray-600 text-xs italic py-10">Sin datos de geolocalización</p>
+                                <?php else: ?>
+                                    <?php 
+                                    $maxGeo = $geo[0]['total'];
+                                    foreach (array_slice($geo, 0, 5) as $g): 
+                                        $width = ($g['total'] / $maxGeo) * 100;
+                                    ?>
+                                        <div>
+                                            <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
+                                                <span>CP <?php echo htmlspecialchars($g['zip_code']); ?></span>
+                                                <span class="text-lime-400"><?php echo $g['total']; ?></span>
+                                            </div>
+                                            <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                <div class="h-full bg-lime-400/40 rounded-full" style="width: <?php echo $width; ?>%"></div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Recurrence Card -->
+                        <div class="glass-card rounded-[2.5rem] p-8 lg:col-span-2">
+                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Análisis de Recurrencia (Clientes Fieles)</p>
+                            <div class="flex flex-wrap gap-4">
+                                <?php if (empty($recurrence)): ?>
+                                    <p class="text-gray-600 text-xs italic py-4">No se han detectado compras recurrentes todavía</p>
+                                <?php else: ?>
+                                    <?php foreach (array_slice($recurrence, 0, 8) as $rec): ?>
+                                        <div class="px-4 py-3 bg-white/5 rounded-[1.5rem] border border-white/5 flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-xs">
+                                                <i class="fas fa-user text-[10px]"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-gray-300 leading-none mb-1"><?php echo htmlspecialchars($rec['attendee_email']); ?></p>
+                                                <p class="text-[9px] text-lime-400 font-black uppercase tracking-tighter"><?php echo $rec['appearances']; ?> Compras</p>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -285,5 +424,27 @@ $stats = [
             </div>
         </main>
     </div>
+    <script>
+        const ctx = document.getElementById('funnelChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Ventas', 'Visitas'],
+                datasets: [{
+                    data: [<?php echo $funnel['paid']; ?>, <?php echo max(0, $funnel['visits'] - $funnel['paid']); ?>],
+                    backgroundColor: ['#DAFB71', 'rgba(255, 255, 255, 0.05)'],
+                    borderWidth: 0,
+                    cutout: '85%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    </script>
 </body>
 </html>

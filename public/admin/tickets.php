@@ -73,6 +73,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $error = "No se pudo actualizar el ticket.";
             }
+        } elseif ($action === 'create_manual') {
+            $eventId = intval($_POST['event_id']);
+            $ticketTypeId = !empty($_POST['ticket_type_id']) ? intval($_POST['ticket_type_id']) : null;
+            $name = cleanInput($_POST['name']);
+            $email = cleanInput($_POST['email']);
+            $phone = cleanInput($_POST['phone']);
+            $zipCode = cleanInput($_POST['zip_code']);
+
+            try {
+                $purchaseData = [
+                    'event_id' => $eventId,
+                    'ticket_type_id' => $ticketTypeId,
+                    'quantity' => 1,
+                    'attendees' => [['name' => $name, 'surname' => '', 'email' => $email]],
+                    'phone' => $phone,
+                    'zip_code' => $zipCode,
+                    'total_price' => 0
+                ];
+
+                $result = completePurchase($purchaseData, $db);
+                if ($result) {
+                    $message = "Ticket manual creado y enviado con éxito a $email";
+                }
+            } catch (Exception $e) {
+                $error = "Error al crear ticket manual: " . $e->getMessage();
+            }
         }
     }
 }
@@ -228,9 +254,14 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
                     <h2 class="text-2xl font-black tracking-tighter">Ventas & <span class="text-gradient">Tickets</span></h2>
                     <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Historial de compras y gestión de accesos</p>
                 </div>
-                <a href="?export=true" class="flex items-center gap-2 px-5 py-2.5 bg-lime-400 text-black rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
-                    <i class="fas fa-file-csv"></i>Exportar CSV
-                </a>
+                <div class="flex items-center gap-3">
+                    <button onclick="openManualTicketModal()" class="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all">
+                        <i class="fas fa-plus"></i>Nuevo Ticket Manual
+                    </button>
+                    <a href="?export=true" class="flex items-center gap-2 px-5 py-2.5 bg-lime-400 text-black rounded-xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
+                        <i class="fas fa-file-csv"></i>Exportar CSV
+                    </a>
+                </div>
             </div>
         </header>
 
@@ -603,5 +634,99 @@ if (isset($_GET['export']) && $_GET['export'] === 'true') {
     <?php if ($message): ?> showNotification("<?php echo $message; ?>"); <?php endif; ?>
     <?php if ($error): ?> showNotification("<?php echo $error; ?>"); <?php endif; ?>
 </script>
+    <!-- Modal Ticket Manual -->
+    <div id="manualTicketModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeManualTicketModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg p-4">
+            <div class="glass-card rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <div class="bg-white/5 px-8 py-6 border-b border-white/5 flex justify-between items-center">
+                    <h3 class="text-xl font-black tracking-tight"><i class="fas fa-plus-circle text-blue-400 mr-2"></i>Crear Ticket <span class="text-gradient">Manual</span></h3>
+                    <button onclick="closeManualTicketModal()" class="text-gray-500 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+                </div>
+                <form action="tickets.php" method="POST" class="p-8 space-y-6">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="action" value="create_manual">
+                    
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Evento</label>
+                        <select name="event_id" required onchange="loadTicketTypes(this.value)" class="w-full px-5 py-3.5 rounded-xl outline-none transition-all text-sm bg-white/5 border border-white/10">
+                            <option value="">Selecciona un evento</option>
+                            <?php foreach ($events as $event): ?>
+                                <option value="<?php echo $event['id']; ?>"><?php echo htmlspecialchars($event['title']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div id="ticketTypeContainer" class="space-y-2 hidden">
+                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Tipo de Entrada</label>
+                        <select name="ticket_type_id" id="manual_ticket_type_id" class="w-full px-5 py-3.5 rounded-xl outline-none transition-all text-sm bg-white/5 border border-white/10">
+                            <!-- Se carga vía AJAX -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Nombre</label>
+                            <input type="text" name="name" required placeholder="Ej: Juan" class="w-full px-5 py-3.5 rounded-xl outline-none border border-white/10 bg-white/5 text-sm">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Email</label>
+                            <input type="email" name="email" required placeholder="email@ejemplo.com" class="w-full px-5 py-3.5 rounded-xl outline-none border border-white/10 bg-white/5 text-sm">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Teléfono</label>
+                            <input type="tel" name="phone" placeholder="+34 600 000 000" class="w-full px-5 py-3.5 rounded-xl outline-none border border-white/10 bg-white/5 text-sm">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Código Postal</label>
+                            <input type="text" name="zip_code" placeholder="Ej: 28001" class="w-full px-5 py-3.5 rounded-xl outline-none border border-white/10 bg-white/5 text-sm">
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" class="w-full py-4 bg-lime-400 text-black rounded-2xl font-black text-xs hover:shadow-[0_0_20px_rgba(218,251,113,0.3)] transition-all">
+                            GENERAR Y ENVIAR TICKET
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openManualTicketModal() {
+            document.getElementById('manualTicketModal').classList.remove('hidden');
+        }
+        function closeManualTicketModal() {
+            document.getElementById('manualTicketModal').classList.add('hidden');
+        }
+        function loadTicketTypes(eventId) {
+            const container = document.getElementById('ticketTypeContainer');
+            const select = document.getElementById('manual_ticket_type_id');
+            
+            if (!eventId) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            fetch(`api_ticket_types.php?event_id=${eventId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        select.innerHTML = '<option value="">Tipo General</option>';
+                        data.forEach(type => {
+                            select.innerHTML += `<option value="${type.id}">${type.name} (${type.price}€)</option>`;
+                        });
+                        container.classList.remove('hidden');
+                    } else {
+                        container.classList.add('hidden');
+                        select.innerHTML = '';
+                    }
+                });
+        }
+    </script>
 </body>
 </html>

@@ -11,7 +11,7 @@ $message = '';
 $error = '';
 
 // Obtener configuración actual del admin
-$stmt = $db->getConnection()->prepare("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?");
+$stmt = $db->getPdo()->prepare("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?");
 $stmt->execute([$adminId]);
 $admin = $stmt->fetch();
 

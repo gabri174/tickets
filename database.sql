@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS tickets (
     purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('valid', 'used', 'cancelled') DEFAULT 'valid',
     qr_code_path VARCHAR(500),
+    referral VARCHAR(100) DEFAULT NULL,
+    zip_code VARCHAR(10) DEFAULT NULL,
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
     FOREIGN KEY (ticket_type_id) REFERENCES ticket_types(id) ON DELETE SET NULL
 );
@@ -95,3 +97,18 @@ INSERT INTO events (title, description, date_event, location, price, max_tickets
 ('Concierto de Jazz', 'Noche mágica con los mejores músicos de jazz de la región.', '2024-12-20 20:00:00', 'Teatro Municipal', 85.00, 200, 200, 'assets/images/concierto.jpg', 'conciertos'),
 ('Campamento de Verano', 'Aventuras y actividades al aire libre para toda la familia.', '2024-12-25 10:00:00', 'Parque Nacional La Cumbre', 120.00, 30, 30, 'assets/images/campamento.jpg', 'festivales')
 ON DUPLICATE KEY UPDATE title=title;
+
+-- Tabla de visitas para el funnel de conversión
+CREATE TABLE IF NOT EXISTS event_visits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_id INT NOT NULL,
+    session_id VARCHAR(100) NOT NULL,
+    ip_hash VARCHAR(64),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+-- Índices para optimización de analytics
+ALTER TABLE tickets ADD INDEX (referral);
+ALTER TABLE tickets ADD INDEX (zip_code);
+ALTER TABLE event_visits ADD INDEX (event_id, created_at);
