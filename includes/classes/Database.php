@@ -4,7 +4,18 @@ class Database {
     
     public function __construct() {
         global $pdo;
-        $this->pdo = $pdo;
+        if (isset($pdo) && $pdo instanceof PDO) {
+            $this->pdo = $pdo;
+        } else {
+            try {
+                $this->pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
+                $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            } catch(PDOException $e) {
+                // Si falla, al menos tenemos el error registrado
+                error_log("Database Connection Error: " . $e->getMessage());
+            }
+        }
     }
 
     // ─────────────────────────────────────────────

@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'El método de pago configurado (' . $paymentMethod . ') aún no está plenamente integrado. Por favor, contacta con el organizador.';
             }
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
             $errors[] = 'Error al procesar la compra: ' . $e->getMessage();
         }

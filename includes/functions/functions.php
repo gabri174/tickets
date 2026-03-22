@@ -240,7 +240,7 @@ function generateWhatsAppLink($phone, $message) {
 
 // Verificar sesión de administrador
 function checkAdminSession() {
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) session_start();
     if (!isset($_SESSION['admin_id'])) {
         header('Location: login.php');
         exit();
@@ -446,8 +446,8 @@ function completePurchase($data, $db) {
             'email' => $primary_email,
             'phone' => $phone
         ];
-    } catch (Exception $e) {
-        $pdo->rollBack();
+    } catch (Throwable $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
         throw $e;
     }
 }
