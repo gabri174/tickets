@@ -28,9 +28,14 @@ if (!isset($_SESSION['referral']) && isset($_GET['ref'])) {
 }
 
 // Registrar visita (funnel de conversión)
-$sessionId = session_id();
-$ipHash = hash('sha256', $_SERVER['REMOTE_ADDR']);
-$db->trackVisit($eventId, $sessionId, $ipHash);
+try {
+    $sessionId = session_id();
+    $ipHash = hash('sha256', $_SERVER['REMOTE_ADDR']);
+    $db->trackVisit($eventId, $sessionId, $ipHash);
+} catch (Throwable $e) {
+    // Si falla el tracking (ej. tabla no existe), no bloqueamos la compra
+    error_log("Error in trackVisit: " . $e->getMessage());
+}
 
 $ticketTypes = $db->getTicketTypesByEvent($eventId);
 
