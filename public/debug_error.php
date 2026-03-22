@@ -35,6 +35,15 @@ try {
         $eventId = $event['id'];
         echo "<p>Evento de prueba ID: $eventId found</p>";
         
+        // TEST trackVisit
+        echo "Intentando trackVisit... ";
+        try {
+            $db->trackVisit($eventId, 'debug-session', 'debug-ip');
+            echo "<span style='color:green'>OK</span><br>";
+        } catch (Throwable $e) {
+            echo "<span style='color:red'>FALLÓ: " . $e->getMessage() . "</span><br>";
+        }
+
         // Cargar types
         $types = $db->getTicketTypesByEvent($eventId);
         echo "Tipos de tickets: " . count($types) . "<br>";
