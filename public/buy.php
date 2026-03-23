@@ -129,6 +129,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: success.php');
                 exit();
             } elseif ($paymentMethod === 'finassets') {
+                // Forzar el uso de la configuración del cliente. Si no existe, lanzar error.
+                if (empty($paymentConfig)) {
+                    throw new Exception('El organizador no ha configurado las credenciales de pago para este evento.');
+                }
+
                 $gateway = new FinassetsGateway($paymentConfig);
                 
                 // Guardamos datos temporales en la sesión para completar la compra tras el pago
