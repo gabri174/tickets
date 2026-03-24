@@ -180,6 +180,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="keywords" content="<?php echo htmlspecialchars($event['seo_keywords']); ?>">
     <?php endif; ?>
     
+    <!-- Open Graph / WhatsApp / Facebook -->
+    <meta property="og:type" content="event">
+    <meta property="og:url" content="<?php echo SITE_URL . '/buy.php?id=' . $eventId; ?>">
+    <meta property="og:title" content="<?php echo htmlspecialchars($event['seo_title'] ?: $event['title']); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($event['seo_description'] ?: 'Compra tus entradas para ' . $event['title'] . ' en ' . $event['location']); ?>">
+    <meta property="og:image" content="<?php echo SITE_URL . '/' . ($event['image_url'] ?: 'assets/img/default-event.jpg'); ?>">
+    <meta property="og:site_name" content="TicketApp">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

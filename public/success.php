@@ -214,6 +214,10 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                            class="btn-modern bg-gray-100 text-gray-800 w-full text-xs py-3">
                             <i class="fas fa-external-link-alt mr-2"></i> Ver Ticket Online
                         </a>
+                        <a href="wallet.php?ticket_code=<?php echo $ticket['code']; ?>" 
+                           class="btn-modern bg-black text-white w-full text-xs py-3 hover:bg-gray-900 border border-gray-800 transition-colors shadow-lg">
+                            <i class="fab fa-apple mr-2 text-lg"></i> Añadir a Wallet
+                        </a>
                     </div>
                 </div>
             <?php endforeach; ?>
