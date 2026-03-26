@@ -49,8 +49,8 @@ if (APP_ENV === 'development') {
 // 🚀 SRE - CAPA 1: REDIS CACHE (Upstash o local)
 // Obtener credenciales desde variable de entorno o definir aquí
 // ──────────────────────────────────────────────────────────────────────────────
-$redisRestUrl   = getenv('REDIS_REST_URL')   ?: '';
-$redisRestToken = getenv('REDIS_REST_TOKEN') ?: '';
+$redisRestUrl   = getenv('REDIS_REST_URL')   ?: 'https://ethical-possum-85011.upstash.io';
+$redisRestToken = getenv('REDIS_REST_TOKEN') ?: 'gQAAAAAAAUwTAAIncDJhZGIzYzliYTA5YTA0YzAxYTJhMmRhZDljZGRlNDM5M3AyODUwMTE';
 $redisUrl       = getenv('REDIS_URL')        ?: '';
 
 if (!defined('REDIS_REST_URL'))   define('REDIS_REST_URL',   $redisRestUrl);
@@ -60,13 +60,15 @@ if (!defined('REDIS_URL'))        define('REDIS_URL',        $redisUrl);
 // ──────────────────────────────────────────────────────────────────────────────
 // 🚀 SRE - CAPA 2: UPSTASH QSTASH (Cola de mensajes)
 // ──────────────────────────────────────────────────────────────────────────────
-$qstashToken      = getenv('UPSTASH_QSTASH_TOKEN') ?: '';
-$qstashSigningKey = getenv('QSTASH_SIGNING_KEY')   ?: '';
-$queueWorkerUrl   = getenv('QUEUE_WORKER_URL')      ?: SITE_URL . '/queue_worker.php';
+$qstashToken      = getenv('UPSTASH_QSTASH_TOKEN') ?: 'eyJVc2VySUQiOiI5N2ExYTdiZC00N2ZmLTRkN2UtOTgyNC02ZDQ4ZGQ4NDkyOTIiLCJQYXNzd29yZCI6ImIwNTlmZTZiODhlZjQ3NDhhOGViMTRmYzNkY2FlYzdhIn0=';
+$qstashSigningKey = getenv('QSTASH_SIGNING_KEY')   ?: 'sig_7cN6pjw7SZyWBsD5L6sh9Tndfwff';
+$qstashUrl        = getenv('QSTASH_URL')           ?: 'https://qstash-eu-central-1.upstash.io';
+$queueWorkerUrl   = getenv('QUEUE_WORKER_URL')     ?: SITE_URL . '/queue_worker.php';
 
 if (!defined('UPSTASH_QSTASH_TOKEN')) define('UPSTASH_QSTASH_TOKEN', $qstashToken);
 if (!defined('QSTASH_SIGNING_KEY'))   define('QSTASH_SIGNING_KEY',   $qstashSigningKey);
-if (!defined('QUEUE_WORKER_URL'))     define('QUEUE_WORKER_URL',      $queueWorkerUrl);
+if (!defined('QSTASH_URL'))           define('QSTASH_URL',           $qstashUrl);
+if (!defined('QUEUE_WORKER_URL'))     define('QUEUE_WORKER_URL',     $queueWorkerUrl);
 
 // Conexión a la base de datos
 try {

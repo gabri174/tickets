@@ -17,7 +17,9 @@ class QueueService {
     public function __construct() {
         $this->qstashToken = defined('UPSTASH_QSTASH_TOKEN') ? UPSTASH_QSTASH_TOKEN : getenv('UPSTASH_QSTASH_TOKEN');
         $this->workerUrl   = defined('QUEUE_WORKER_URL')     ? QUEUE_WORKER_URL     : getenv('QUEUE_WORKER_URL');
-        $this->qstashUrl   = 'https://qstash.upstash.io/v2/publish/';
+        $baseUrl           = defined('QSTASH_URL')           ? QSTASH_URL           : (getenv('QSTASH_URL') ?: 'https://qstash.upstash.io');
+        
+        $this->qstashUrl   = rtrim($baseUrl, '/') . '/v2/publish/';
         $this->enabled     = !empty($this->qstashToken) && !empty($this->workerUrl);
     }
 
