@@ -81,7 +81,7 @@ export default {
           attempt: 1
         };
 
-        const qstashResponse = await fetch(`${env.QSTASH_URL}/v2/publish/${encodeURIComponent(env.QUEUE_WORKER_URL)}`, {
+        const qstashResponse = await fetch(`${env.QSTASH_URL}/v2/publish/${env.QUEUE_WORKER_URL}`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${env.UPSTASH_QSTASH_TOKEN}`,
