@@ -15,6 +15,45 @@ export default {
     const url = new URL(request.url);
 
     // ────────────────────────────────────────────────────────
+    // RUTA DE SINCRONIZACIÓN D1 (POST /api/d1-sync) - Migración
+    // ────────────────────────────────────────────────────────
+    if (request.method === "POST" && url.pathname === "/api/d1-sync") {
+      // Proteger endpoint con token secreto compartido
+      const authHeader = request.headers.get("Authorization");
+      if (authHeader !== `Bearer ${env.D1_SYNC_TOKEN}`) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      
+      try {
+        const data = await request.json();
+        if (data.action === "insert_ticket" && env.DB) {
+          // Dual-write: insert ticket into D1 using bound Database
+          const stmt = env.DB.prepare(
+            `INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, status, qr_code_path, referral, zip_code)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            data.ticket.event_id,
+            data.ticket.ticket_type_id,
+            data.ticket.ticket_code,
+            data.ticket.attendee_name,
+            data.ticket.attendee_email,
+            data.ticket.attendee_phone,
+            data.ticket.status,
+            data.ticket.qr_code_path,
+            data.ticket.referral,
+            data.ticket.zip_code
+          );
+          
+          await stmt.run();
+          return new Response(JSON.stringify({ success: true }), { status: 200 });
+        }
+        return new Response("Ignored or unsupported action", { status: 200 });
+      } catch (e) {
+        return new Response(`D1 Sync Error: ${e.message}`, { status: 500 });
+      }
+    }
+
+    // ────────────────────────────────────────────────────────
     // RUTA DE COMPRA (Interceptar POST a /buy.php)
     // ────────────────────────────────────────────────────────
     if (request.method === "POST" && url.pathname === "/buy.php") {

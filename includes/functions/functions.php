@@ -411,6 +411,24 @@ function completePurchase($data, $db) {
             $zipCode = $data['zip_code'] ?? null;
 
             $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId, $referral, $zipCode);
+            
+            // --- DUAL-WRITE TO CLOUDFLARE D1 (EDGE) ---
+            if (defined('D1_SYNC_URL') && defined('D1_SYNC_TOKEN')) {
+                syncTicketToD1Async([
+                    'event_id' => $eventId,
+                    'ticket_type_id' => $ticketTypeId,
+                    'ticket_code' => $ticketCode,
+                    'attendee_name' => $a_name,
+                    'attendee_email' => $a_email,
+                    'attendee_phone' => $phone,
+                    'status' => 'valid',
+                    'qr_code_path' => $qrPath,
+                    'referral' => $referral,
+                    'zip_code' => $zipCode
+                ]);
+            }
+            // ------------------------------------------
+
             $tickets[] = [
                 'code' => $ticketCode,
                 'qr_path' => $qrPath,
@@ -450,5 +468,32 @@ function completePurchase($data, $db) {
         if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
         throw $e;
     }
+}
+
+/**
+ * Función asíncrona para sincronizar tickets con D1 (Zero-Downtime Migration)
+ * Usa cURL rápido con timeout bajo para no bloquear al usuario si el Edge demora.
+ */
+function syncTicketToD1Async($ticketData) {
+    $url = D1_SYNC_URL;
+    $ch = curl_init($url);
+    
+    $payload = json_encode([
+        'action' => 'insert_ticket',
+        'ticket' => $ticketData
+    ]);
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . D1_SYNC_TOKEN
+    ]);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    // Timeout ultra rápido (1.5 segundos) para que la caída del endpoint D1 no afecte a la venta MySQL principal
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 1500); 
+    
+    curl_exec($ch);
+    curl_close($ch);
 }
 ?>

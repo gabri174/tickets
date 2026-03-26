@@ -46,8 +46,8 @@ if (APP_ENV === 'development') {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
 // 🚀 SRE - CAPA 1: REDIS CACHE (Upstash o local)
-// Obtener credenciales desde variable de entorno o definir aquí
 // ──────────────────────────────────────────────────────────────────────────────
 $redisRestUrl   = getenv('REDIS_REST_URL')   ?: 'https://ethical-possum-85011.upstash.io';
 $redisRestToken = getenv('REDIS_REST_TOKEN') ?: 'gQAAAAAAAUwTAAIncDJhZGIzYzliYTA5YTA0YzAxYTJhMmRhZDljZGRlNDM5M3AyODUwMTE';
@@ -57,18 +57,17 @@ if (!defined('REDIS_REST_URL'))   define('REDIS_REST_URL',   $redisRestUrl);
 if (!defined('REDIS_REST_TOKEN')) define('REDIS_REST_TOKEN', $redisRestToken);
 if (!defined('REDIS_URL'))        define('REDIS_URL',        $redisUrl);
 
-// ──────────────────────────────────────────────────────────────────────────────
-// 🚀 SRE - CAPA 2: UPSTASH QSTASH (Cola de mensajes)
-// ──────────────────────────────────────────────────────────────────────────────
-$qstashToken      = getenv('UPSTASH_QSTASH_TOKEN') ?: 'eyJVc2VySUQiOiI5N2ExYTdiZC00N2ZmLTRkN2UtOTgyNC02ZDQ4ZGQ4NDkyOTIiLCJQYXNzd29yZCI6ImIwNTlmZTZiODhlZjQ3NDhhOGViMTRmYzNkY2FlYzdhIn0=';
-$qstashSigningKey = getenv('QSTASH_SIGNING_KEY')   ?: 'sig_7cN6pjw7SZyWBsD5L6sh9Tndfwff';
-$qstashUrl        = getenv('QSTASH_URL')           ?: 'https://qstash-eu-central-1.upstash.io';
-$queueWorkerUrl   = getenv('QUEUE_WORKER_URL')     ?: SITE_URL . '/queue_worker.php';
 
-if (!defined('UPSTASH_QSTASH_TOKEN')) define('UPSTASH_QSTASH_TOKEN', $qstashToken);
-if (!defined('QSTASH_SIGNING_KEY'))   define('QSTASH_SIGNING_KEY',   $qstashSigningKey);
-if (!defined('QSTASH_URL'))           define('QSTASH_URL',           $qstashUrl);
-if (!defined('QUEUE_WORKER_URL'))     define('QUEUE_WORKER_URL',     $queueWorkerUrl);
+// Upstash QStash (Cola de Escritura)
+define('UPSTASH_QSTASH_TOKEN', $_ENV['UPSTASH_QSTASH_TOKEN'] ?? '');
+define('QSTASH_URL', $_ENV['QSTASH_URL'] ?? 'https://qstash.upstash.io');
+define('QSTASH_CURRENT_SIGNING_KEY', $_ENV['QSTASH_CURRENT_SIGNING_KEY'] ?? '');
+define('QSTASH_NEXT_SIGNING_KEY', $_ENV['QSTASH_NEXT_SIGNING_KEY'] ?? '');
+define('QUEUE_WORKER_URL', $_ENV['QUEUE_WORKER_URL'] ?? SITE_URL . '/queue_worker.php');
+
+// Cloudflare D1 (Migración Dual-Write)
+define('D1_SYNC_URL', $_ENV['D1_SYNC_URL'] ?? SITE_URL . '/api/d1-sync');
+define('D1_SYNC_TOKEN', $_ENV['D1_SYNC_TOKEN'] ?? '');
 
 // Conexión a la base de datos
 try {
