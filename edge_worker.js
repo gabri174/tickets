@@ -100,7 +100,14 @@ export default {
             method: "POST",
             headers: { "Authorization": `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}` }
           });
-          return Response.redirect(`${url.origin}/buy.php?id=${eventId}&error=Colapso_pasarela_intentalo_de_nuevo`, 302);
+          
+          let errorText = "Desconocido";
+          try {
+            errorText = await qstashResponse.text();
+            errorText = encodeURIComponent(errorText.substring(0, 100)); // Capping length
+          } catch(e) {}
+
+          return Response.redirect(`${url.origin}/buy.php?id=${eventId}&error=Colapso_pasarela_qstash_fail_${qstashResponse.status}_${errorText}`, 302);
         }
 
       } catch (e) {
