@@ -33,9 +33,40 @@ define('SALT_LENGTH', 32);
 // Zona horaria
 date_default_timezone_set('America/Mexico_City');
 
+// Entorno (development / production)
+define('APP_ENV', getenv('APP_ENV') ?: 'production');
+
 // Reporte de errores (desactivar en producción)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+if (APP_ENV === 'development') {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🚀 SRE - CAPA 1: REDIS CACHE (Upstash o local)
+// Obtener credenciales desde variable de entorno o definir aquí
+// ──────────────────────────────────────────────────────────────────────────────
+$redisRestUrl   = getenv('REDIS_REST_URL')   ?: '';
+$redisRestToken = getenv('REDIS_REST_TOKEN') ?: '';
+$redisUrl       = getenv('REDIS_URL')        ?: '';
+
+if (!defined('REDIS_REST_URL'))   define('REDIS_REST_URL',   $redisRestUrl);
+if (!defined('REDIS_REST_TOKEN')) define('REDIS_REST_TOKEN', $redisRestToken);
+if (!defined('REDIS_URL'))        define('REDIS_URL',        $redisUrl);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🚀 SRE - CAPA 2: UPSTASH QSTASH (Cola de mensajes)
+// ──────────────────────────────────────────────────────────────────────────────
+$qstashToken      = getenv('UPSTASH_QSTASH_TOKEN') ?: '';
+$qstashSigningKey = getenv('QSTASH_SIGNING_KEY')   ?: '';
+$queueWorkerUrl   = getenv('QUEUE_WORKER_URL')      ?: SITE_URL . '/queue_worker.php';
+
+if (!defined('UPSTASH_QSTASH_TOKEN')) define('UPSTASH_QSTASH_TOKEN', $qstashToken);
+if (!defined('QSTASH_SIGNING_KEY'))   define('QSTASH_SIGNING_KEY',   $qstashSigningKey);
+if (!defined('QUEUE_WORKER_URL'))     define('QUEUE_WORKER_URL',      $queueWorkerUrl);
 
 // Conexión a la base de datos
 try {
@@ -43,6 +74,7 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch(PDOException $e) {
-    die("Error de conexión: " . $e->getMessage());
+    error_log("DB Connection Error: " . $e->getMessage());
+    die(json_encode(['error' => 'Database connection failed']));
 }
 ?>

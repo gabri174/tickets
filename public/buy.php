@@ -5,8 +5,12 @@ require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
 require_once '../includes/classes/PaymentGateway.php';
 require_once '../includes/classes/FinassetsGateway.php';
+require_once '../includes/classes/RedisCache.php';
+require_once '../includes/classes/InventoryLock.php';
+require_once '../includes/classes/QueueService.php';
 
-$db = new Database();
+$db    = new Database();
+$cache = RedisCache::getInstance();
 
 // Obtener evento
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -14,8 +18,15 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
     exit();
 }
 
-$eventId = cleanInput($_GET['id']);
-$event = $db->getEventById($eventId);
+$eventId = (int) cleanInput($_GET['id']);
+
+// ── CAPA 1: Redis Cache ──────────────────────────────────────────────────────
+// Lee el evento desde Redis (1ms). Solo va a MySQL si no está en caché.
+$event = $cache->getEvent($eventId);
+if (!$event) {
+    $event = $db->getEventById($eventId);
+    if ($event) $cache->setEvent($eventId, $event);
+}
 
 if (!$event) {
     header('Location: index.php');
@@ -73,6 +84,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $unitPrice = $event['price'];
         $ticketTypeName = '';
 
+        // ── CAPA 1: Tipos de entrada desde caché ────────────────────────────
+        $cachedTypes = $cache->getTicketTypes($eventId);
+        if (!$cachedTypes) {
+            $cachedTypes = $db->getTicketTypesByEvent($eventId);
+            if ($cachedTypes) $cache->setTicketTypes($eventId, $cachedTypes);
+        }
+
         if (!empty($ticketTypes)) {
             if (!$ticketTypeId) {
                 $errors[] = 'Debes seleccionar un tipo de entrada';
@@ -97,6 +115,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
             $totalPrice = $unitPrice * $quantity;
+
+        // ── CAPA 3: Semáforo de Inventario (Redis Atomic Lock) ───────────────
+        // Verifica y resta el stock en Redis ANTES de procesar el pago.
+        // Esto aguanta miles de comprobaciones por milisegundo sin tocar MySQL.
+        $inventoryLock    = new InventoryLock($cache);
+        $stockEventKey    = InventoryLock::eventKey($eventId);
+        $stockTypeKey     = $ticketTypeId ? InventoryLock::typeKey($ticketTypeId) : null;
+        $inventoryBlocked = false;
+
+        if ($cache->isAvailable()) {
+            // Inicializar stock en Redis si no existe aún
+            $cache->initStock(
+                $eventId,
+                (int)($event['available_tickets'] ?? 0),
+                $ticketTypeId,
+                (int)($selectedType['available_tickets'] ?? 0)
+            );
+
+            $remaining = $inventoryLock->decrementStock($stockEventKey, $quantity);
+            if ($remaining === -2) {
+                $errors[] = '⚡ Sin stock disponible en este momento. Inténtalo de nuevo.';
+                $inventoryBlocked = true;
+            } elseif ($remaining >= 0 && $stockTypeKey) {
+                $remainingType = $inventoryLock->decrementStock($stockTypeKey, $quantity);
+                if ($remainingType === -2) {
+                    $inventoryLock->restoreStock($stockEventKey, $quantity); // compensar
+                    $errors[] = '⚡ Sin entradas de este tipo disponibles. Inténtalo de nuevo.';
+                    $inventoryBlocked = true;
+                }
+            }
+        }
+
+        if (!$inventoryBlocked && empty($errors)):
         try {
             $pdo = $db->getPdo();
             
@@ -114,18 +165,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($paymentMethod === 'none') {
-                $result = completePurchase([
-                    'event_id' => $eventId,
+                // ── CAPA 2: Cola de Mensajes ─────────────────────────────────────────
+                // Para tickets gratuitos también usamos la cola si QStash está activo.
+                $purchaseData = [
+                    'event_id'       => $eventId,
                     'ticket_type_id' => $ticketTypeId,
-                    'quantity' => $quantity,
-                    'attendees' => $attendees,
-                    'phone' => $phone,
-                    'zip_code' => $zipCode,
-                    'total_price' => $totalPrice
-                ], $db);
-                
-                $_SESSION['purchase_success'] = $result;
-                
+                    'quantity'       => $quantity,
+                    'attendees'      => $attendees,
+                    'phone'          => $phone,
+                    'zip_code'       => $zipCode,
+                    'total_price'    => $totalPrice,
+                    'referral'       => $_SESSION['referral'] ?? null,
+                ];
+
+                $queue  = new QueueService();
+                $queued = $queue->enqueuePurchase($purchaseData);
+
+                if ($queued['queued']) {
+                    // Apuntado en cola → respuesta inmediata al usuario
+                    $_SESSION['purchase_success'] = [
+                        'event_title' => $event['title'],
+                        'tickets'     => [], // El worker los generará asincrónicamente
+                        'queued'      => true,
+                        'email'       => $attendees[0]['email'],
+                        'total_price' => $totalPrice,
+                    ];
+                } else {
+                    // Sin cola configurada → procesamiento directo (fallback)
+                    $result = completePurchase($purchaseData, $db);
+                    // Invalidar caché de evento para reflejar nuevo stock
+                    $cache->invalidateEvent($eventId);
+                    $_SESSION['purchase_success'] = $result;
+                }
+
                 header('Location: success.php');
                 exit();
             } elseif ($paymentMethod === 'finassets') {
@@ -160,8 +232,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+            // Restaurar stock en Redis si el pago falló
+            if ($cache->isAvailable() && !$inventoryBlocked) {
+                $inventoryLock->restoreStock($stockEventKey, $quantity);
+                if ($stockTypeKey) $inventoryLock->restoreStock($stockTypeKey, $quantity);
+            }
             $errors[] = 'Error al procesar la compra: ' . $e->getMessage();
         }
+        endif; // end !$inventoryBlocked
         }
     }
 }
