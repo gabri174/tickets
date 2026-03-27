@@ -4,13 +4,15 @@ require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
 
-// Verificar si hay datos de compra
-if (!isset($_SESSION['purchase_success'])) {
+$isAsync = isset($_GET['async_success']) && $_GET['async_success'] === 'true';
+
+// Verificar si hay datos de compra o si es asíncrona
+if (!isset($_SESSION['purchase_success']) && !$isAsync) {
     header('Location: index.php');
     exit();
 }
 
-$purchase = $_SESSION['purchase_success'];
+$purchase = $_SESSION['purchase_success'] ?? ['event_id' => $_GET['event_id'] ?? 0, 'email' => 'tu correo electrónico'];
 $emailError = $_SESSION['email_error'] ?? null;
 $debugMode = isset($_GET['debug']);
 
@@ -132,8 +134,13 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                 <i class="fas fa-check text-4xl"></i>
             </div>
             <div class="text-center md:text-left">
-                <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Compra Completada!</h2>
-                <p class="text-gray-400 font-medium text-lg">Tus tickets están listos. Hemos enviado un correo a <span class="text-white"><?php echo htmlspecialchars($purchase['email']); ?></span></p>
+                <?php if ($isAsync): ?>
+                    <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Reserva Recibida!</h2>
+                    <p class="text-gray-400 font-medium text-lg">Estamos generando tus códigos. Recibirás tus entradas en <span class="text-white">breve en tu correo</span>.</p>
+                <?php else: ?>
+                    <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Compra Completada!</h2>
+                    <p class="text-gray-400 font-medium text-lg">Tus tickets están listos. Hemos enviado un correo a <span class="text-white"><?php echo htmlspecialchars($purchase['email']); ?></span></p>
+                <?php endif; ?>
             </div>
             <div class="md:ml-auto flex flex-col items-center gap-2">
                  <div id="whatsappStatus" class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-gray-400">
@@ -150,78 +157,95 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
             </div>
         <?php endif; ?>
 
-        <!-- Tickets Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            <?php foreach ($purchase['tickets'] as $index => $ticket): ?>
-                <div class="ticket-main-card shadow-2xl animate-ticket">
-                    <!-- Top Section: Image -->
-                    <?php if ($imgUrl): ?>
-                        <div class="p-2">
-                             <img src="<?php echo $imgUrl; ?>" class="ticket-image rounded-2xl shadow-lg" alt="">
-                        </div>
-                    <?php else: ?>
-                        <div class="ticket-image bg-gray-200 flex items-center justify-center text-gray-400">
-                             <i class="fas fa-ticket-alt text-5xl"></i>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="ticket-content">
-                        <h3 class="text-2xl font-bold text-center mb-6 leading-tight"><?php echo htmlspecialchars($purchase['event_title']); ?></h3>
-                        
-                        <div class="grid grid-cols-2 gap-y-6 gap-x-4 mb-2">
-                            <div>
-                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">FECHA</p>
-                                <p class="text-sm font-bold text-gray-800"><?php echo formatDate($eventData['date_event'] ?? date('Y-m-d'), 'd M, Y'); ?></p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">HORA</p>
-                                <p class="text-sm font-bold text-gray-800">19:30 PM</p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">LUGAR</p>
-                                <p class="text-sm font-bold text-gray-800 truncate"><?php echo htmlspecialchars($eventData['location'] ?? 'Auditorio Principal'); ?></p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">TIPO</p>
-                                <p class="text-sm font-bold text-gray-800"><?php echo htmlspecialchars($ticket['type_name'] ?? 'General'); ?></p>
-                            </div>
-                        </div>
-
-                        <div class="ticket-divider"></div>
-
-                        <div class="flex flex-col items-center">
-                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-4">ASISTENTE</p>
-                            <p class="text-lg font-bold text-gray-900 mb-6"><?php echo htmlspecialchars($ticket['name']); ?></p>
-                            
-                            <!-- QR Visual -->
-                            <div class="p-2 border-2 border-dashed border-gray-200 rounded-2xl mb-4 bg-white">
-                                <?php 
-                                $qrWebPath = SITE_URL . '/qrcodes/' . basename($ticket['qr_path']);
-                                ?>
-                                <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-32 h-32 contrast-125">
-                            </div>
-                            <p class="text-xs font-mono text-gray-400 tracking-tighter uppercase"><?php echo $ticket['code']; ?></p>
-                        </div>
-                    </div>
-
-                    <!-- Action Floating Bar -->
-                    <div class="flex flex-col gap-2 p-6 pt-0">
-                        <button onclick="shareIndividualTicket('<?php echo $ticket['code']; ?>', '<?php echo htmlspecialchars($purchase['event_title']); ?>')" 
-                                class="btn-modern btn-lime w-full text-xs py-3">
-                            <i class="fab fa-whatsapp mr-2"></i> Compartir Ticket
+        <?php if ($isAsync): ?>
+            <!-- Async Processing State -->
+            <div class="glass-card mb-12 p-10 text-center bg-white/5 border border-lime-400/20 rounded-3xl relative overflow-hidden">
+                <div class="absolute inset-0 bg-lime-400/5 animate-pulse"></div>
+                <div class="relative z-10">
+                    <i class="fas fa-spinner fa-spin text-5xl text-lime-400 mb-6 drop-shadow-lg"></i>
+                    <h3 class="text-3xl font-black text-white mb-4 tracking-tight">Procesando tus entradas...</h3>
+                    <p class="text-gray-400 max-w-xl mx-auto mb-8 text-lg">Nuestros sistemas están emitiendo tus códigos QR en este mismo instante. Debido a la alta demanda, están en cola y te llegarán al correo electrónico en unos segundos.</p>
+                    <div class="flex justify-center">
+                        <button onclick="window.location.reload()" class="btn-modern btn-lime text-sm py-4 px-10 font-bold tracking-wide">
+                            <i class="fas fa-sync-alt mr-2"></i> Recargar estado
                         </button>
-                        <a href="ticket.php?code=<?php echo $ticket['code']; ?>" target="_blank"
-                           class="btn-modern bg-gray-100 text-gray-800 w-full text-xs py-3">
-                            <i class="fas fa-external-link-alt mr-2"></i> Ver Ticket Online
-                        </a>
-                        <a href="wallet.php?ticket_code=<?php echo $ticket['code']; ?>" 
-                           class="btn-modern bg-black text-white w-full text-xs py-3 hover:bg-gray-900 border border-gray-800 transition-colors shadow-lg">
-                            <i class="fab fa-apple mr-2 text-lg"></i> Añadir a Wallet
-                        </a>
                     </div>
                 </div>
-            <?php endforeach; ?>
-        </div>
+            </div>
+        <?php else: ?>
+            <!-- Tickets Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                <?php foreach ($purchase['tickets'] as $index => $ticket): ?>
+                    <div class="ticket-main-card shadow-2xl animate-ticket">
+                        <!-- Top Section: Image -->
+                        <?php if ($imgUrl): ?>
+                            <div class="p-2">
+                                 <img src="<?php echo $imgUrl; ?>" class="ticket-image rounded-2xl shadow-lg" alt="">
+                            </div>
+                        <?php else: ?>
+                            <div class="ticket-image bg-gray-200 flex items-center justify-center text-gray-400">
+                                 <i class="fas fa-ticket-alt text-5xl"></i>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="ticket-content">
+                            <h3 class="text-2xl font-bold text-center mb-6 leading-tight"><?php echo htmlspecialchars($purchase['event_title']); ?></h3>
+                            
+                            <div class="grid grid-cols-2 gap-y-6 gap-x-4 mb-2">
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">FECHA</p>
+                                    <p class="text-sm font-bold text-gray-800"><?php echo formatDate($eventData['date_event'] ?? date('Y-m-d'), 'd M, Y'); ?></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">HORA</p>
+                                    <p class="text-sm font-bold text-gray-800">19:30 PM</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">LUGAR</p>
+                                    <p class="text-sm font-bold text-gray-800 truncate"><?php echo htmlspecialchars($eventData['location'] ?? 'Auditorio Principal'); ?></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-1">TIPO</p>
+                                    <p class="text-sm font-bold text-gray-800"><?php echo htmlspecialchars($ticket['type_name'] ?? 'General'); ?></p>
+                                </div>
+                            </div>
+
+                            <div class="ticket-divider"></div>
+
+                            <div class="flex flex-col items-center">
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none mb-4">ASISTENTE</p>
+                                <p class="text-lg font-bold text-gray-900 mb-6"><?php echo htmlspecialchars($ticket['name']); ?></p>
+                                
+                                <!-- QR Visual -->
+                                <div class="p-2 border-2 border-dashed border-gray-200 rounded-2xl mb-4 bg-white">
+                                    <?php 
+                                    $qrWebPath = SITE_URL . '/qrcodes/' . basename($ticket['qr_path']);
+                                    ?>
+                                    <img src="<?php echo $qrWebPath; ?>" alt="QR" class="w-32 h-32 contrast-125">
+                                </div>
+                                <p class="text-xs font-mono text-gray-400 tracking-tighter uppercase"><?php echo $ticket['code']; ?></p>
+                            </div>
+                        </div>
+
+                        <!-- Action Floating Bar -->
+                        <div class="flex flex-col gap-2 p-6 pt-0">
+                            <button onclick="shareIndividualTicket('<?php echo $ticket['code']; ?>', '<?php echo htmlspecialchars($purchase['event_title']); ?>')" 
+                                    class="btn-modern btn-lime w-full text-xs py-3">
+                                <i class="fab fa-whatsapp mr-2"></i> Compartir Ticket
+                            </button>
+                            <a href="ticket.php?code=<?php echo $ticket['code']; ?>" target="_blank"
+                               class="btn-modern bg-gray-100 text-gray-800 w-full text-xs py-3">
+                                <i class="fas fa-external-link-alt mr-2"></i> Ver Ticket Online
+                            </a>
+                            <a href="wallet.php?ticket_code=<?php echo $ticket['code']; ?>" 
+                               class="btn-modern bg-black text-white w-full text-xs py-3 hover:bg-gray-900 border border-gray-800 transition-colors shadow-lg">
+                                <i class="fab fa-apple mr-2 text-lg"></i> Añadir a Wallet
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
 
         <div class="h-24"></div>
     </div>
@@ -267,12 +291,14 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
         }
 
-        // Auto-trigger WhatsApp after 2 seconds
+        // Auto-trigger WhatsApp after 2 seconds (ONLY IF NOT ASYNC)
+        <?php if (!$isAsync): ?>
         document.addEventListener('DOMContentLoaded', () => {
              setTimeout(() => {
                  shareOnWhatsApp();
              }, 2000);
         });
+        <?php endif; ?>
     </script>
 
     <style>

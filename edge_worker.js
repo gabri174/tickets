@@ -131,8 +131,8 @@ export default {
         });
 
         if (qstashResponse.ok) {
-          // Éxito: Redirigir a success.php de forma transparente
-          return Response.redirect(`${url.origin}/success.php`, 302);
+          // Éxito: Redirigir a success.php de forma transparente informando que es asíncrono
+          return Response.redirect(`${url.origin}/success.php?async_success=true&event_id=${eventId}`, 302);
         } else {
           // Falla QStash -> Devolvemos el stock a Redis (compensación)
           await fetch(`${env.UPSTASH_REDIS_REST_URL}/incrby/${stockKey}/${quantity}`, {
