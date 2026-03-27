@@ -142,6 +142,7 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                     <p class="text-gray-400 font-medium text-lg">Tus tickets están listos. Hemos enviado un correo a <span class="text-white"><?php echo htmlspecialchars($purchase['email']); ?></span></p>
                 <?php endif; ?>
             </div>
+            <?php if (!$isAsync): ?>
             <div class="md:ml-auto flex flex-col items-center gap-2">
                  <div id="whatsappStatus" class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-gray-400">
                     <div class="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
@@ -149,6 +150,7 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
                  </div>
                  <button onclick="shareOnWhatsApp()" class="text-[10px] text-lime-400 uppercase font-black tracking-widest hover:underline">¿No se abrió? Reenviar</button>
             </div>
+            <?php endif; ?>
         </div>
 
         <?php if ($emailError): ?>
