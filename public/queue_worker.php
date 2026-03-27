@@ -22,24 +22,22 @@ require_once '../includes/classes/Database.php';
 
 // ── 1. VERIFICACIÓN DE FIRMA HMAC (QStash) ──────────────────────────────────
 function verifyQStashSignature(string $body): bool {
-    $signingKey = defined('QSTASH_SIGNING_KEY') ? QSTASH_SIGNING_KEY : getenv('QSTASH_SIGNING_KEY');
+    // Hemos simplificado la verificación de JWT de QStash a un header secreto enviado por nuestro Edge Worker
+    // Edge_worker en Cloudflare envía: Upstash-Forward-X-Webhook-Secret = UPSTASH_QSTASH_TOKEN
+    $expectedSecret = defined('UPSTASH_QSTASH_TOKEN') ? UPSTASH_QSTASH_TOKEN : getenv('UPSTASH_QSTASH_TOKEN');
     
-    // Si no hay clave configurada, solo permitir en modo desarrollo
-    if (empty($signingKey)) {
-        // En producción esto DEBE estar configurado
+    // Si no hay token configurado, solo permitir en modo desarrollo
+    if (empty($expectedSecret)) {
         if (defined('APP_ENV') && APP_ENV === 'production') {
             return false;
         }
-        error_log("QUEUE_WORKER: No QSTASH_SIGNING_KEY configured. Allowing (dev mode).");
         return true;
     }
 
-    $signature = $_SERVER['HTTP_UPSTASH_SIGNATURE'] ?? '';
-    if (empty($signature)) return false;
+    $providedSecret = $_SERVER['HTTP_X_WEBHOOK_SECRET'] ?? '';
+    if (empty($providedSecret)) return false;
 
-    // QStash firma con JWT. Verificación básica de HMAC del body.
-    $expectedSig = base64_encode(hash_hmac('sha256', $body, $signingKey, true));
-    return hash_equals($expectedSig, $signature);
+    return hash_equals($expectedSecret, $providedSecret);
 }
 
 // ── 2. RECIBIR Y VALIDAR EL REQUEST ─────────────────────────────────────────

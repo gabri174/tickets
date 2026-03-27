@@ -125,7 +125,8 @@ export default {
           headers: {
             "Authorization": `Bearer ${env.UPSTASH_QSTASH_TOKEN}`,
             "Content-Type": "application/json",
-            "Upstash-Retries": "3"
+            "Upstash-Retries": "3",
+            "Upstash-Forward-X-Webhook-Secret": env.UPSTASH_QSTASH_TOKEN
           },
           body: JSON.stringify(qstashPayload)
         });
