@@ -1,5 +1,4 @@
 # Configuración y credenciales
-/includes/config/config.php
 .env
 .env.local
 .env.production
