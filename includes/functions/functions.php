@@ -167,7 +167,7 @@ function sendTicketEmail($to, $subject, $body, $attachment = null) {
         $mail->Password   = SMTP_PASSWORD;
         $mail->SMTPSecure = (SMTP_PORT == 465) ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS : PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = SMTP_PORT;
-        $mail->Timeout    = 15; // 15 segundos máximo para conectar/enviar
+        $mail->Timeout    = 5; // 5 segundos máximo para conectar (rápido fallback si el puerto está bloqueado)
 
         // Opciones adicionales para evitar errores de certificados en algunos hostings
         $mail->SMTPOptions = array(
@@ -521,17 +521,31 @@ function completePurchase($data, $db) {
         $pdfPath = generateTicketPDF($event, $tickets, $totalPrice);
         if (function_exists('qLog')) qLog("[TRACE] PDF generado: " . basename($pdfPath));
         
+        // Enviar email - SMTP con fallback a mail() nativo
+        $emailSent = false;
+        $emailError = null;
+
         try {
             if (function_exists('qLog')) qLog("[TRACE] Iniciando envío de email a " . $primary_email);
-            sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
-            if (function_exists('qLog')) qLog("[TRACE] Email enviado OK.");
-        } catch (Exception $mailEx) {
-            if (session_status() === PHP_SESSION_ACTIVE) {
-                $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
+            $emailSent = sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
+            if ($emailSent) {
+                if (function_exists('qLog')) qLog("[TRACE] Email enviado OK.");
+            } else {
+                $emailError = "El envío de email falló (SMTP y mail() nativo)";
+                if (function_exists('qLog')) qLog("[WARNING] No se pudo enviar el email a " . $primary_email);
             }
-            // Importante: No silenciar el error si queremos que el Queue Worker lo capture en su rastro
-            throw new Exception("Error en PHPMailer: " . $mailEx->getMessage());
+        } catch (Exception $mailEx) {
+            $emailError = "Error al enviar el correo: " . $mailEx->getMessage();
+            if (function_exists('qLog')) qLog("[ERROR] Excepción en envío de email: " . $emailError);
         }
+
+        // Guardar error en sesión para mostrar al usuario (solo si hay sesión activa)
+        if ($emailError && session_status() === PHP_SESSION_ACTIVE) {
+            $_SESSION['email_error'] = $emailError;
+        }
+
+        // NOTA: No lanzamos excepción aquí porque el ticket YA FUE CREADO en la DB
+        // El error de email es no-critical: el usuario puede recargar o contactar soporte
         
         return [
             'event_id' => $eventId,
