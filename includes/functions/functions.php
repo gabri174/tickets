@@ -453,7 +453,11 @@ function completePurchase($data, $db) {
         try {
             sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
         } catch (Exception $mailEx) {
-            $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
+            }
+            // Importante: No silenciar el error si queremos que el Queue Worker lo capture en su rastro
+            throw new Exception("Error en PHPMailer: " . $mailEx->getMessage());
         }
         
         return [
