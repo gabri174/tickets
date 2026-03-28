@@ -6,13 +6,41 @@ require_once '../includes/classes/Database.php';
 
 $isAsync = isset($_GET['async_success']) && $_GET['async_success'] === 'true';
 
+// --- AUTO-DETECTION PARA TICKETS EN COLA ---
+// Si estamos en modo espera pero ya existen los tickets en DB (aunque el mail tarde), los mostramos.
+if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
+    $email = $_GET['email'];
+    $eventId = $_GET['event_id'];
+    $db = new Database();
+    // Buscamos tickets para este mail/evento en los últimos 5 minutos
+    $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 5);
+    if (count($recentTickets) > 0) {
+        $isAsync = false; // Cambiamos a modo éxito total
+        $purchase = [
+            'event_id' => $eventId,
+            'event_title' => 'Tus Entradas', // Se actualizará abajo
+            'tickets' => [],
+            'email' => $email,
+            'phone' => '' // Opcional
+        ];
+        foreach ($recentTickets as $rt) {
+            $purchase['tickets'][] = [
+                'code' => $rt['ticket_code'],
+                'name' => $rt['attendee_name'],
+                'qr_path' => $rt['qr_code_path'],
+                'type_name' => $rt['type_name']
+            ];
+        }
+    }
+}
+
 // Verificar si hay datos de compra o si es asíncrona
-if (!isset($_SESSION['purchase_success']) && !$isAsync) {
+if (!isset($_SESSION['purchase_success']) && !$isAsync && (!isset($purchase['tickets']) || count($purchase['tickets']) == 0)) {
     header('Location: index.php');
     exit();
 }
 
-$purchase = $_SESSION['purchase_success'] ?? ['event_id' => $_GET['event_id'] ?? 0, 'email' => 'tu correo electrónico'];
+$purchase = $_SESSION['purchase_success'] ?? $purchase ?? ['event_id' => $_GET['event_id'] ?? 0, 'email' => 'tu correo electrónico'];
 $emailError = $_SESSION['email_error'] ?? null;
 $debugMode = isset($_GET['debug']);
 
