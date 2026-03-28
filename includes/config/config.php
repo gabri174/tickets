@@ -15,7 +15,7 @@ define('ADMIN_EMAIL', 'admin@tickets.com');
 
 // Configuración de correo (PHPMailer)
 define('SMTP_HOST', 'smtp.ensupresencia.eu');
-define('SMTP_PORT', 465);
+define('SMTP_PORT', 587);
 define('SMTP_USERNAME', 'tickets@ensupresencia.eu');
 define('SMTP_PASSWORD', 'Tickets2025_esp_@.');
 define('SMTP_FROM_EMAIL', 'tickets@ensupresencia.eu');
