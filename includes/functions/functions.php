@@ -416,7 +416,7 @@ function uploadImage($file, $destination) {
 
 // Completar la compra (crear tickets, descontar stock, enviar email)
 function completePurchase($data, $db) {
-    if (function_exists('qLog')) qLog("[TRACE] Entrando en completePurchase");
+    if (function_exists('qLog')) qLog("[TRACE] Entrando en completePurchase [v2.2 - Proteccion Duplicados + Fallback Mail]");
     
     $eventId = $data['event_id'];
     $ticketTypeId = $data['ticket_type_id'];
