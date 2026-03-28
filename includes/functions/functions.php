@@ -167,6 +167,7 @@ function sendTicketEmail($to, $subject, $body, $attachment = null) {
         $mail->Password   = SMTP_PASSWORD;
         $mail->SMTPSecure = (SMTP_PORT == 465) ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS : PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = SMTP_PORT;
+        $mail->Timeout    = 15; // 15 segundos máximo para conectar/enviar
 
         // Opciones adicionales para evitar errores de certificados en algunos hostings
         $mail->SMTPOptions = array(
@@ -374,7 +375,9 @@ function uploadImage($file, $destination) {
 
 // Completar la compra (crear tickets, descontar stock, enviar email)
 function completePurchase($data, $db) {
-    $eventId = $data['event_id'];
+    if (function_exists('qLog')) qLog("[TRACE] Entrando en completePurchase");
+    
+    try {
     $ticketTypeId = $data['ticket_type_id'];
     $quantity = $data['quantity'];
     $attendees = $data['attendees'];
@@ -405,12 +408,16 @@ function completePurchase($data, $db) {
             $ticketCode = generateTicketCode();
             $qrFilename = $ticketCode;
             $qrData = SITE_URL . "/ticket.php?code=" . $ticketCode;
+            if (function_exists('qLog')) qLog("[TRACE] Generando QR para: " . $ticketCode);
             $qrPath = generateQRCode($qrData, $qrFilename);
+            if (function_exists('qLog')) qLog("[TRACE] QR generado OK.");
             
             $referral = $_SESSION['referral'] ?? null;
             $zipCode = $data['zip_code'] ?? null;
 
+            if (function_exists('qLog')) qLog("[TRACE] Creando ticket en DB MySQL...");
             $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId, $referral, $zipCode);
+            if (function_exists('qLog')) qLog("[TRACE] Ticket creado OK.");
             
             // --- DUAL-WRITE TO CLOUDFLARE D1 (EDGE) ---
             if (defined('D1_SYNC_URL') && defined('D1_SYNC_TOKEN')) {
@@ -443,15 +450,20 @@ function completePurchase($data, $db) {
             $db->updateAvailableTicketType($ticketTypeId, $quantity);
         }
         
+        if (function_exists('qLog')) qLog("[TRACE] Committing transaction...");
         $pdo->commit();
+        if (function_exists('qLog')) qLog("[TRACE] Transaction committed OK.");
         
         // Enviar email
         $subject = "Tus tickets para " . $event['title'];
         $emailBody = generateEmailBody($event, $tickets, $primary_name, $totalPrice);
         $pdfPath = generateTicketPDF($event, $tickets, $totalPrice);
+        if (function_exists('qLog')) qLog("[TRACE] PDF generado: " . basename($pdfPath));
         
         try {
+            if (function_exists('qLog')) qLog("[TRACE] Iniciando envío de email a " . $primary_email);
             sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
+            if (function_exists('qLog')) qLog("[TRACE] Email enviado OK.");
         } catch (Exception $mailEx) {
             if (session_status() === PHP_SESSION_ACTIVE) {
                 $_SESSION['email_error'] = "Error al enviar el correo: " . $mailEx->getMessage();
@@ -496,6 +508,7 @@ function syncTicketToD1Async($ticketData) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     // Timeout ultra rápido (1.5 segundos) para que la caída del endpoint D1 no afecte a la venta MySQL principal
     curl_setopt($ch, CURLOPT_TIMEOUT_MS, 1500); 
+    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
     
     curl_exec($ch);
     curl_close($ch);
