@@ -377,7 +377,7 @@ function uploadImage($file, $destination) {
 function completePurchase($data, $db) {
     if (function_exists('qLog')) qLog("[TRACE] Entrando en completePurchase");
     
-    try {
+    $eventId = $data['event_id'];
     $ticketTypeId = $data['ticket_type_id'];
     $quantity = $data['quantity'];
     $attendees = $data['attendees'];
