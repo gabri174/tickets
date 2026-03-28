@@ -192,10 +192,51 @@ function sendTicketEmail($to, $subject, $body, $attachment = null) {
         if ($mail->send()) {
             return true;
         }
-        throw new Exception($mail->ErrorInfo);
+        if (function_exists('qLog')) qLog("[WARNING] SMTP falló: " . $mail->ErrorInfo . ". Intentando mail() nativo como fallback...");
+        return fallbackMail($to, $subject, $body, $attachment);
     } catch (Exception $e) {
-        throw new Exception($e->getMessage());
+        if (function_exists('qLog')) qLog("[WARNING] Excepción en SMTP: " . $e->getMessage() . ". Intentando mail() nativo...");
+        return fallbackMail($to, $subject, $body, $attachment);
     }
+}
+
+/**
+ * Fallback usando la función mail() de PHP para cuando el puerto SMTP está bloqueado
+ */
+function fallbackMail($to, $subject, $body, $attachment = null) {
+    if (function_exists('qLog')) qLog("[TRACE] Entrando en fallbackMail para $to");
+    $from = SMTP_FROM_EMAIL;
+    $headers = "From: " . SMTP_FROM_NAME . " <$from>\r\n";
+    $headers .= "Reply-To: $from\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    
+    if ($attachment && file_exists($attachment)) {
+        $boundary = md5(time());
+        $headers .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n";
+        
+        $filename = basename($attachment);
+        $content = chunk_split(base64_encode(file_get_contents($attachment)));
+        
+        $message = "--$boundary\r\n";
+        $message .= "Content-Type: text/html; charset=\"UTF-8\"\r\n";
+        $message .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
+        $message .= $body . "\r\n\r\n";
+        
+        $message .= "--$boundary\r\n";
+        $message .= "Content-Type: application/pdf; name=\"$filename\"\r\n";
+        $message .= "Content-Transfer-Encoding: base64\r\n";
+        $message .= "Content-Disposition: attachment; filename=\"$filename\"\r\n\r\n";
+        $message .= $content . "\r\n\r\n";
+        $message .= "--$boundary--";
+        
+        $result = mail($to, $subject, $message, $headers);
+    } else {
+        $headers .= "Content-Type: text/html; charset=\"UTF-8\"\r\n";
+        $result = mail($to, $subject, $body, $headers);
+    }
+    
+    if (function_exists('qLog')) qLog("[TRACE] Resultado de mail() nativo: " . ($result ? "ÉXITO" : "FALLO"));
+    return $result;
 }
 
 function sendResetPasswordEmail($email, $token) {
@@ -405,6 +446,7 @@ function completePurchase($data, $db) {
         // Si ya existen tickets para este email y evento creados en los últimos 10 minutos,
         // asumimos que es un reintento de la cola y saltamos la creación para evitar duplicados.
         $existingTickets = $db->getRecentTicketsByEmail($primary_email, $eventId, 10);
+        if (function_exists('qLog')) qLog("[TRACE] Check Idempotencia: " . count($existingTickets) . " tickets encontrados para $primary_email");
         
         if (count($existingTickets) >= $quantity) {
             if (function_exists('qLog')) qLog("[TRACE] Idempotencia activa: Ya existen tickets recientes (" . count($existingTickets) . "). Saltando inserción DB.");
