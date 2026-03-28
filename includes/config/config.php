@@ -59,10 +59,10 @@ if (!defined('REDIS_URL'))        define('REDIS_URL',        $redisUrl);
 
 
 // Upstash QStash (Cola de Escritura)
-define('UPSTASH_QSTASH_TOKEN', $_ENV['UPSTASH_QSTASH_TOKEN'] ?? '');
+define('UPSTASH_QSTASH_TOKEN', $_ENV['UPSTASH_QSTASH_TOKEN'] ?? 'eyJVc2VySUQiOiI5N2ExYTdiZC00N2ZmLTRkN2UtOTgyNC02ZDQ4ZGQ4NDkyOTIiLCJQYXNzd29yZCI6ImIwNTlmZTZiODhlZjQ3NDhhOGViMTRmYzNkY2FlYzdhIn0=');
 define('QSTASH_URL', $_ENV['QSTASH_URL'] ?? 'https://qstash.upstash.io');
-define('QSTASH_CURRENT_SIGNING_KEY', $_ENV['QSTASH_CURRENT_SIGNING_KEY'] ?? '');
-define('QSTASH_NEXT_SIGNING_KEY', $_ENV['QSTASH_NEXT_SIGNING_KEY'] ?? '');
+define('QSTASH_CURRENT_SIGNING_KEY', $_ENV['QSTASH_CURRENT_SIGNING_KEY'] ?? 'sig_7cN6pjw7SZyWBsD5L6sh9Tndfwff');
+define('QSTASH_NEXT_SIGNING_KEY', $_ENV['QSTASH_NEXT_SIGNING_KEY'] ?? 'sig_6UkYRjmbrrp7Bi9JeJiS7HZo8FD1');
 define('QUEUE_WORKER_URL', $_ENV['QUEUE_WORKER_URL'] ?? SITE_URL . '/queue_worker.php');
 
 // Cloudflare D1 (Migración Dual-Write)
