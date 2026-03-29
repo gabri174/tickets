@@ -43,30 +43,30 @@ if (file_exists(dirname(__DIR__, 2) . '/vendor/autoload.php')) {
     require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 }
 
-// Las constantes ya están definidas por loadEnv(), usamos valores por defecto si no
-define('DB_HOST', defined('DB_HOST') ? DB_HOST : 'localhost');
-define('DB_NAME', defined('DB_NAME') ? DB_NAME : 'tickets_system');
-define('DB_USER', defined('DB_USER') ? DB_USER : 'root');
-define('DB_PASS', defined('DB_PASS') ? DB_PASS : '');
+// Si no se definieron desde .env, usar valores por defecto
+if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if (!defined('DB_NAME')) define('DB_NAME', 'tickets_system');
+if (!defined('DB_USER')) define('DB_USER', 'root');
+if (!defined('DB_PASS')) define('DB_PASS', '');
 
 // ──────────────────────────────────────────────────────────────────────
 // Configuración del sitio
 // ──────────────────────────────────────────────────────────────────────
 
-define('SITE_URL', defined('SITE_URL') ? SITE_URL : 'http://localhost');
-define('SITE_NAME', defined('SITE_NAME') ? SITE_NAME : 'Tickets - Sistema de Ventas');
-define('ADMIN_EMAIL', defined('ADMIN_EMAIL') ? ADMIN_EMAIL : 'admin@tickets.com');
+if (!defined('SITE_URL')) define('SITE_URL', 'http://localhost');
+if (!defined('SITE_NAME')) define('SITE_NAME', 'Tickets - Sistema de Ventas');
+if (!defined('ADMIN_EMAIL')) define('ADMIN_EMAIL', 'admin@tickets.com');
 
 // ──────────────────────────────────────────────────────────────────────
 // Configuración de correo (PHPMailer)
 // ──────────────────────────────────────────────────────────────────────
 
-define('SMTP_HOST', defined('SMTP_HOST') ? SMTP_HOST : 'localhost');
-define('SMTP_PORT', defined('SMTP_PORT') ? SMTP_PORT : 587);
-define('SMTP_USERNAME', defined('SMTP_USERNAME') ? SMTP_USERNAME : '');
-define('SMTP_PASSWORD', defined('SMTP_PASSWORD') ? SMTP_PASSWORD : '');
-define('SMTP_FROM_EMAIL', defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'no-reply@localhost');
-define('SMTP_FROM_NAME', defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'Tickets');
+if (!defined('SMTP_HOST')) define('SMTP_HOST', 'localhost');
+if (!defined('SMTP_PORT')) define('SMTP_PORT', 587);
+if (!defined('SMTP_USERNAME')) define('SMTP_USERNAME', '');
+if (!defined('SMTP_PASSWORD')) define('SMTP_PASSWORD', '');
+if (!defined('SMTP_FROM_EMAIL')) define('SMTP_FROM_EMAIL', 'no-reply@localhost');
+if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', 'Tickets');
 
 // ──────────────────────────────────────────────────────────────────────
 // Rutas del sistema
@@ -93,7 +93,7 @@ date_default_timezone_set('America/Mexico_City');
 // Entorno (development / production)
 // ──────────────────────────────────────────────────────────────────────
 
-define('APP_ENV', defined('APP_ENV') ? APP_ENV : 'production');
+if (!defined('APP_ENV')) define('APP_ENV', 'production');
 
 if (APP_ENV === 'development') {
     error_reporting(E_ALL);
@@ -107,26 +107,26 @@ if (APP_ENV === 'development') {
 // 🚀 SRE - CAPA 1: REDIS CACHE (Upstash o local)
 // ──────────────────────────────────────────────────────────────────────
 
-define('REDIS_REST_URL', defined('REDIS_REST_URL') ? REDIS_REST_URL : '');
-define('REDIS_REST_TOKEN', defined('REDIS_REST_TOKEN') ? REDIS_REST_TOKEN : '');
-define('REDIS_URL', defined('REDIS_URL') ? REDIS_URL : '');
+if (!defined('REDIS_REST_URL')) define('REDIS_REST_URL', '');
+if (!defined('REDIS_REST_TOKEN')) define('REDIS_REST_TOKEN', '');
+if (!defined('REDIS_URL')) define('REDIS_URL', '');
 
 // ──────────────────────────────────────────────────────────────────────
 // Upstash QStash (Cola de Escritura)
 // ──────────────────────────────────────────────────────────────────────
 
-define('UPSTASH_QSTASH_TOKEN', defined('UPSTASH_QSTASH_TOKEN') ? UPSTASH_QSTASH_TOKEN : '');
-define('QSTASH_URL', defined('QSTASH_URL') ? QSTASH_URL : 'https://qstash.upstash.io');
-define('QSTASH_CURRENT_SIGNING_KEY', defined('QSTASH_CURRENT_SIGNING_KEY') ? QSTASH_CURRENT_SIGNING_KEY : '');
-define('QSTASH_NEXT_SIGNING_KEY', defined('QSTASH_NEXT_SIGNING_KEY') ? QSTASH_NEXT_SIGNING_KEY : '');
-define('QUEUE_WORKER_URL', defined('QUEUE_WORKER_URL') ? QUEUE_WORKER_URL : SITE_URL . '/queue_worker.php');
+if (!defined('UPSTASH_QSTASH_TOKEN')) define('UPSTASH_QSTASH_TOKEN', '');
+if (!defined('QSTASH_URL')) define('QSTASH_URL', 'https://qstash.upstash.io');
+if (!defined('QSTASH_CURRENT_SIGNING_KEY')) define('QSTASH_CURRENT_SIGNING_KEY', '');
+if (!defined('QSTASH_NEXT_SIGNING_KEY')) define('QSTASH_NEXT_SIGNING_KEY', '');
+if (!defined('QUEUE_WORKER_URL')) define('QUEUE_WORKER_URL', SITE_URL . '/queue_worker.php');
 
 // ──────────────────────────────────────────────────────────────────────
 // Cloudflare D1 (Migración Dual-Write)
 // ──────────────────────────────────────────────────────────────────────
 
-define('D1_SYNC_URL', defined('D1_SYNC_URL') ? D1_SYNC_URL : SITE_URL . '/api/d1-sync');
-define('D1_SYNC_TOKEN', defined('D1_SYNC_TOKEN') ? D1_SYNC_TOKEN : '');
+if (!defined('D1_SYNC_URL')) define('D1_SYNC_URL', SITE_URL . '/api/d1-sync');
+if (!defined('D1_SYNC_TOKEN')) define('D1_SYNC_TOKEN', '');
 
 // ──────────────────────────────────────────────────────────────────────
 // Conexión a la base de datos
