@@ -6,6 +6,34 @@ require_once '../includes/classes/Database.php';
 
 $isAsync = isset($_GET['async_success']) && $_GET['async_success'] === 'true';
 
+// --- ENDPOINT PARA POLLING DE ESTADO ---
+if (isset($_GET['check_status']) && $_GET['check_status'] === '1') {
+    header('Content-Type: application/json');
+    $email = $_GET['email'] ?? '';
+    $eventId = $_GET['event_id'] ?? 0;
+
+    if ($email && $eventId) {
+        $db = new Database();
+        $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 5);
+
+        if (count($recentTickets) > 0) {
+            echo json_encode(['ready' => true]);
+        } else {
+            // Verificar si hay error en sesión
+            session_start();
+            $emailError = $_SESSION['email_error'] ?? null;
+            if ($emailError) {
+                echo json_encode(['error' => $emailError, 'partial' => true]);
+            } else {
+                echo json_encode(['ready' => false, 'message' => 'Procesando...']);
+            }
+        }
+    } else {
+        echo json_encode(['error' => 'Datos incompletos']);
+    }
+    exit();
+}
+
 // --- AUTO-DETECTION PARA TICKETS EN COLA ---
 // Si estamos en modo espera pero ya existen los tickets en DB (aunque el mail tarde), los mostramos.
 if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
@@ -187,21 +215,87 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
             </div>
         <?php endif; ?>
 
-        <?php if ($isAsync): ?>
-            <!-- Async Processing State -->
-            <div class="glass-card mb-12 p-10 text-center bg-white/5 border border-lime-400/20 rounded-3xl relative overflow-hidden">
-                <div class="absolute inset-0 bg-lime-400/5 animate-pulse"></div>
-                <div class="relative z-10">
-                    <i class="fas fa-spinner fa-spin text-5xl text-lime-400 mb-6 drop-shadow-lg"></i>
-                    <h3 class="text-3xl font-black text-white mb-4 tracking-tight">Procesando tus entradas...</h3>
-                    <p class="text-gray-400 max-w-xl mx-auto mb-8 text-lg">Nuestros sistemas están emitiendo tus códigos QR en este mismo instante. Debido a la alta demanda, están en cola y te llegarán al correo electrónico en unos segundos.</p>
-                    <div class="flex justify-center">
-                        <button onclick="window.location.reload()" class="btn-modern btn-lime text-sm py-4 px-10 font-bold tracking-wide">
-                            <i class="fas fa-sync-alt mr-2"></i> Recargar estado
-                        </button>
-                    </div>
+        <?php if ($isAsync && count($purchase['tickets']) > 0): ?>
+            <!-- Éxito después de procesamiento async - Banner verde -->
+            <div class="glass-card mb-8 p-6 border-lime-400/30 bg-lime-400/10 rounded-2xl flex items-center gap-4">
+                <div class="w-14 h-14 bg-lime-400 rounded-2xl flex items-center justify-center text-black flex-shrink-0 shadow-xl shadow-lime-400/30">
+                    <i class="fas fa-check text-3xl"></i>
+                </div>
+                <div class="text-left flex-1">
+                    <h3 class="text-2xl font-black text-white mb-1">¡Tickets Generados!</h3>
+                    <p class="text-gray-300 text-sm">Hemos enviado los tickets a <span class="text-white font-bold"><?php echo htmlspecialchars($purchase['email']); ?></span>. Revisa tu bandeja de entrada (y spam).</p>
+                </div>
+                <div class="hidden md:block">
+                    <i class="fas fa-envelope-open-text text-4xl text-lime-400"></i>
                 </div>
             </div>
+        <?php endif; ?>
+
+        <?php if ($isAsync): ?>
+            <!-- Async Processing State con Polling -->
+            <div class="glass-card mb-12 p-10 text-center bg-white/5 border border-lime-400/20 rounded-3xl relative overflow-hidden" id="processingCard">
+                <div class="absolute inset-0 bg-lime-400/5 animate-pulse"></div>
+                <div class="relative z-10">
+                    <i class="fas fa-spinner fa-spin text-5xl text-lime-400 mb-6 drop-shadow-lg" id="spinnerIcon"></i>
+                    <h3 class="text-3xl font-black text-white mb-4 tracking-tight" id="statusTitle">Procesando tus entradas...</h3>
+                    <p class="text-gray-400 max-w-xl mx-auto mb-8 text-lg" id="statusText">Nuestros sistemas están emitiendo tus códigos QR en este mismo instante. Debido a la alta demanda, están en cola y te llegarán al correo electrónico en unos segundos.</p>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="checkStatus()" class="btn-modern btn-lime text-sm py-4 px-10 font-bold tracking-wide" id="checkBtn">
+                            <i class="fas fa-sync-alt mr-2"></i> Verificar estado
+                        </button>
+                        <button onclick="window.location.reload()" class="btn-modern bg-gray-100 text-gray-800 text-sm py-4 px-10 font-bold tracking-wide">
+                            <i class="fas fa-redo mr-2"></i> Recargar
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-4" id="lastCheck"></p>
+                </div>
+            </div>
+
+            <script>
+                // Polling automático cada 3 segundos
+                let pollInterval;
+                let maxAttempts = 20; // 20 * 3s = 60 segundos máximo
+                let attempt = 0;
+
+                function checkStatus() {
+                    fetch(window.location.href + '&check_status=1')
+                        .then(r => r.json())
+                        .then(data => {
+                            attempt++;
+                            document.getElementById('lastCheck').textContent = 'Última verificación: ' + new Date().toLocaleTimeString();
+
+                            if (data.ready) {
+                                // Tickets listos - recargar para mostrar
+                                clearInterval(pollInterval);
+                                document.getElementById('statusTitle').textContent = '¡Tickets Listos!';
+                                document.getElementById('statusText').textContent = 'Hemos generado tus entradas correctamente. Mostrando...';
+                                document.getElementById('spinnerIcon').className = 'fas fa-check text-5xl text-lime-400 mb-6 drop-shadow-lg';
+                                setTimeout(() => window.location.reload(), 1500);
+                            } else if (data.error) {
+                                // Error - mostrar mensaje
+                                clearInterval(pollInterval);
+                                document.getElementById('statusTitle').textContent = 'Error en el procesamiento';
+                                document.getElementById('statusText').textContent = data.error;
+                                document.getElementById('spinnerIcon').className = 'fas fa-times text-5xl text-red-400 mb-6 drop-shadow-lg';
+                            } else if (attempt >= maxAttempts) {
+                                // Timeout
+                                clearInterval(pollInterval);
+                                document.getElementById('statusTitle').textContent = 'Toma más tiempo de lo esperado';
+                                document.getElementById('statusText').textContent = 'El procesamiento está tomando más tiempo. Puedes esperar o recargar manualmente.';
+                                document.getElementById('spinnerIcon').className = 'fas fa-clock text-5xl text-yellow-400 mb-6 drop-shadow-lg';
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Error checking status:', err);
+                        });
+                }
+
+                // Iniciar polling automático al cargar
+                document.addEventListener('DOMContentLoaded', () => {
+                    pollInterval = setInterval(checkStatus, 3000);
+                    checkStatus(); // Primera verificación inmediata
+                });
+            </script>
         <?php else: ?>
             <!-- Tickets Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
