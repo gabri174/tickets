@@ -26,13 +26,25 @@ if (isset($_GET['check_status']) && $_GET['check_status'] === '1') {
         }
 
         if (count($recentTickets) > 0) {
-            echo json_encode(['ready' => true, 'count' => count($recentTickets)]);
+            echo json_encode(['ready' => true, 'count' => count($recentTickets), 'debug' => ['email' => $email, 'phone' => $phone]]);
         } else {
-            echo json_encode(['ready' => false, 'message' => 'Generando tickets...']);
+            echo json_encode(['ready' => false, 'message' => 'Generando tickets...', 'debug' => ['email' => $email, 'phone' => $phone, 'event' => $eventId]]);
         }
     } else {
         echo json_encode(['error' => 'Datos incompletos', 'email' => $email, 'phone' => $phone, 'event' => $eventId]);
     }
+    exit();
+}
+
+// --- ENDPOINT DE DEBUG PARA VERIFICAR PARÁMETROS ---
+if (isset($_GET['debug_params']) && $_GET['debug_params'] === '1') {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'GET' => $_GET,
+        'SESSION' => $_SESSION,
+        'isAsync' => $isAsync,
+        'tickets_found' => isset($purchase['tickets']) ? count($purchase['tickets']) : 0
+    ]);
     exit();
 }
 
@@ -263,48 +275,55 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
             </div>
 
             <script>
-                // Polling automático cada 3 segundos
+                // Polling automático cada 1 segundo (más rápido para mejor UX)
                 let pollInterval;
-                let maxAttempts = 20; // 20 * 3s = 60 segundos máximo
+                let maxAttempts = 30; // 30 * 1s = 30 segundos máximo
                 let attempt = 0;
 
                 function checkStatus() {
-                    fetch(window.location.href + '&check_status=1')
+                    // Construir URL completa con todos los parámetros
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const checkUrl = window.location.pathname + '?' + urlParams.toString() + '&check_status=1';
+
+                    fetch(checkUrl)
                         .then(r => r.json())
                         .then(data => {
                             attempt++;
-                            document.getElementById('lastCheck').textContent = 'Última verificación: ' + new Date().toLocaleTimeString();
+                            document.getElementById('lastCheck').textContent = 'Verificando... (' + attempt + '/' + maxAttempts + ') - ' + new Date().toLocaleTimeString();
 
-                            if (data.ready) {
+                            if (data.ready && data.count > 0) {
                                 // Tickets listos - recargar para mostrar
                                 clearInterval(pollInterval);
-                                document.getElementById('statusTitle').textContent = '¡Tickets Listos!';
-                                document.getElementById('statusText').textContent = 'Hemos generado tus entradas correctamente. Mostrando...';
+                                document.getElementById('statusTitle').textContent = '¡' + data.count + ' Tickets Generados!';
+                                document.getElementById('statusText').textContent = 'Hemos generado tus ' + data.count + ' entradas correctamente. Recargando para mostrar...';
                                 document.getElementById('spinnerIcon').className = 'fas fa-check text-5xl text-lime-400 mb-6 drop-shadow-lg';
-                                setTimeout(() => window.location.reload(), 1500);
+                                document.getElementById('checkBtn').style.display = 'none';
+                                setTimeout(() => window.location.reload(), 1000);
                             } else if (data.error) {
                                 // Error - mostrar mensaje
                                 clearInterval(pollInterval);
                                 document.getElementById('statusTitle').textContent = 'Error en el procesamiento';
                                 document.getElementById('statusText').textContent = data.error;
                                 document.getElementById('spinnerIcon').className = 'fas fa-times text-5xl text-red-400 mb-6 drop-shadow-lg';
+                                document.getElementById('checkBtn').style.display = 'none';
                             } else if (attempt >= maxAttempts) {
-                                // Timeout
+                                // Timeout - pero seguir intentando
                                 clearInterval(pollInterval);
-                                document.getElementById('statusTitle').textContent = 'Toma más tiempo de lo esperado';
-                                document.getElementById('statusText').textContent = 'El procesamiento está tomando más tiempo. Puedes esperar o recargar manualmente.';
+                                document.getElementById('statusTitle').textContent = 'Aún procesando...';
+                                document.getElementById('statusText').textContent = 'Toma más tiempo de lo esperado. Haz click en "Verificar estado" para comprobar manualmente.';
                                 document.getElementById('spinnerIcon').className = 'fas fa-clock text-5xl text-yellow-400 mb-6 drop-shadow-lg';
                             }
                         })
                         .catch(err => {
                             console.error('Error checking status:', err);
+                            document.getElementById('lastCheck').textContent = 'Error de conexión. Reintentando...';
                         });
                 }
 
                 // Iniciar polling automático al cargar
                 document.addEventListener('DOMContentLoaded', () => {
-                    pollInterval = setInterval(checkStatus, 3000);
                     checkStatus(); // Primera verificación inmediata
+                    pollInterval = setInterval(checkStatus, 1000); // 1 segundo
                 });
             </script>
         <?php else: ?>
