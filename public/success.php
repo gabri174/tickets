@@ -10,46 +10,57 @@ $isAsync = isset($_GET['async_success']) && $_GET['async_success'] === 'true';
 if (isset($_GET['check_status']) && $_GET['check_status'] === '1') {
     header('Content-Type: application/json');
     $email = $_GET['email'] ?? '';
+    $phone = $_GET['phone'] ?? '';
     $eventId = $_GET['event_id'] ?? 0;
 
-    if ($email && $eventId) {
+    if (($email || $phone) && $eventId) {
         $db = new Database();
-        $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 5);
+        // Buscar por email o por teléfono
+        $recentTickets = [];
+        if ($email) {
+            $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 10);
+        }
+        // Si no hay por email, intentar por teléfono
+        if (empty($recentTickets) && $phone) {
+            $recentTickets = $db->getRecentTicketsByPhone($phone, $eventId, 10);
+        }
 
         if (count($recentTickets) > 0) {
-            echo json_encode(['ready' => true]);
+            echo json_encode(['ready' => true, 'count' => count($recentTickets)]);
         } else {
-            // Verificar si hay error en sesión
-            session_start();
-            $emailError = $_SESSION['email_error'] ?? null;
-            if ($emailError) {
-                echo json_encode(['error' => $emailError, 'partial' => true]);
-            } else {
-                echo json_encode(['ready' => false, 'message' => 'Procesando...']);
-            }
+            echo json_encode(['ready' => false, 'message' => 'Generando tickets...']);
         }
     } else {
-        echo json_encode(['error' => 'Datos incompletos']);
+        echo json_encode(['error' => 'Datos incompletos', 'email' => $email, 'phone' => $phone, 'event' => $eventId]);
     }
     exit();
 }
 
 // --- AUTO-DETECTION PARA TICKETS EN COLA ---
 // Si estamos en modo espera pero ya existen los tickets en DB (aunque el mail tarde), los mostramos.
+$phone = $_GET['phone'] ?? '';
 if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
     $email = $_GET['email'];
     $eventId = $_GET['event_id'];
     $db = new Database();
-    // Buscamos tickets para este mail/evento en los últimos 5 minutos
-    $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 5);
+    // Buscamos tickets para este mail/evento en los últimos 10 minutos
+    $recentTickets = [];
+    if ($email) {
+        $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 10);
+    }
+    // Si no hay por email, intentar por teléfono
+    if (empty($recentTickets) && $phone) {
+        $recentTickets = $db->getRecentTicketsByPhone($phone, $eventId, 10);
+    }
+
     if (count($recentTickets) > 0) {
-        $isAsync = false; // Cambiamos a modo éxito total
+        $isAsync = false; // Cambiamos a modo éxito total - tickets encontrados
         $purchase = [
             'event_id' => $eventId,
-            'event_title' => 'Tus Entradas', // Se actualizará abajo
+            'event_title' => '', // Se actualizará abajo con getEventById
             'tickets' => [],
             'email' => $email,
-            'phone' => '' // Opcional
+            'phone' => $phone
         ];
         foreach ($recentTickets as $rt) {
             $purchase['tickets'][] = [

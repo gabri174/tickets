@@ -156,6 +156,12 @@ class Database {
         return $stmt->fetchAll();
     }
 
+    public function getRecentTicketsByPhone($phone, $eventId, $minutes = 10) {
+        $stmt = $this->pdo->prepare("SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_phone = ? AND t.event_id = ? AND t.purchase_date > DATE_SUB(NOW(), INTERVAL ? MINUTE) ORDER BY t.id ASC");
+        $stmt->execute([$phone, $eventId, $minutes]);
+        return $stmt->fetchAll();
+    }
+
     // ─────────────────────────────────────────────
     // ADMINISTRADORES
     // ─────────────────────────────────────────────

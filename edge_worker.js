@@ -98,17 +98,21 @@ export default {
         // Extraer datos del formulario (esto asume que envuelves los datos del attendee en JSON, 
         // pero para simplificar enviamos el RAW body)
         
+        // Extraer email del primer attendee para la redirección
+        const primaryEmail = formData.get("attendees[0][email]") || "";
+        const primaryPhone = formData.get("phone") || "";
+
         let purchaseData = {
           event_id: eventId,
           ticket_type_id: ticketTypeId,
           quantity: quantity,
-          phone: formData.get("phone"),
+          phone: primaryPhone,
           zip_code: formData.get("zip_code"),
           // Aquí mapearías todos los attendees recibidos en el POST
           attendees: [{
             name: formData.get("attendees[0][name]"),
             surname: formData.get("attendees[0][surname]"),
-            email: formData.get("attendees[0][email]")
+            email: primaryEmail
           }],
           total_price: 0 // Lo recalculará el backend, esto es para entradas gratis
         };
@@ -132,8 +136,9 @@ export default {
         });
 
         if (qstashResponse.ok) {
-          // Éxito: Redirigir a success.php de forma transparente informando que es asíncrono
-          return Response.redirect(`${url.origin}/success.php?async_success=true&event_id=${eventId}`, 302);
+          // Éxito: Redirigir a success.php con email y teléfono para polling
+          const redirectUrl = `${url.origin}/success.php?async_success=true&event_id=${eventId}&email=${encodeURIComponent(primaryEmail)}&phone=${encodeURIComponent(primaryPhone)}`;
+          return Response.redirect(redirectUrl, 302);
         } else {
           // Falla QStash -> Devolvemos el stock a Redis (compensación)
           await fetch(`${env.UPSTASH_REDIS_REST_URL}/incrby/${stockKey}/${quantity}`, {
