@@ -443,11 +443,10 @@ function completePurchase($data, $db) {
         $tickets = [];
 
         // --- IDEMPOTENCY CHECK ---
-        // Si ya existen tickets para este email y evento creados en los últimos 10 minutos,
-        // asumimos que es un reintento de la cola y saltamos la creación para evitar duplicados.
-        $existingTickets = $db->getRecentTicketsByEmail($primary_email, $eventId, 10);
-        if (function_exists('qLog')) qLog("[TRACE] Check Idempotencia: " . count($existingTickets) . " tickets encontrados para $primary_email");
-        
+        // Buscar tickets existentes por teléfono (más fiable que email cuando hay múltiples asistentes)
+        $existingTickets = $db->getRecentTicketsByPhone($phone, $eventId, 10);
+        if (function_exists('qLog')) qLog("[TRACE] Check Idempotencia: " . count($existingTickets) . " tickets encontrados para teléfono $phone");
+
         if (count($existingTickets) >= $quantity) {
             if (function_exists('qLog')) qLog("[TRACE] Idempotencia activa: Ya existen tickets recientes (" . count($existingTickets) . "). Saltando inserción DB.");
             foreach ($existingTickets as $et) {
