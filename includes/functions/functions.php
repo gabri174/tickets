@@ -442,6 +442,14 @@ function completePurchase($data, $db) {
         $primary_name = cleanInput($attendees[0]['name']) . ' ' . cleanInput($attendees[0]['surname']);
         $tickets = [];
 
+        // LOG: Cantidad de asistentes y quantity esperada
+        if (function_exists('qLog')) {
+            qLog("[INFO] completePurchase: quantity=$quantity, attendees_count=" . count($attendees));
+            foreach ($attendees as $idx => $att) {
+                qLog("[INFO] Attendee #" . ($idx+1) . ": " . cleanInput($att['name']) . " " . cleanInput($att['surname']) . " <" . cleanInput($att['email']) . ">");
+            }
+        }
+
         // --- IDEMPOTENCY CHECK ---
         // Buscar tickets existentes por teléfono (más fiable que email cuando hay múltiples asistentes)
         $existingTickets = $db->getRecentTicketsByPhone($phone, $eventId, 10);
