@@ -95,12 +95,21 @@ export default {
         }
 
         // --- CAPA 2: Enviar a la Cola (Upstash QStash) ---
-        // Extraer datos del formulario (esto asume que envuelves los datos del attendee en JSON, 
-        // pero para simplificar enviamos el RAW body)
-        
         // Extraer email del primer attendee para la redirección
-        const primaryEmail = formData.get("attendees[0][email]") || "";
+        const primaryEmail = formData.get("attendees.0.email") || formData.get("attendees[0][email]") || "";
         const primaryPhone = formData.get("phone") || "";
+
+        // Extraer TODOS los attendees dinámicamente
+        const attendees = [];
+        for (let i = 0; i < quantity; i++) {
+          const name = formData.get(`attendees.${i}.name`) || formData.get(`attendees[${i}][name]`) || "";
+          const surname = formData.get(`attendees.${i}.surname`) || formData.get(`attendees[${i}][surname]`) || "";
+          const email = formData.get(`attendees.${i}.email`) || formData.get(`attendees[${i}][email]`) || "";
+
+          if (name || email) {
+            attendees.push({ name, surname, email });
+          }
+        }
 
         let purchaseData = {
           event_id: eventId,
@@ -108,12 +117,7 @@ export default {
           quantity: quantity,
           phone: primaryPhone,
           zip_code: formData.get("zip_code"),
-          // Aquí mapearías todos los attendees recibidos en el POST
-          attendees: [{
-            name: formData.get("attendees[0][name]"),
-            surname: formData.get("attendees[0][surname]"),
-            email: primaryEmail
-          }],
+          attendees: attendees,
           total_price: 0 // Lo recalculará el backend, esto es para entradas gratis
         };
 
@@ -121,7 +125,11 @@ export default {
           action: "complete_purchase",
           purchase_data: purchaseData,
           enqueued_at: Date.now(),
-          attempt: 1
+          attempt: 1,
+          _debug: {
+            quantity: quantity,
+            attendees_count: attendees.length
+          }
         };
 
         const qstashResponse = await fetch(`${env.QSTASH_URL}/v2/publish/${env.QUEUE_WORKER_URL}`, {
