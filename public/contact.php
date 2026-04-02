@@ -1,7 +1,7 @@
 <?php
+require_once '../includes/config/config.php';
 $currentPage = 'contact';
 $pageTitle = 'Contacto - ' . SITE_NAME;
-require_once '../includes/config/config.php';
 require_once '../includes/partials/header.php';
 ?>
 

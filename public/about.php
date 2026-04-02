@@ -1,7 +1,7 @@
 <?php
+require_once '../includes/config/config.php';
 $currentPage = 'about';
 $pageTitle = 'Nosotros - ' . SITE_NAME;
-require_once '../includes/config/config.php';
 require_once '../includes/partials/header.php';
 ?>
 
