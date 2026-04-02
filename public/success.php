@@ -111,101 +111,32 @@ $db = new Database();
 $eventData = $db->getEventById($purchase['event_id'] ?? 0);
 $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData['image_url'] : '';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Compra Exitosa! - <?php echo SITE_NAME; ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: var(--bg-dark); }
-        .success-checkmark {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            display: block;
-            stroke-width: 2;
-            stroke: #DAFB71;
-            stroke-miterlimit: 10;
-            margin: 10% auto;
-            box-shadow: inset 0px 0px 0px #DAFB71;
-            animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
-        }
-    </style>
-</head>
-<body>
-    <!-- Main Header / Navbar -->
-    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <!-- Logo -->
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-ticket-alt text-black text-xl"></i>
-                    </div>
-                    <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
-                </div>
+$currentPage = 'success';
+$pageTitle = '¡Compra Exitosa! - ' . SITE_NAME;
+$extraStyles = '
+    .success-checkmark {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: block;
+        stroke-width: 2;
+        stroke: #DAFB71;
+        stroke-miterlimit: 10;
+        margin: 10% auto;
+        box-shadow: inset 0px 0px 0px #DAFB71;
+        animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+    }
+    .animate-ticket {
+        animation: bounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes bounceIn {
+        from { opacity: 0; transform: scale(0.9) translateY(40px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+';
 
-                <!-- Desktop Navigation -->
-                <nav class="hidden md:flex items-center gap-8">
-                    <a href="index.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Inicio</a>
-                    <a href="about.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Nosotros</a>
-                    <a href="contact.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Contacto</a>
-                    <div class="w-px h-6 bg-white/10 mx-2"></div>
-                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
-                        <i class="fas fa-user-shield text-xs"></i>
-                        Administración
-                    </a>
-                </nav>
-
-                <!-- Mobile Menu Button -->
-                <button class="md:hidden text-gray-400 hover:text-white" onclick="toggleMobileMenu()">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Mobile Menu Drawer -->
-        <div id="mobileMenu" class="fixed inset-0 z-[60] hidden md:hidden">
-            <!-- Overlay -->
-            <div class="absolute inset-0 bg-[#0A0E14]/95 backdrop-blur-2xl" onclick="toggleMobileMenu()"></div>
-            
-            <!-- Menu Content -->
-            <nav class="relative h-full flex flex-col items-center justify-center gap-8 p-8">
-                <button class="absolute top-8 right-8 text-gray-400 hover:text-white text-2xl" onclick="toggleMobileMenu()">
-                    <i class="fas fa-times"></i>
-                </button>
-                
-                <a href="index.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Inicio</a>
-                <a href="about.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Nosotros</a>
-                <a href="contact.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Contacto</a>
-                
-                <div class="w-full h-px bg-white/10 my-4"></div>
-                
-                <a href="admin/" class="flex items-center gap-3 text-2xl font-bold text-gray-300 hover:text-white transition" onclick="toggleMobileMenu()">
-                    <i class="fas fa-user-shield text-xl text-lime-400"></i>
-                    Administración
-                </a>
-            </nav>
-        </div>
-    </header>
-
-    <script>
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobileMenu');
-            menu.classList.toggle('hidden');
-            if (!menu.classList.contains('hidden')) {
-                document.body.style.overflow = 'hidden';
-                document.documentElement.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = 'auto';
-                document.documentElement.style.overflow = 'auto';
-            }
-        }
-    </script>
+require_once '../includes/partials/header.php';
+?>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <!-- Success Status -->
@@ -415,50 +346,7 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
         <div class="h-12"></div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-[#0A0E14] border-t border-white/5 py-12 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                <!-- Logo y descripción -->
-                <div class="text-center md:text-left">
-                    <div class="flex items-center justify-center md:justify-start gap-2 mb-4">
-                        <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-ticket-alt text-black text-xl"></i>
-                        </div>
-                        <span class="text-xl font-bold text-white tracking-tighter">TICKETAPP</span>
-                    </div>
-                    <p class="text-gray-400 text-sm">La plataforma líder para la gestión de eventos y ticketing digital.</p>
-                </div>
-
-                <!-- Enlaces rápidos -->
-                <div class="text-center">
-                    <h4 class="text-white font-bold mb-4">Enlaces</h4>
-                    <div class="flex flex-col gap-2">
-                        <a href="index.php" class="text-gray-400 hover:text-lime-400 text-sm transition">Inicio</a>
-                        <a href="about.php" class="text-gray-400 hover:text-lime-400 text-sm transition">Nosotros</a>
-                        <a href="contact.php" class="text-gray-400 hover:text-lime-400 text-sm transition">Contacto</a>
-                    </div>
-                </div>
-
-                <!-- Contacto -->
-                <div class="text-center md:text-right">
-                    <h4 class="text-white font-bold mb-4">Contacto</h4>
-                    <p class="text-gray-400 text-sm">¿Necesitas ayuda?</p>
-                    <a href="mailto:admin@tickets.com" class="text-lime-400 hover:text-lime-300 text-sm font-bold transition">admin@tickets.com</a>
-                </div>
-            </div>
-
-            <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-gray-600 text-[10px] uppercase tracking-widest font-bold">
-                    &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
-                </p>
-                <div class="flex gap-4">
-                    <a href="#" class="text-gray-500 hover:text-lime-400 transition text-sm">Privacidad</a>
-                    <a href="#" class="text-gray-500 hover:text-lime-400 transition text-sm">Términos</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <?php require_once '../includes/partials/footer.php'; ?>
 
     <script>
         function shareOnWhatsApp() {
@@ -496,15 +384,5 @@ $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData[
         });
         <?php endif; ?>
     </script>
-
-    <style>
-        .animate-ticket {
-            animation: bounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes bounceIn {
-            from { opacity: 0; transform: scale(0.9) translateY(40px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-    </style>
 </body>
 </html>

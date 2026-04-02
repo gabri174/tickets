@@ -247,113 +247,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($event['seo_title'] ?: $event['title'] . ' - TicketApp'); ?></title>
-    <meta name="description" content="<?php echo htmlspecialchars($event['seo_description'] ?: 'Compra tus entradas para ' . $event['title'] . ' en ' . $event['location']); ?>">
-    <?php if ($event['seo_keywords']): ?>
-    <meta name="keywords" content="<?php echo htmlspecialchars($event['seo_keywords']); ?>">
-    <?php endif; ?>
-    
-    <!-- Open Graph / WhatsApp / Facebook -->
+$currentPage = 'buy';
+$pageTitle = htmlspecialchars($event['seo_title'] ?: $event['title'] . ' - TicketApp');
+$metaDescription = $event['seo_description'] ?: 'Compra tus entradas para ' . $event['title'] . ' en ' . $event['location'];
+$metaKeywords = $event['seo_keywords'] ?: '';
+
+$extraHead = '
     <meta property="og:type" content="event">
-    <meta property="og:url" content="<?php echo SITE_URL . '/buy.php?id=' . $eventId; ?>">
-    <meta property="og:title" content="<?php echo htmlspecialchars($event['seo_title'] ?: $event['title']); ?>">
-    <meta property="og:description" content="<?php echo htmlspecialchars($event['seo_description'] ?: 'Compra tus entradas para ' . $event['title'] . ' en ' . $event['location']); ?>">
-    <meta property="og:image" content="<?php echo SITE_URL . '/' . ($event['image_url'] ?: 'assets/img/default-event.jpg'); ?>">
+    <meta property="og:url" content="' . SITE_URL . '/buy.php?id=' . $eventId . '">
+    <meta property="og:title" content="' . htmlspecialchars($event['seo_title'] ?: $event['title']) . '">
+    <meta property="og:description" content="' . htmlspecialchars($event['seo_description'] ?: 'Compra tus entradas para ' . $event['title'] . ' en ' . $event['location']) . '">
+    <meta property="og:image" content="' . SITE_URL . '/' . ($event['image_url'] ?: 'assets/img/default-event.jpg') . '">
     <meta property="og:site_name" content="TicketApp">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        input[type="number"], input[type="text"], input[type="email"], input[type="tel"] {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            outline: none;
-            transition: border-color 0.3s ease;
-        }
-        input:focus { border-color: var(--accent-blue); }
-        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #A1A1A1; }
-    </style>
-</head>
-<body>
-    <!-- Main Header / Navbar -->
-    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <!-- Logo -->
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-ticket-alt text-black text-xl"></i>
-                    </div>
-                    <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
-                </div>
+';
 
-                <!-- Desktop Navigation -->
-                <nav class="hidden md:flex items-center gap-8">
-                    <a href="index.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Inicio</a>
-                    <a href="about.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Nosotros</a>
-                    <a href="contact.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Contacto</a>
-                    <div class="w-px h-6 bg-white/10 mx-2"></div>
-                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
-                        <i class="fas fa-user-shield text-xs"></i>
-                        Administración
-                    </a>
-                </nav>
+$extraStyles = '
+    input[type="number"], input[type="text"], input[type="email"], input[type="tel"] {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        outline: none;
+        transition: border-color 0.3s ease;
+    }
+    input:focus { border-color: var(--accent-blue); }
+    label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #A1A1A1; }
+    .animate-slide-up {
+        animation: slideUp 0.4s ease-out;
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+';
 
-                <!-- Mobile Menu Button -->
-                <button class="md:hidden text-gray-400 hover:text-white" onclick="toggleMobileMenu()">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
-            </div>
-        </div>
+require_once '../includes/partials/header.php';
+?>
 
-        <!-- Mobile Menu Drawer -->
-        <div id="mobileMenu" class="fixed inset-0 z-[60] hidden md:hidden">
-            <!-- Overlay -->
-            <div class="absolute inset-0 bg-[#0A0E14]/95 backdrop-blur-2xl" onclick="toggleMobileMenu()"></div>
-            
-            <!-- Menu Content -->
-            <nav class="relative h-full flex flex-col items-center justify-center gap-8 p-8">
-                <button class="absolute top-8 right-8 text-gray-400 hover:text-white text-2xl" onclick="toggleMobileMenu()">
-                    <i class="fas fa-times"></i>
-                </button>
-                
-                <a href="index.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Inicio</a>
-                <a href="about.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Nosotros</a>
-                <a href="contact.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Contacto</a>
-                
-                <div class="w-full h-px bg-white/10 my-4"></div>
-                
-                <a href="admin/" class="flex items-center gap-3 text-2xl font-bold text-gray-300 hover:text-white transition" onclick="toggleMobileMenu()">
-                    <i class="fas fa-user-shield text-xl text-lime-400"></i>
-                    Administración
-                </a>
-            </nav>
-        </div>
-    </header>
-
-    <script>
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobileMenu');
-            menu.classList.toggle('hidden');
-            if (!menu.classList.contains('hidden')) {
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = 'auto';
-            }
-        }
-    </script>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <header class="flex items-center justify-between mb-12">
             <a href="index.php" class="glass-pill w-12 h-12 flex items-center justify-center text-lg hover:bg-white/10 transition">
                 <i class="fas fa-arrow-left"></i>
             </a>
@@ -504,19 +437,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="h-20"></div>
 
-    <!-- Footer -->
-    <footer class="bg-[#0A0E14] border-t border-white/5 py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div class="flex items-center justify-center gap-2 mb-6">
-                <i class="fas fa-ticket-alt text-lime-400"></i>
-                <span class="text-xl font-bold text-white tracking-tighter">TICKETAPP</span>
-            </div>
-            <p class="text-gray-500 text-sm mb-8">La plataforma líder para tus entradas digitales.</p>
-            <div class="pt-8 border-t border-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">
-                &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
-            </div>
-        </div>
-    </footer>
+    <?php require_once '../includes/partials/footer.php'; ?>
 
     <script>
         const quantityInput = document.getElementById('quantity');
@@ -592,15 +513,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         typeRadios.forEach(radio => radio.addEventListener('change', updatePrices));
         document.addEventListener('DOMContentLoaded', updateAttendeeFields);
     </script>
-
-    <style>
-        .animate-slide-up {
-            animation: slideUp 0.4s ease-out;
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
 </body>
 </html>

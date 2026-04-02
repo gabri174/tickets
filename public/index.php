@@ -10,88 +10,13 @@ $allEvents = $db->getActiveEvents();
 $events = array_filter($allEvents, function($e) {
     return !empty($e['image_url']);
 });
+$currentPage = 'index';
+$pageTitle = SITE_NAME . ' - Tu plataforma de tickets';
+$metaDescription = 'Vende y compra tus entradas de forma inteligente y rápida con TicketApp. La plataforma líder para experiencias inolvidables.';
+$metaKeywords = 'tickets, entradas, eventos, conciertos, teatro, festivales, deportes, TicketApp';
+
+require_once '../includes/partials/header.php';
 ?>
-
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo SITE_NAME; ?> - Tu plataforma de tickets</title>
-    <meta name="description" content="Vende y compra tus entradas de forma inteligente y rápida con TicketApp. La plataforma líder para experiencias inolvidables.">
-    <meta name="keywords" content="tickets, entradas, eventos, conciertos, teatro, festivales, deportes, TicketApp">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-    <!-- Main Header / Navbar -->
-    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <!-- Logo -->
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-ticket-alt text-black text-xl"></i>
-                    </div>
-                    <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
-                </div>
-
-                <!-- Desktop Navigation -->
-                <nav class="hidden md:flex items-center gap-8">
-                    <a href="index.php" class="text-sm font-semibold text-lime-400">Inicio</a>
-                    <a href="about.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Nosotros</a>
-                    <a href="contact.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Contacto</a>
-                    <div class="w-px h-6 bg-white/10 mx-2"></div>
-                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
-                        <i class="fas fa-user-shield text-xs"></i>
-                        Administración
-                    </a>
-                </nav>
-
-                <!-- Mobile Menu Button -->
-                <button class="md:hidden text-gray-400 hover:text-white" onclick="toggleMobileMenu()">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Mobile Menu Drawer -->
-        <div id="mobileMenu" class="fixed inset-0 z-[60] hidden md:hidden">
-            <!-- Overlay -->
-            <div class="absolute inset-0 bg-[#0A0E14]/95 backdrop-blur-2xl" onclick="toggleMobileMenu()"></div>
-            
-            <!-- Menu Content -->
-            <nav class="relative h-full flex flex-col items-center justify-center gap-8 p-8">
-                <button class="absolute top-8 right-8 text-gray-400 hover:text-white text-2xl" onclick="toggleMobileMenu()">
-                    <i class="fas fa-times"></i>
-                </button>
-                
-                <a href="index.php" class="text-3xl font-bold text-lime-400" onclick="toggleMobileMenu()">Inicio</a>
-                <a href="about.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Nosotros</a>
-                <a href="contact.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Contacto</a>
-                
-                <div class="w-full h-px bg-white/10 my-4"></div>
-                
-                <a href="admin/" class="flex items-center gap-3 text-2xl font-bold text-gray-300 hover:text-white transition" onclick="toggleMobileMenu()">
-                    <i class="fas fa-user-shield text-xl text-lime-400"></i>
-                    Administración
-                </a>
-            </nav>
-        </div>
-    </header>
-
-    <script>
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobileMenu');
-            menu.classList.toggle('hidden');
-            if (!menu.classList.contains('hidden')) {
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = 'auto';
-            }
-        }
-    </script>
 
     <!-- Hero Section -->
     <section class="relative overflow-hidden pt-16 pb-24 md:pt-32 md:pb-40">
@@ -232,31 +157,7 @@ $events = array_filter($allEvents, function($e) {
 
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-[#0A0E14] border-t border-white/5 py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div class="flex items-center justify-center gap-2 mb-6">
-                <i class="fas fa-ticket-alt text-lime-400"></i>
-                <span class="text-xl font-bold text-white tracking-tighter">TICKETAPP</span>
-            </div>
-            <p class="text-gray-500 text-sm mb-8">La plataforma líder para tus entradas digitales.</p>
-            <div class="flex justify-center gap-6 mb-8 text-gray-400">
-                <a href="#" class="hover:text-white transition"><i class="fab fa-facebook-f"></i></a>
-                <a href="#" class="hover:text-white transition"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="hover:text-white transition"><i class="fab fa-instagram"></i></a>
-            </div>
-            <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-gray-600 text-[10px] uppercase tracking-widest font-bold">
-                    &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
-                </p>
-                <div class="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                    <span>Created by</span>
-                    <span class="text-lime-400">Creative Technologies</span>
-                    <span>by Gabriel Guerra</span>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <?php require_once '../includes/partials/footer.php'; ?>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -311,26 +212,6 @@ $events = array_filter($allEvents, function($e) {
                     }
                 });
             });
-
-            // Mobile Menu Toggle
-            const mobileMenuBtn = document.querySelector('header button');
-            const nav = document.querySelector('header nav');
-            if (mobileMenuBtn && nav) {
-                mobileMenuBtn.addEventListener('click', () => {
-                    nav.classList.toggle('hidden');
-                    nav.classList.toggle('flex');
-                    nav.classList.toggle('flex-col');
-                    nav.classList.toggle('absolute');
-                    nav.classList.toggle('top-20');
-                    nav.classList.toggle('left-0');
-                    nav.classList.toggle('right-0');
-                    nav.classList.toggle('bg-[#0A0E14]');
-                    nav.classList.toggle('p-6');
-                    nav.classList.toggle('border-b');
-                    nav.classList.toggle('border-white/5');
-                    nav.classList.toggle('animate-fade-in');
-                });
-            }
         });
     </script>
 </body>

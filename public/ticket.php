@@ -46,131 +46,59 @@ if (!isset($ticket['image_url'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket - <?php echo htmlspecialchars($ticket['event_title']); ?></title>
-    
-    <!-- OpenGraph Meta Tags for Rich Sharing -->
-    <meta property="og:title" content="🎫 Ticket: <?php echo htmlspecialchars($ticket['event_title']); ?>">
-    <meta property="og:description" content="Fecha: <?php echo formatDate($ticket['date_event']); ?> en <?php echo htmlspecialchars($ticket['location']); ?>. ¡Presenta este ticket en la entrada!">
-    <?php if ($ticket['image_url']): ?>
-        <meta property="og:image" content="<?php echo SITE_URL . '/' . htmlspecialchars($ticket['image_url']); ?>">
-    <?php endif; ?>
-    <meta property="og:url" content="<?php echo SITE_URL . '/ticket.php?code=' . $ticket['ticket_code']; ?>">
+$currentPage = 'ticket';
+$pageTitle = 'Ticket - ' . htmlspecialchars($ticket['event_title']);
+
+$extraHead = '
+    <meta property="og:title" content="🎫 Ticket: ' . htmlspecialchars($ticket['event_title']) . '">
+    <meta property="og:description" content="Fecha: ' . formatDate($ticket['date_event']) . ' en ' . htmlspecialchars($ticket['location']) . '. ¡Presenta este ticket en la entrada!">
+    ' . ($ticket['image_url'] ? '<meta property="og:image" content="' . SITE_URL . '/' . htmlspecialchars($ticket['image_url']) . '">' : '') . '
+    <meta property="og:url" content="' . SITE_URL . '/ticket.php?code=' . $ticket['ticket_code'] . '">
     <meta property="og:type" content="website">
+';
+
+$extraStyles = '
+    body { 
+        background: #0A0E14;
+        background: linear-gradient(180deg, #0A0E14 0%, #171E26 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        margin: 0;
+    }
+    .status-badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .status-valid { background: #DAFB71; color: #000; }
+    .status-used { background: #EE3D5A; color: #fff; }
+    .status-cancelled { background: #666; color: #fff; }
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="assets/css/index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { 
-            background: #0A0E14;
-            background: linear-gradient(180deg, #0A0E14 0%, #171E26 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-            margin: 0;
-        }
-        .status-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 10;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        .status-valid { background: #DAFB71; color: #000; }
-        .status-used { background: #EE3D5A; color: #fff; }
-        .status-cancelled { background: #666; color: #fff; }
-        
+    .ticket-container {
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 640px) {
         .ticket-container {
-            width: 100%;
-            max-width: 480px;
-            margin: 0 auto;
+            padding: 10px;
         }
+    }
+';
 
-        @media (max-width: 640px) {
-            .ticket-container {
-                padding: 10px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Main Header / Navbar -->
-    <header class="sticky top-0 z-50 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5 w-full">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <!-- Logo -->
-                <div class="flex items-center gap-3">
-                    <a href="index.php" class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-ticket-alt text-black text-xl"></i>
-                        </div>
-                        <span class="text-2xl font-black tracking-tighter text-white">TICKETAPP</span>
-                    </a>
-                </div>
-
-                <!-- Desktop Navigation -->
-                <nav class="hidden md:flex items-center gap-8">
-                    <a href="index.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Inicio</a>
-                    <a href="about.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Nosotros</a>
-                    <a href="contact.php" class="text-sm font-semibold text-gray-400 hover:text-white transition">Contacto</a>
-                    <div class="w-px h-6 bg-white/10 mx-2"></div>
-                    <a href="admin/" class="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition px-4 py-2 rounded-full bg-white/5 border border-white/10">
-                        <i class="fas fa-user-shield text-xs"></i>
-                        Administración
-                    </a>
-                </nav>
-
-                <!-- Mobile Menu Button -->
-                <button class="md:hidden text-gray-400 hover:text-white" onclick="toggleMobileMenu()">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Mobile Menu Drawer -->
-        <div id="mobileMenu" class="fixed inset-0 z-[60] hidden md:hidden">
-            <!-- Overlay -->
-            <div class="absolute inset-0 bg-[#0A0E14]/95 backdrop-blur-2xl" onclick="toggleMobileMenu()"></div>
-            
-            <!-- Menu Content -->
-            <nav class="relative h-full flex flex-col items-center justify-center gap-8 p-8">
-                <button class="absolute top-8 right-8 text-gray-400 hover:text-white text-2xl" onclick="toggleMobileMenu()">
-                    <i class="fas fa-times"></i>
-                </button>
-                
-                <a href="index.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Inicio</a>
-                <a href="about.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Nosotros</a>
-                <a href="contact.php" class="text-3xl font-bold text-white hover:text-lime-400 transition" onclick="toggleMobileMenu()">Contacto</a>
-                
-                <div class="w-full h-px bg-white/10 my-4"></div>
-                
-                <a href="admin/" class="flex items-center gap-3 text-2xl font-bold text-gray-300 hover:text-white transition" onclick="toggleMobileMenu()">
-                    <i class="fas fa-user-shield text-xl text-lime-400"></i>
-                    Administración
-                </a>
-            </nav>
-        </div>
-    </header>
-
-    <script>
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobileMenu');
-            menu.classList.toggle('hidden');
-            document.body.style.overflow = menu.classList.contains('hidden') ? 'auto' : 'hidden';
-        }
-    </script>
+require_once '../includes/partials/header.php';
+?>
 
 <?php if ($isAdmin): ?>
     <!-- Admin Toolbar -->
@@ -302,19 +230,7 @@ if (!isset($ticket['image_url'])) {
         <div class="h-12 no-print"></div>
     </div>
 
-    <!-- Footer (Non-printable) -->
-    <footer class="bg-[#0A0E14] border-t border-white/5 py-12 no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div class="flex items-center justify-center gap-2 mb-6">
-                <i class="fas fa-ticket-alt text-lime-400"></i>
-                <span class="text-xl font-bold text-white tracking-tighter text-white">TICKETAPP</span>
-            </div>
-            <p class="text-gray-500 text-sm mb-8">Tu entrada segura y digital.</p>
-            <div class="pt-8 border-t border-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">
-                &copy; <?php echo date('Y'); ?> TicketApp. Todos los derechos reservados.
-            </div>
-        </div>
-    </footer>
+    <?php require_once '../includes/partials/footer.php'; ?>
     
     <script>
         function shareTicket() {
