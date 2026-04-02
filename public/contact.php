@@ -1,5 +1,8 @@
 <?php
 require_once '../includes/config/config.php';
+require_once '../includes/functions/functions.php';
+require_once '../includes/classes/Database.php';
+
 $currentPage = 'contact';
 $pageTitle = 'Contacto - ' . SITE_NAME;
 require_once '../includes/partials/header.php';
