@@ -110,7 +110,8 @@ if (!$debugMode) {
 $db = new Database();
 $eventData = $db->getEventById($purchase['event_id'] ?? 0);
 $imgUrl = ($eventData && $eventData['image_url']) ? SITE_URL . '/' . $eventData['image_url'] : '';
-?>
+
+
 $currentPage = 'success';
 $pageTitle = '¡Compra Exitosa! - ' . SITE_NAME;
 $extraStyles = '

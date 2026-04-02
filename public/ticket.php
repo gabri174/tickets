@@ -44,7 +44,8 @@ if (!$ticket) {
 if (!isset($ticket['image_url'])) {
     $ticket['image_url'] = null;
 }
-?>
+
+
 
 $currentPage = 'ticket';
 $pageTitle = 'Ticket - ' . htmlspecialchars($ticket['event_title']);

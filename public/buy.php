@@ -245,7 +245,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 
-?>
 
 $currentPage = 'buy';
 $pageTitle = htmlspecialchars($event['seo_title'] ?: $event['title'] . ' - TicketApp');
