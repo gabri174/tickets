@@ -124,7 +124,7 @@ class Analytics {
         // Obtenemos tickets vendidos en las últimas 24h vs total disponible
         $sql = "SELECT 
                     e.available_tickets,
-                    (SELECT COUNT(*) FROM tickets WHERE event_id = e.id AND purchase_date >= NOW() - INTERVAL 1 DAY) as sales_last_24h
+                    (SELECT COUNT(*) FROM tickets WHERE event_id = e.id AND purchase_date >= datetime('now', '-1 day')) as sales_last_24h
                 FROM events e
                 WHERE e.id = ?";
         

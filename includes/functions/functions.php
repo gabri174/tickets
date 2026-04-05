@@ -434,8 +434,8 @@ function completePurchase($data, $db) {
         $ticketTypeName = $tt['name'] ?? '';
     }
 
-    $pdo = $db->getPdo();
-    $pdo->beginTransaction();
+    // No usamos transacciones PDO con D1 Proxy en este momento
+    // El sistema funcionará con commits individuales automáticos por el Worker
     
     try {
         $primary_email = cleanInput($attendees[0]['email']);
@@ -486,22 +486,7 @@ function completePurchase($data, $db) {
             $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId, $referral, $zipCode);
             if (function_exists('qLog')) qLog("[TRACE] Ticket creado OK.");
             
-            // --- DUAL-WRITE TO CLOUDFLARE D1 (EDGE) ---
-            if (defined('D1_SYNC_URL') && defined('D1_SYNC_TOKEN')) {
-                syncTicketToD1Async([
-                    'event_id' => $eventId,
-                    'ticket_type_id' => $ticketTypeId,
-                    'ticket_code' => $ticketCode,
-                    'attendee_name' => $a_name,
-                    'attendee_email' => $a_email,
-                    'attendee_phone' => $phone,
-                    'status' => 'valid',
-                    'qr_code_path' => $qrPath,
-                    'referral' => $referral,
-                    'zip_code' => $zipCode
-                ]);
-            }
-            // ------------------------------------------
+            // El ticket ya se crea directamente en D1 a través de $db->createTicket
 
             $tickets[] = [
                 'code' => $ticketCode,
@@ -518,9 +503,7 @@ function completePurchase($data, $db) {
         }
         } // Fin del else de idempotencia
         
-        if (function_exists('qLog')) qLog("[TRACE] Committing transaction...");
-        $pdo->commit();
-        if (function_exists('qLog')) qLog("[TRACE] Transaction committed OK.");
+        // Commit automático en D1
         
         // Enviar email
         $subject = "Tus tickets para " . $event['title'];
@@ -563,7 +546,7 @@ function completePurchase($data, $db) {
             'phone' => $phone
         ];
     } catch (Throwable $e) {
-        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        // No hay rollback en este modo simple de D1 Proxy
         throw $e;
     }
 }

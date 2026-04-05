@@ -36,18 +36,14 @@ $envPath = dirname(__DIR__, 2) . '/.env';
 loadEnv($envPath);
 
 // ──────────────────────────────────────────────────────────────────────
-// Configuración de la base de datos
+// Cloudflare D1 (Proxy API)
 // ──────────────────────────────────────────────────────────────────────
 
-if (file_exists(dirname(__DIR__, 2) . '/vendor/autoload.php')) {
-    require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
-}
+if (!defined('D1_API_URL')) define('D1_API_URL', 'https://tickets-api.gabri.workers.dev');
+if (!defined('D1_API_TOKEN')) define('D1_API_TOKEN', '');
 
-// Si no se definieron desde .env, usar valores por defecto
-if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
-if (!defined('DB_NAME')) define('DB_NAME', 'tickets_system');
-if (!defined('DB_USER')) define('DB_USER', 'root');
-if (!defined('DB_PASS')) define('DB_PASS', '');
+// Eliminamos la conexión PDO directa a MySQL
+$pdo = null;
 
 // ──────────────────────────────────────────────────────────────────────
 // Configuración del sitio
@@ -121,24 +117,4 @@ if (!defined('QSTASH_CURRENT_SIGNING_KEY')) define('QSTASH_CURRENT_SIGNING_KEY',
 if (!defined('QSTASH_NEXT_SIGNING_KEY')) define('QSTASH_NEXT_SIGNING_KEY', '');
 if (!defined('QUEUE_WORKER_URL')) define('QUEUE_WORKER_URL', SITE_URL . '/queue_worker.php');
 
-// ──────────────────────────────────────────────────────────────────────
-// Cloudflare D1 (Migración Dual-Write)
-// ──────────────────────────────────────────────────────────────────────
-
-if (!defined('D1_SYNC_URL')) define('D1_SYNC_URL', SITE_URL . '/api/d1-sync');
-if (!defined('D1_SYNC_TOKEN')) define('D1_SYNC_TOKEN', '');
-
-// ──────────────────────────────────────────────────────────────────────
-// Conexión a la base de datos
-// ──────────────────────────────────────────────────────────────────────
-
-try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch(PDOException $e) {
-    error_log("DB Connection Error: " . $e->getMessage());
-    error_log("DB Host: " . DB_HOST . ", DB Name: " . DB_NAME);
-    die(json_encode(['error' => 'Database connection failed']));
-}
 ?>

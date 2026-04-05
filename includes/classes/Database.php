@@ -1,21 +1,59 @@
 <?php
 class Database {
-    private $pdo;
+    private $apiUrl;
+    private $apiToken;
+    private $lastInsertId = null;
     
     public function __construct() {
-        global $pdo;
-        if (isset($pdo) && $pdo instanceof PDO) {
-            $this->pdo = $pdo;
-        } else {
-            try {
-                $this->pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
-                $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            } catch(PDOException $e) {
-                // Si falla, al menos tenemos el error registrado
-                error_log("Database Connection Error: " . $e->getMessage());
-            }
+        $this->apiUrl = defined('D1_API_URL') ? D1_API_URL : '';
+        $this->apiToken = defined('D1_API_TOKEN') ? D1_API_TOKEN : '';
+    }
+
+    /**
+     * Realiza una llamada al Proxy de Cloudflare D1
+     */
+    private function callD1($sql, $params = [], $method = 'all') {
+        if (empty($this->apiUrl)) {
+            error_log("D1 Error: D1_API_URL no definido");
+            return null;
         }
+
+        $ch = curl_init($this->apiUrl . '/api/query');
+        $payload = json_encode([
+            'sql' => $sql,
+            'params' => $params,
+            'method' => $method
+        ]);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $this->apiToken
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            error_log("D1 Proxy Error ($httpCode): " . $response);
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || !$data['success']) {
+            error_log("D1 Error: " . ($data['message'] ?? 'Respuesta inválida'));
+            return null;
+        }
+
+        // Si es una operación de escritura (run), guardamos el ID insertado
+        if ($method === 'run' && isset($data['data']['meta']['last_row_id'])) {
+            $this->lastInsertId = $data['data']['meta']['last_row_id'];
+        }
+
+        return $data['data'];
     }
 
     // ─────────────────────────────────────────────
@@ -24,68 +62,66 @@ class Database {
 
     public function getActiveEvents($category = null) {
         if ($category && $category !== 'todos') {
-            $stmt = $this->pdo->prepare("SELECT * FROM events WHERE status = 'active' AND category = ? ORDER BY date_event ASC");
-            $stmt->execute([$category]);
+            $res = $this->callD1("SELECT * FROM events WHERE status = 'active' AND category = ? ORDER BY date_event ASC", [$category]);
         } else {
-            $stmt = $this->pdo->prepare("SELECT * FROM events WHERE status = 'active' ORDER BY date_event ASC");
-            $stmt->execute();
+            $res = $this->callD1("SELECT * FROM events WHERE status = 'active' ORDER BY date_event ASC");
         }
-        return $stmt->fetchAll();
+        return $res['results'] ?? [];
     }
 
     public function getEventById($id, $adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("SELECT * FROM events WHERE id = ? AND status = 'active' AND admin_id = ?");
-            $stmt->execute([$id, $adminId]);
+            $res = $this->callD1("SELECT * FROM events WHERE id = ? AND status = 'active' AND admin_id = ?", [$id, $adminId], 'first');
         } else {
-            $stmt = $this->pdo->prepare("SELECT * FROM events WHERE id = ?");
-            $stmt->execute([$id]);
+            $res = $this->callD1("SELECT * FROM events WHERE id = ?", [$id], 'first');
         }
-        return $stmt->fetch();
+        return $res;
     }
 
     public function createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl = null, $adminId = 1, $category = 'otros', $seoTitle = null, $seoDescription = null, $seoKeywords = null) {
-        $stmt = $this->pdo->prepare("INSERT INTO events (title, description, date_event, location, price, max_tickets, available_tickets, image_url, admin_id, category, seo_title, seo_description, seo_keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([$title, $description, $dateEvent, $location, $price, $maxTickets, $maxTickets, $imageUrl, $adminId, $category, $seoTitle, $seoDescription, $seoKeywords]);
+        $sql = "INSERT INTO events (title, description, date_event, location, price, max_tickets, available_tickets, image_url, admin_id, category, seo_title, seo_description, seo_keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $res = $this->callD1($sql, [$title, $description, $dateEvent, $location, $price, $maxTickets, $maxTickets, $imageUrl, $adminId, $category, $seoTitle, $seoDescription, $seoKeywords], 'run');
+        return $res !== null;
     }
 
     public function getLastInsertId() {
-        return $this->pdo->lastInsertId();
+        return $this->lastInsertId;
     }
 
     public function updateEvent($id, $title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl = null, $adminId = null, $category = 'otros', $seoTitle = null, $seoDescription = null, $seoKeywords = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("UPDATE events SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=? WHERE id=? AND admin_id=?");
-            return $stmt->execute([$title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $category, $seoTitle, $seoDescription, $seoKeywords, $id, $adminId]);
+            $sql = "UPDATE events SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=? WHERE id=? AND admin_id=?";
+            $params = [$title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $category, $seoTitle, $seoDescription, $seoKeywords, $id, $adminId];
         } else {
-            $stmt = $this->pdo->prepare("UPDATE events SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=? WHERE id=?");
-            return $stmt->execute([$title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $category, $seoTitle, $seoDescription, $seoKeywords, $id]);
+            $sql = "UPDATE events SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=? WHERE id=?";
+            $params = [$title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl, $category, $seoTitle, $seoDescription, $seoKeywords, $id];
         }
+        return $this->callD1($sql, $params, 'run') !== null;
     }
 
     public function deleteEvent($id, $adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("UPDATE events SET status = 'inactive' WHERE id = ? AND admin_id = ?");
-            return $stmt->execute([$id, $adminId]);
+            $sql = "UPDATE events SET status = 'inactive' WHERE id = ? AND admin_id = ?";
+            $params = [$id, $adminId];
         } else {
-            $stmt = $this->pdo->prepare("UPDATE events SET status = 'inactive' WHERE id = ?");
-            return $stmt->execute([$id]);
+            $sql = "UPDATE events SET status = 'inactive' WHERE id = ?";
+            $params = [$id];
         }
+        return $this->callD1($sql, $params, 'run') !== null;
     }
+
     public function getAllEvents($adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("SELECT * FROM events WHERE admin_id = ? ORDER BY created_at DESC");
-            $stmt->execute([$adminId]);
+            $res = $this->callD1("SELECT * FROM events WHERE admin_id = ? ORDER BY created_at DESC", [$adminId]);
         } else {
-            $stmt = $this->pdo->prepare("SELECT * FROM events ORDER BY created_at DESC");
-            $stmt->execute();
+            $res = $this->callD1("SELECT * FROM events ORDER BY created_at DESC");
         }
-        return $stmt->fetchAll();
+        return $res['results'] ?? [];
     }
 
     public function trackVisit($eventId, $sessionId, $ipHash) {
-        $stmt = $this->pdo->prepare("INSERT INTO event_visits (event_id, session_id, ip_hash) VALUES (?, ?, ?)");
-        return $stmt->execute([$eventId, $sessionId, $ipHash]);
+        $sql = "INSERT INTO event_visits (event_id, session_id, ip_hash) VALUES (?, ?, ?)";
+        return $this->callD1($sql, [$eventId, $sessionId, $ipHash], 'run') !== null;
     }
 
     // ─────────────────────────────────────────────
@@ -93,35 +129,31 @@ class Database {
     // ─────────────────────────────────────────────
 
     public function getTicketTypesByEvent($eventId) {
-        $stmt = $this->pdo->prepare("SELECT * FROM ticket_types WHERE event_id = ? ORDER BY sort_order ASC, id ASC");
-        $stmt->execute([$eventId]);
-        return $stmt->fetchAll();
+        $res = $this->callD1("SELECT * FROM ticket_types WHERE event_id = ? ORDER BY sort_order ASC, id ASC", [$eventId]);
+        return $res['results'] ?? [];
     }
 
     public function getTicketTypeById($id) {
-        $stmt = $this->pdo->prepare("SELECT * FROM ticket_types WHERE id = ?");
-        $stmt->execute([$id]);
-        return $stmt->fetch();
+        return $this->callD1("SELECT * FROM ticket_types WHERE id = ?", [$id], 'first');
     }
 
     public function createTicketType($eventId, $name, $description, $price, $maxTickets, $sortOrder = 0) {
-        $stmt = $this->pdo->prepare("INSERT INTO ticket_types (event_id, name, description, price, max_tickets, available_tickets, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([$eventId, $name, $description, $price, $maxTickets, $maxTickets, $sortOrder]);
+        $sql = "INSERT INTO ticket_types (event_id, name, description, price, max_tickets, available_tickets, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        return $this->callD1($sql, [$eventId, $name, $description, $price, $maxTickets, $maxTickets, $sortOrder], 'run') !== null;
     }
 
     public function updateTicketType($id, $name, $description, $price, $maxTickets, $sortOrder = 0) {
-        $stmt = $this->pdo->prepare("UPDATE ticket_types SET name=?, description=?, price=?, max_tickets=?, sort_order=? WHERE id=?");
-        return $stmt->execute([$name, $description, $price, $maxTickets, $sortOrder, $id]);
+        $sql = "UPDATE ticket_types SET name=?, description=?, price=?, max_tickets=?, sort_order=? WHERE id=?";
+        return $this->callD1($sql, [$name, $description, $price, $maxTickets, $sortOrder, $id], 'run') !== null;
     }
 
     public function deleteTicketTypesByEvent($eventId) {
-        $stmt = $this->pdo->prepare("DELETE FROM ticket_types WHERE event_id = ?");
-        return $stmt->execute([$eventId]);
+        return $this->callD1("DELETE FROM ticket_types WHERE event_id = ?", [$eventId], 'run') !== null;
     }
 
     public function updateAvailableTicketType($typeId, $quantity = 1) {
-        $stmt = $this->pdo->prepare("UPDATE ticket_types SET available_tickets = available_tickets - ? WHERE id = ? AND available_tickets >= ?");
-        return $stmt->execute([$quantity, $typeId, $quantity]);
+        $sql = "UPDATE ticket_types SET available_tickets = available_tickets - ? WHERE id = ? AND available_tickets >= ?";
+        return $this->callD1($sql, [$quantity, $typeId, $quantity], 'run') !== null;
     }
 
     // ─────────────────────────────────────────────
@@ -129,37 +161,39 @@ class Database {
     // ─────────────────────────────────────────────
 
     public function createTicket($eventId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $ticketTypeId = null, $referral = null, $zipCode = null) {
-        $stmt = $this->pdo->prepare("INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path, referral, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([$eventId, $ticketTypeId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $referral, $zipCode]);
+        $sql = "INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path, referral, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $res = $this->callD1($sql, [$eventId, $ticketTypeId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $referral, $zipCode], 'run');
+        return $res !== null;
     }
 
     public function updateAvailableTickets($eventId, $quantity = 1) {
-        $stmt = $this->pdo->prepare("UPDATE events SET available_tickets = available_tickets - ? WHERE id = ? AND available_tickets >= ?");
-        return $stmt->execute([$quantity, $eventId, $quantity]);
+        $sql = "UPDATE events SET available_tickets = available_tickets - ? WHERE id = ? AND available_tickets >= ?";
+        return $this->callD1($sql, [$quantity, $eventId, $quantity], 'run') !== null;
     }
 
     public function getTicketsByEvent($eventId) {
-        $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE t.event_id = ? ORDER BY t.purchase_date DESC");
-        $stmt->execute([$eventId]);
-        return $stmt->fetchAll();
+        $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE t.event_id = ? ORDER BY t.purchase_date DESC";
+        $res = $this->callD1($sql, [$eventId]);
+        return $res['results'] ?? [];
     }
 
     public function getTicketByCode($code) {
-        $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title, e.date_event, e.location, e.image_url, tt.name as ticket_type_name FROM tickets t JOIN events e ON t.event_id = e.id LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.ticket_code = ?");
-        $stmt->execute([$code]);
-        return $stmt->fetch();
+        $sql = "SELECT t.*, e.title as event_title, e.date_event, e.location, e.image_url, tt.name as ticket_type_name FROM tickets t JOIN events e ON t.event_id = e.id LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.ticket_code = ?";
+        return $this->callD1($sql, [$code], 'first');
     }
 
     public function getRecentTicketsByEmail($email, $eventId, $minutes = 10) {
-        $stmt = $this->pdo->prepare("SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_email = ? AND t.event_id = ? AND t.purchase_date > DATE_SUB(NOW(), INTERVAL ? MINUTE) ORDER BY t.id ASC");
-        $stmt->execute([$email, $eventId, $minutes]);
-        return $stmt->fetchAll();
+        // Adaptación SQLite para DATE_SUB
+        $sql = "SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_email = ? AND t.event_id = ? AND t.purchase_date > datetime('now', '-' || ? || ' minutes') ORDER BY t.id ASC";
+        $res = $this->callD1($sql, [$email, $eventId, $minutes]);
+        return $res['results'] ?? [];
     }
 
     public function getRecentTicketsByPhone($phone, $eventId, $minutes = 10) {
-        $stmt = $this->pdo->prepare("SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_phone = ? AND t.event_id = ? AND t.purchase_date > DATE_SUB(NOW(), INTERVAL ? MINUTE) ORDER BY t.id ASC");
-        $stmt->execute([$phone, $eventId, $minutes]);
-        return $stmt->fetchAll();
+        // Adaptación SQLite para DATE_SUB
+        $sql = "SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_phone = ? AND t.event_id = ? AND t.purchase_date > datetime('now', '-' || ? || ' minutes') ORDER BY t.id ASC";
+        $res = $this->callD1($sql, [$phone, $eventId, $minutes]);
+        return $res['results'] ?? [];
     }
 
     // ─────────────────────────────────────────────
@@ -167,10 +201,7 @@ class Database {
     // ─────────────────────────────────────────────
 
     public function validateAdmin($login, $password) {
-        $stmt = $this->pdo->prepare("SELECT * FROM admins WHERE username = ? OR email = ?");
-        $stmt->execute([$login, $login]);
-        $admin = $stmt->fetch();
-        
+        $admin = $this->callD1("SELECT * FROM admins WHERE username = ? OR email = ?", [$login, $login], 'first');
         if ($admin && password_verify($password, $admin['password'])) {
             return $admin;
         }
@@ -178,39 +209,30 @@ class Database {
     }
 
     public function getLoginAttempts($login) {
-        $stmt = $this->pdo->prepare("SELECT login_attempts, last_login_attempt FROM admins WHERE username = ? OR email = ?");
-        $stmt->execute([$login, $login]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $this->callD1("SELECT login_attempts, last_login_attempt FROM admins WHERE username = ? OR email = ?", [$login, $login], 'first');
     }
 
     public function incrementLoginAttempts($login) {
-        $stmt = $this->pdo->prepare("UPDATE admins SET login_attempts = login_attempts + 1, last_login_attempt = NOW() WHERE username = ? OR email = ?");
-        return $stmt->execute([$login, $login]);
+        // SQlite use datetime('now')
+        $sql = "UPDATE admins SET login_attempts = login_attempts + 1, last_login_attempt = datetime('now') WHERE username = ? OR email = ?";
+        return $this->callD1($sql, [$login, $login], 'run') !== null;
     }
 
     public function resetLoginAttempts($login) {
-        $stmt = $this->pdo->prepare("UPDATE admins SET login_attempts = 0, last_login_attempt = NULL WHERE username = ? OR email = ?");
-        return $stmt->execute([$login, $login]);
+        $sql = "UPDATE admins SET login_attempts = 0, last_login_attempt = NULL WHERE username = ? OR email = ?";
+        return $this->callD1($sql, [$login, $login], 'run') !== null;
     }
 
     public function registerAdmin($username, $password, $email, $role = 'organizer') {
-        // Verificar si existe antes de insertar
-        $stmt = $this->pdo->prepare("SELECT id, username, email FROM admins WHERE username = ? OR email = ?");
-        $stmt->execute([$username, $email]);
-        if ($stmt->fetch()) {
-            return "exists"; // Retornar mensaje específico
+        $existing = $this->callD1("SELECT id FROM admins WHERE username = ? OR email = ?", [$username, $email], 'first');
+        if ($existing) {
+            return "exists";
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $this->pdo->prepare("INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)");
-        try {
-            if ($stmt->execute([$username, $hashedPassword, $email, $role])) {
-                return $this->pdo->lastInsertId();
-            }
-            return false;
-        } catch (PDOException $e) {
-            return false;
-        }
+        $sql = "INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)";
+        $res = $this->callD1($sql, [$username, $hashedPassword, $email, $role], 'run');
+        return $res ? $this->lastInsertId : false;
     }
 
     // ─────────────────────────────────────────────
@@ -219,74 +241,71 @@ class Database {
 
     public function getAllTickets($adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ? ORDER BY t.purchase_date DESC");
-            $stmt->execute([$adminId]);
+            $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ? ORDER BY t.purchase_date DESC";
+            $res = $this->callD1($sql, [$adminId]);
         } else {
-            $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id ORDER BY t.purchase_date DESC");
-            $stmt->execute();
+            $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id ORDER BY t.purchase_date DESC";
+            $res = $this->callD1($sql);
         }
-        return $stmt->fetchAll();
+        return $res['results'] ?? [];
     }
 
     public function countTickets($adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("SELECT COUNT(t.id) as total FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ?");
-            $stmt->execute([$adminId]);
+            $sql = "SELECT COUNT(t.id) as total FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ?";
+            $res = $this->callD1($sql, [$adminId], 'first');
         } else {
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) as total FROM tickets");
-            $stmt->execute();
+            $sql = "SELECT COUNT(*) as total FROM tickets";
+            $res = $this->callD1($sql, [], 'first');
         }
-        return $stmt->fetch()['total'];
+        return $res['total'] ?? 0;
     }
 
     public function countEvents($adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) as total FROM events WHERE status = 'active' AND admin_id = ?");
-            $stmt->execute([$adminId]);
+            $sql = "SELECT COUNT(*) as total FROM events WHERE status = 'active' AND admin_id = ?";
+            $res = $this->callD1($sql, [$adminId], 'first');
         } else {
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) as total FROM events WHERE status = 'active'");
-            $stmt->execute();
+            $sql = "SELECT COUNT(*) as total FROM events WHERE status = 'active'";
+            $res = $this->callD1($sql, [], 'first');
         }
-        return $stmt->fetch()['total'];
+        return $res['total'] ?? 0;
     }
 
     public function updateTicketStatus($id, $status, $adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("UPDATE tickets t JOIN events e ON t.event_id = e.id SET t.status = ? WHERE t.id = ? AND e.admin_id = ?");
-            return $stmt->execute([$status, $id, $adminId]);
+            // SQLite JOIN syntax in UPDATE is different or not supported directly like MySQL
+            // We use a subquery for admin_id validation
+            $sql = "UPDATE tickets SET status = ? WHERE id = ? AND event_id IN (SELECT id FROM events WHERE admin_id = ?)";
+            return $this->callD1($sql, [$status, $id, $adminId], 'run') !== null;
         } else {
-            $stmt = $this->pdo->prepare("UPDATE tickets SET status = ? WHERE id = ?");
-            return $stmt->execute([$status, $id]);
+            $sql = "UPDATE tickets SET status = ? WHERE id = ?";
+            return $this->callD1($sql, [$status, $id], 'run') !== null;
         }
     }
 
     public function getTicketById($id) {
-        $stmt = $this->pdo->prepare("SELECT t.*, e.title as event_title, tt.name as type_name 
-                                    FROM tickets t 
-                                    JOIN events e ON t.event_id = e.id 
-                                    LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
-                                    WHERE t.id = ?");
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $sql = "SELECT t.*, e.title as event_title, tt.name as type_name 
+                FROM tickets t 
+                JOIN events e ON t.event_id = e.id 
+                LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
+                WHERE t.id = ?";
+        return $this->callD1($sql, [$id], 'first');
     }
 
     public function updateTicketData($id, $name, $email, $phone, $adminId = null) {
         if ($adminId) {
-            $stmt = $this->pdo->prepare("UPDATE tickets t 
-                                        JOIN events e ON t.event_id = e.id 
-                                        SET t.attendee_name = ?, t.attendee_email = ?, t.attendee_phone = ? 
-                                        WHERE t.id = ? AND e.admin_id = ?");
-            return $stmt->execute([$name, $email, $phone, $id, $adminId]);
+            $sql = "UPDATE tickets SET attendee_name = ?, attendee_email = ?, attendee_phone = ? 
+                    WHERE id = ? AND event_id IN (SELECT id FROM events WHERE admin_id = ?)";
+            return $this->callD1($sql, [$name, $email, $phone, $id, $adminId], 'run') !== null;
         } else {
-            $stmt = $this->pdo->prepare("UPDATE tickets SET attendee_name = ?, attendee_email = ?, attendee_phone = ? WHERE id = ?");
-            return $stmt->execute([$name, $email, $phone, $id]);
+            $sql = "UPDATE tickets SET attendee_name = ?, attendee_email = ?, attendee_phone = ? WHERE id = ?";
+            return $this->callD1($sql, [$name, $email, $phone, $id], 'run') !== null;
         }
     }
 
     public function getAdminById($id) {
-        $stmt = $this->pdo->prepare("SELECT * FROM admins WHERE id = ?");
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $this->callD1("SELECT * FROM admins WHERE id = ?", [$id], 'first');
     }
 
     public function updateAdminProfile($id, $data) {
@@ -298,55 +317,101 @@ class Database {
         }
         $params[] = $id;
         $sql = "UPDATE admins SET " . implode(", ", $fields) . " WHERE id = ?";
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute($params);
+        return $this->callD1($sql, $params, 'run') !== null;
     }
 
     public function createPasswordReset($email, $token) {
-        // Eliminar tokens previos
-        $stmt = $this->pdo->prepare("DELETE FROM password_resets WHERE email = ?");
-        $stmt->execute([$email]);
-        
-        $stmt = $this->pdo->prepare("INSERT INTO password_resets (email, token) VALUES (?, ?)");
-        return $stmt->execute([$email, $token]);
+        $this->callD1("DELETE FROM password_resets WHERE email = ?", [$email], 'run');
+        $sql = "INSERT INTO password_resets (email, token) VALUES (?, ?)";
+        return $this->callD1($sql, [$email, $token], 'run') !== null;
     }
 
     public function getPasswordReset($token) {
-        $stmt = $this->pdo->prepare("SELECT * FROM password_resets WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
-        $stmt->execute([$token]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        // SQLite adaptation for DATE_SUB
+        $sql = "SELECT * FROM password_resets WHERE token = ? AND created_at > datetime('now', '-1 hour')";
+        return $this->callD1($sql, [$token], 'first');
     }
 
     public function deletePasswordReset($email) {
-        $stmt = $this->pdo->prepare("DELETE FROM password_resets WHERE email = ?");
-        return $stmt->execute([$email]);
+        return $this->callD1("DELETE FROM password_resets WHERE email = ?", [$email], 'run') !== null;
     }
 
     public function updateAdminPasswordByEmail($email, $password) {
         $hashed = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $this->pdo->prepare("UPDATE admins SET password = ? WHERE email = ?");
-        return $stmt->execute([$hashed, $email]);
+        $sql = "UPDATE admins SET password = ? WHERE email = ?";
+        return $this->callD1($sql, [$hashed, $email], 'run') !== null;
     }
 
     public function setAdminVerificationCode($adminId, $code) {
-        $stmt = $this->pdo->prepare("UPDATE admins SET verification_code = ?, is_verified = 0 WHERE id = ?");
-        return $stmt->execute([$code, $adminId]);
+        $sql = "UPDATE admins SET verification_code = ?, is_verified = 0 WHERE id = ?";
+        return $this->callD1($sql, [$code, $adminId], 'run') !== null;
     }
 
     public function verifyAdmin($adminId, $code) {
-        $stmt = $this->pdo->prepare("UPDATE admins SET is_verified = 1, verification_code = NULL WHERE id = ? AND verification_code = ?");
-        $stmt->execute([$adminId, $code]);
-        return $stmt->rowCount() > 0;
+        $sql = "UPDATE admins SET is_verified = 1, verification_code = NULL WHERE id = ? AND verification_code = ?";
+        $res = $this->callD1($sql, [$adminId, $code], 'run');
+        // En D1 'run' devuelve meta con changes
+        return ($res['meta']['changes'] ?? 0) > 0;
     }
 
     public function getAdminByEmail($email) {
-        $stmt = $this->pdo->prepare("SELECT * FROM admins WHERE email = ?");
-        $stmt->execute([$email]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $this->callD1("SELECT * FROM admins WHERE email = ?", [$email], 'first');
     }
 
     public function getPdo() {
-        return $this->pdo;
+        return $this; // Devolvemos el mismo objeto para compatibilidad de interfaz
+    }
+
+    /**
+     * Compatibilidad con prepare() - Retorna el mismo objeto
+     */
+    private $pendingSql;
+    public function prepare($sql) {
+        $this->pendingSql = $sql;
+        return $this;
+    }
+
+    /**
+     * Compatibilidad con execute()
+     */
+    private $lastResult;
+    public function execute($params = []) {
+        // Al ejecutar, realizamos la llamada real a D1
+        $method = stripos($this->pendingSql, 'SELECT') === 0 ? 'all' : 'run';
+        $this->lastResult = $this->callD1($this->pendingSql, $params, $method);
+        return $this->lastResult !== null;
+    }
+
+    /**
+     * Compatibilidad con fetchAll()
+     */
+    public function fetchAll() {
+        return $this->lastResult['results'] ?? [];
+    }
+
+    /**
+     * Compatibilidad con fetch()
+     */
+    public function fetch() {
+        // En D1 'all' devuelve results como lista. fetch() en PDO devuelve el primer elemento
+        if (isset($this->lastResult['results'][0])) {
+            return $this->lastResult['results'][0];
+        }
+        // Si usamos method 'first' en callD1 directamente
+        return $this->lastResult; 
+    }
+
+    /**
+     * Compatibilidad con fetchColumn()
+     */
+    public function fetchColumn($column = 0) {
+        $row = $this->fetch();
+        if ($row && is_array($row)) {
+            $values = array_values($row);
+            return $values[$column] ?? null;
+        }
+        return $row;
     }
 }
 ?>
+

@@ -1,6 +1,0 @@
-name = "tickets_esp"
-
-[[d1_databases]]
-binding = "db"       # Este es el nombre que usas en los comandos
-database_name = "tickets-d1" # Nombre exacto de tu base de datos D1 en Cloudflare
-database_id = "c0ff49fd-f363-4ea8-91b5-1ee21ad4edbd" # El ID de tu base de datos en Cloudflare

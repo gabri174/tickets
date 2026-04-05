@@ -1,0 +1,8 @@
+name = "tickets-api"
+main = "src/index.ts"
+compatibility_date = "2024-04-04"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tickets-d1"
+database_id = "c0ff49fd-f363-4ea8-91b5-1ee21ad4edbd"
