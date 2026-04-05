@@ -3,8 +3,11 @@
  * DIAGNÓSTICO DE CONEXIÓN CLOUDFLARE D1
  * Ejecuta este archivo en tu navegador: ensupresencia.eu/debug_d1.php
  */
-require_once 'includes/config/config.php';
-require_once 'includes/classes/Database.php';
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+require_once '../includes/config/config.php';
+require_once '../includes/classes/Database.php';
 
 header('Content-Type: text/plain');
 
