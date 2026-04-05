@@ -3,7 +3,6 @@ require_once '../../includes/config/config.php';
 require_once '../../includes/functions/functions.php';
 require_once '../../includes/classes/Database.php';
 
-session_start();
 $db = new Database();
 $error = '';
 $success = '';

@@ -1,4 +1,18 @@
 <?php
+// Configuración de Sesión (Debe ser lo primero)
+if (session_status() === PHP_SESSION_NONE) {
+    // Configurar cookies seguras para HTTPS
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => true,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Carga de variables de entorno desde .env
 // ──────────────────────────────────────────────────────────────────────

@@ -38,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($db->setAdminVerificationCode($adminId, $code)) {
                     try {
                         if (sendVerificationCodeEmail($email, $code)) {
-                            if (session_status() === PHP_SESSION_NONE) session_start();
                             $_SESSION['verify_admin_id'] = $adminId;
                             $_SESSION['verify_email'] = $email;
                             header('Location: verify-email.php');

@@ -43,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $db->resetLoginAttempts($login);
                     
                     if (!$admin['is_verified']) {
-                        if (session_status() === PHP_SESSION_NONE) session_start();
                         $_SESSION['verify_admin_id'] = $admin['id'];
                         $_SESSION['verify_email'] = $admin['email'];
                         header('Location: verify-email.php');
@@ -51,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     // Login exitoso
-                    if (session_status() === PHP_SESSION_NONE) session_start();
                     session_regenerate_id(true);
                     
                     $_SESSION['admin_id'] = $admin['id'];
