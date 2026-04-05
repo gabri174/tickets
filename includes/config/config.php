@@ -53,7 +53,7 @@ loadEnv($envPath);
 // Cloudflare D1 (Proxy API)
 // ──────────────────────────────────────────────────────────────────────
 
-if (!defined('D1_API_URL')) define('D1_API_URL', 'https://tickets-api.gabri.workers.dev');
+if (!defined('D1_API_URL')) define('D1_API_URL', 'https://tickets-api.crtv-technologies.workers.dev');
 if (!defined('D1_API_TOKEN')) define('D1_API_TOKEN', '');
 
 // Eliminamos la conexión PDO directa a MySQL
