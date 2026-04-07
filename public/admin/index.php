@@ -1,5 +1,5 @@
 <?php
-// Redirigir al login
-header('Location: login.php');
+// Redirigir al dashboard
+header('Location: dashboard.php');
 exit;
 ?>

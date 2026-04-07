@@ -13,6 +13,13 @@
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "tickets-d1",
+			"database_id": "c0ff49fd-f363-4ea8-91b5-1ee21ad4edbd"
+		}
 	]
 	/**
 	 * Smart Placement

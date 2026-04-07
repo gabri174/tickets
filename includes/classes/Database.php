@@ -28,7 +28,9 @@ class Database {
     }
 
     public function countAdmins() {
-        return $this->callD1("SELECT COUNT(*) as total FROM admins", [], 'first');
+        $result = $this->callD1("SELECT COUNT(*) as total FROM admins", [], 'all');
+        // Con 'all', el resultado viene en ['results'][0]
+        return $result['results'][0] ?? null;
     }
 
     /**
@@ -410,7 +412,21 @@ class Database {
     public function execute($params = []) {
         // Al ejecutar, realizamos la llamada real a D1
         $method = stripos($this->pendingSql, 'SELECT') === 0 ? 'all' : 'run';
-        $this->lastResult = $this->callD1($this->pendingSql, $params, $method);
+        $result = $this->callD1($this->pendingSql, $params, $method);
+
+        // Normalizar estructura: callD1 con 'all' devuelve ['results' => [...], 'meta' => [...]]
+        // Pero 'first' o 'run' pueden devolver datos directos
+        if ($method === 'all' && $result !== null) {
+            // Asegurar que tenga estructura results
+            if (!isset($result['results'])) {
+                $this->lastResult = ['results' => [$result], 'meta' => []];
+            } else {
+                $this->lastResult = $result;
+            }
+        } else {
+            $this->lastResult = $result;
+        }
+
         return $this->lastResult !== null;
     }
 
