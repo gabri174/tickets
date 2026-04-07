@@ -12,6 +12,26 @@ class Database {
     }
 
     /**
+     * Método de diagnóstico público — SOLO para debug_d1.php
+     */
+    public function testConnection() {
+        return [
+            'url'   => $this->apiUrl,
+            'token' => !empty($this->apiToken) ? '✅ SÍ (' . strlen($this->apiToken) . ' chars)' : '❌ NO',
+            'result' => $this->callD1('SELECT 1 as test', [], 'first'),
+        ];
+    }
+
+    public function listTables() {
+        $res = $this->callD1("SELECT name FROM sqlite_master WHERE type='table'", [], 'all');
+        return $res['results'] ?? null;
+    }
+
+    public function countAdmins() {
+        return $this->callD1("SELECT COUNT(*) as total FROM admins", [], 'first');
+    }
+
+    /**
      * Realiza una llamada al Proxy de Cloudflare D1
      */
     private function callD1($sql, $params = [], $method = 'all') {
