@@ -45,9 +45,20 @@ function loadEnv($path) {
     return true;
 }
 
-// Cargar .env desde la raíz del proyecto
-$envPath = dirname(__DIR__, 2) . '/.env';
-loadEnv($envPath);
+// Cargar .env desde la raíz del proyecto (probando varias rutas comunes)
+$possiblePaths = [
+    dirname(__DIR__, 2) . '/.env',
+    $_SERVER['DOCUMENT_ROOT'] . '/.env',
+    '../../.env',
+    './.env'
+];
+
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        loadEnv($path);
+        break;
+    }
+}
 
 // ──────────────────────────────────────────────────────────────────────
 // Cloudflare D1 (Proxy API)

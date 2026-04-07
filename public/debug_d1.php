@@ -17,6 +17,19 @@ echo "==================================================\n\n";
 
 echo "1. VERIFICACIÓN DE CONFIGURACIÓN (.env / config.php)\n";
 echo "--------------------------------------------------\n";
+
+$possiblePaths = [
+    dirname(__DIR__, 2) . '/.env',
+    $_SERVER['DOCUMENT_ROOT'] . '/.env',
+    '../../.env',
+    './.env'
+];
+
+foreach ($possiblePaths as $path) {
+    echo "Probando ruta: $path [" . (file_exists($path) ? "✅ ENCONTRADO" : "❌ NO ENCONTRADO") . "]\n";
+}
+echo "\n";
+
 echo "URL API: " . D1_API_URL . "\n";
 $hasToken = (defined('D1_API_TOKEN') && !empty(D1_API_TOKEN));
 echo "TOKEN configurado: " . ($hasToken ? "✅ SÍ" : "❌ NO (Revisar .env)") . "\n";
