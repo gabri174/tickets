@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once '../includes/config/config.php';
 require_once '../includes/classes/Database.php';
 require_once '../includes/functions/functions.php';
@@ -11,15 +14,13 @@ $success = '';
 $eventId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
 if (!$eventId) {
-    header('Location: ../');
-    exit();
+    die('Error: ID de evento no válido');
 }
 
 // Obtener datos del evento
 $event = $db->getEventById($eventId);
 if (!$event || $event['status'] !== 'active') {
-    header('Location: ../');
-    exit();
+    die('Error: Evento no encontrado o no está activo');
 }
 
 // Obtener tipos de entrada del evento
@@ -280,12 +281,13 @@ $organizer = $db->getAdminById($event['admin_id']);
                                     Tipo de Entrada
                                 </label>
                                 <div class="space-y-3">
+                                    <?php $first = true; ?>
                                     <?php foreach ($ticketTypes as $type): ?>
                                         <label class="ticket-type-card block glass-card rounded-2xl p-4 cursor-pointer">
                                             <div class="flex items-center justify-between">
                                                 <div class="flex items-center gap-3">
                                                     <input type="radio" name="ticket_type_id" value="<?php echo $type['id']; ?>"
-                                                           <?php echo $loop->first ? 'checked' : ''; ?>>
+                                                           <?php echo $first ? 'checked' : ''; ?>>
                                                     <div>
                                                         <p class="font-bold"><?php echo htmlspecialchars($type['name']); ?></p>
                                                         <p class="text-xs text-gray-500"><?php echo htmlspecialchars($type['description']); ?></p>
@@ -297,6 +299,7 @@ $organizer = $db->getAdminById($event['admin_id']);
                                                 </div>
                                             </div>
                                         </label>
+                                    <?php $first = false; ?>
                                     <?php endforeach; ?>
                                 </div>
                             </div>
@@ -392,8 +395,8 @@ $organizer = $db->getAdminById($event['admin_id']);
     </section>
 
     <script>
-        const maxTickets = <?php echo $ticketTypes[0]['available_tickets'] ?? $event['available_tickets']; ?>;
-        const ticketTypes = <?php echo json_encode($ticketTypes); ?>;
+        const maxTickets = <?php echo !empty($ticketTypes) && isset($ticketTypes[0]['available_tickets']) ? (int)$ticketTypes[0]['available_tickets'] : (int)($event['available_tickets'] ?? 100); ?>;
+        const ticketTypes = <?php echo json_encode($ticketTypes ?: []); ?>;
 
         function updateQuantity(delta) {
             const input = document.getElementById('quantity');

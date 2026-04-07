@@ -70,12 +70,45 @@ export default {
 		if (url.pathname === "/api/validate" && request.method === "POST") {
 			try {
 				const body: any = await request.json();
-				let code = body.ticket_code.includes('/') ? body.ticket_code.split('/').pop().trim() : body.ticket_code.trim();
+				let rawCode = body.ticket_code || "";
 
-				const ticket = await env.DB.prepare("SELECT attendee_name, status FROM tickets WHERE ticket_code = ?").bind(code).first();
+				// Extraer código desde URL completa (ej: https://ensupresencia.eu/ticket.php?code=TCK_XXX-1234)
+				let code = rawCode;
+				if (rawCode.includes('code=')) {
+					// Extraer el parámetro 'code' de la URL
+					const urlParams = new URL(rawCode).searchParams;
+					code = urlParams.get('code') || rawCode.split('code=').pop()?.split('&')[0] || rawCode;
+				} else if (rawCode.includes('/')) {
+					// Fallback: tomar última parte de la URL
+					code = rawCode.split('/').pop()?.trim() || rawCode;
+				}
 
-				if (!ticket) return Response.json({ success: false, message: "No existe en Cloudflare" }, { status: 404 });
-				if (ticket.status === 'used') return Response.json({ success: false, message: "¡YA USADO!" }, { status: 409 });
+				// Limpiar el código de cualquier caracter extraño
+				code = code.trim();
+
+				// Debug: buscar el ticket con el código extraído
+				const ticket = await env.DB.prepare("SELECT id, ticket_code, attendee_name, status FROM tickets WHERE ticket_code = ?").bind(code).first();
+
+				if (!ticket) {
+					// Intentar búsqueda parcial por si hay problemas de formato
+					const partialMatch = await env.DB.prepare("SELECT id, ticket_code, attendee_name, status FROM tickets WHERE ticket_code LIKE ? LIMIT 1").bind(`%${code}%`).first();
+					if (partialMatch) {
+						return Response.json({
+							success: false,
+							message: `Código similar encontrado: ${partialMatch.ticket_code}. Verifica el formato.`,
+							debug: { searched: code, found: partialMatch.ticket_code }
+						}, { status: 404 });
+					}
+					return Response.json({
+						success: false,
+						message: "No existe en Cloudflare",
+						debug: { searched: code, rawReceived: rawCode }
+					}, { status: 404 });
+				}
+
+				if (ticket.status === 'used') {
+					return Response.json({ success: false, message: "¡YA USADO!" }, { status: 409 });
+				}
 
 				await env.DB.prepare("UPDATE tickets SET status = 'used' WHERE ticket_code = ?").bind(code).run();
 				return Response.json({ success: true, message: "¡BIENVENIDO! " + ticket.attendee_name });
