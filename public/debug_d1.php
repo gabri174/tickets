@@ -42,14 +42,35 @@ $db = new Database();
 
 echo "2. PRUEBA DE CONEXIÓN BÁSICA (SELECT 1)\n";
 echo "--------------------------------------------------\n";
-$res1 = $db->callD1("SELECT 1 as test", [], 'first');
 
-if ($res1) {
+// Usamos CURL manual en el diagnóstico para ver TODO lo que pasa
+$ch = curl_init(D1_API_URL . '/api/query');
+$payload = json_encode(['sql' => 'SELECT 1 as test', 'params' => [], 'method' => 'first']);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/json',
+    'Authorization: Bearer ' . D1_API_TOKEN
+]);
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
+curl_close($ch);
+
+if ($httpCode === 200) {
     echo "✅ ÉXITO: Conexión establecida con el Worker.\n";
-    echo "Respuesta: " . json_encode($res1) . "\n";
+    echo "Respuesta: " . $response . "\n";
 } else {
-    echo "❌ FALLO: No se pudo conectar con el Proxy de Cloudflare.\n";
-    echo "Acción recomendada: Revisa que D1_API_URL y D1_API_TOKEN sean correctos en tu .env del servidor.\n";
+    echo "❌ FALLO DE CONEXIÓN:\n";
+    echo "Código HTTP: " . $httpCode . "\n";
+    if ($curlError) echo "Error CURL: " . $curlError . "\n";
+    echo "Respuesta de Cloudflare: " . $response . "\n";
+    
+    if ($httpCode === 401) {
+        echo "\n💡 POSIBLE CAUSA: El TOKEN en tu .env no coincide con el de Cloudflare.\n";
+        echo "Acción: Ejecuta 'npx wrangler secret put D1_API_TOKEN' y asegúrate de usar el mismo valor.\n";
+    }
 }
 echo "\n";
 
