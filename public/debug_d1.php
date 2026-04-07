@@ -1,7 +1,7 @@
 <?php
 /**
- * DIAGNÓSTICO DE CONEXIÓN CLOUDFLARE D1
- * Ejecuta este archivo en tu navegador: ensupresencia.eu/debug_d1.php
+ * DIAGNÓSTICO DE CONEXIÓN CLOUDFLARE D1 (v2)
+ * Ejecuta este archivo: ensupresencia.eu/debug_d1.php
  */
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -9,50 +9,57 @@ error_reporting(E_ALL);
 require_once '../includes/config/config.php';
 require_once '../includes/classes/Database.php';
 
-header('Content-Type: text/plain');
+header('Content-Type: text/plain; charset=UTF-8');
 
-echo "=== DIAGNÓSTICO DE CONEXIÓN D1 ===\n\n";
+echo "==================================================\n";
+echo "🔍 DIAGNÓSTICO DE SISTEMA DE TICKETS (Cloudflare D1)\n";
+echo "==================================================\n\n";
 
-echo "1. Verificando Configuración:\n";
+echo "1. VERIFICACIÓN DE CONFIGURACIÓN (.env / config.php)\n";
+echo "--------------------------------------------------\n";
 echo "URL API: " . D1_API_URL . "\n";
-echo "TOKEN configurado: " . (defined('D1_API_TOKEN') && !empty(D1_API_TOKEN) ? "SÍ (longitud: " . strlen(D1_API_TOKEN) . ")" : "NO") . "\n\n";
+$hasToken = (defined('D1_API_TOKEN') && !empty(D1_API_TOKEN));
+echo "TOKEN configurado: " . ($hasToken ? "✅ SÍ" : "❌ NO (Revisar .env)") . "\n";
+if (!$hasToken) {
+    echo "⚠️  ATENCIÓN: Sin TOKEN no puedes conectar con Cloudflare.\n";
+}
+echo "\n";
 
 $db = new Database();
 
-echo "2. Probando consulta simple (SELECT 1):\n";
-$res = $db->callD1("SELECT 1 as test");
+echo "2. PRUEBA DE CONEXIÓN BÁSICA (SELECT 1)\n";
+echo "--------------------------------------------------\n";
+$res1 = $db->callD1("SELECT 1 as test", [], 'first');
 
-if ($res) {
-    echo "¡ÉXITO! La conexión con el Worker y D1 es correcta.\n";
-    echo "Respuesta: " . json_encode($res) . "\n";
+if ($res1) {
+    echo "✅ ÉXITO: Conexión establecida con el Worker.\n";
+    echo "Respuesta: " . json_encode($res1) . "\n";
 } else {
-    echo "FALLO: No se pudo conectar con el Proxy de D1.\n";
-    echo "Revisa los logs de error de tu servidor PHP (error_log) para ver el detalle del curl.\n";
-    
-    // Intento de diagnóstico manual con CURL para ver cabeceras
-    echo "\n3. Diagnostico Manual (CURL Detallado):\n";
-    $ch = curl_init(D1_API_URL . '/api/query');
-    $payload = json_encode(['sql' => 'SELECT 1', 'params' => [], 'method' => 'all']);
-    
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Authorization: Bearer ' . D1_API_TOKEN
-    ]);
-    // Desactivar verificación SSL temporalmente solo para prueba si es necesario (no recomendado en prod)
-    // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
-    
-    $response = curl_exec($ch);
-    $info = curl_getinfo($ch);
-    $err = curl_error($ch);
-    
-    echo "Código HTTP: " . $info['http_code'] . "\n";
-    if ($err) echo "Error CURL: " . $err . "\n";
-    echo "Respuesta Cruda: " . $response . "\n";
-    
-    curl_close($ch);
+    echo "❌ FALLO: No se pudo conectar con el Proxy de Cloudflare.\n";
+    echo "Acción recomendada: Revisa que D1_API_URL y D1_API_TOKEN sean correctos en tu .env del servidor.\n";
+}
+echo "\n";
+
+echo "3. VERIFICACIÓN DE TABLAS (D1 Cloudflare)\n";
+echo "--------------------------------------------------\n";
+$tables = ['admins', 'events', 'tickets', 'ticket_types'];
+foreach ($tables as $table) {
+    $sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
+    $exists = $db->callD1($sql, [$table], 'first');
+    echo "Tabla '{$table}': " . ($exists ? "✅ EXISTE" : "❌ NO EXISTE") . "\n";
+}
+echo "\n";
+
+echo "4. PRUEBA DE LECTURA DE DATOS (Admins)\n";
+echo "--------------------------------------------------\n";
+$admins = $db->callD1("SELECT id, username, email FROM admins LIMIT 1");
+if ($admins && isset($admins['results'])) {
+    echo "✅ ÉXITO: Se pudo leer la tabla de administradores.\n";
+    echo "Total registros encontrados: " . count($admins['results']) . "\n";
+} else {
+    echo "❌ ERROR: No se pudieron leer datos de 'admins'.\n";
 }
 
-echo "\n=== FIN DEL DIAGNÓSTICO ===\n";
+echo "\n==================================================\n";
+echo "💡 Si todas las marcas son ✅, el registro DEBE funcionar.\n";
+echo "==================================================\n";
