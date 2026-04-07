@@ -51,14 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Login exitoso
                     session_regenerate_id(true);
-                    
+
                     $_SESSION['admin_id'] = $admin['id'];
                     $_SESSION['admin_username'] = $admin['username'];
                     $_SESSION['admin_email'] = $admin['email'];
                     $_SESSION['admin_role'] = $admin['role'];
                     $_SESSION['admin_photo'] = $admin['profile_photo'];
-                    
-                    header('Location: index.php');
+
+                    header('Location: dashboard.php');
                     exit();
                 } else {
                     // Increment attempts on failed login

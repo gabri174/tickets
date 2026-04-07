@@ -103,6 +103,11 @@ class Database {
         return $res['results'] ?? [];
     }
 
+    public function getActiveEventsByOrganizer($adminId) {
+        $res = $this->callD1("SELECT * FROM events WHERE status = 'active' AND admin_id = ? ORDER BY date_event ASC", [$adminId]);
+        return $res['results'] ?? [];
+    }
+
     public function getEventById($id, $adminId = null) {
         if ($adminId) {
             $res = $this->callD1("SELECT * FROM events WHERE id = ? AND status = 'active' AND admin_id = ?", [$id, $adminId], 'first');

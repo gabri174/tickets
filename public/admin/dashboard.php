@@ -136,7 +136,7 @@ $prediction = $selectedEventId ? $analytics->getSoldOutPrediction($selectedEvent
                             <p class="text-xs font-bold"><?php echo date('l, d F'); ?></p>
                             <p class="text-[10px] text-gray-500 uppercase"><?php echo date('H:i'); ?> GMT+1</p>
                         </div>
-                        <a href="../" target="_blank" class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/10 transition">
+                        <a href="../store.php?id=<?php echo $_SESSION['admin_id']; ?>" target="_blank" class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/10 transition">
                             <i class="fas fa-eye text-[10px]"></i>
                             Ver Tienda
                         </a>
