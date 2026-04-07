@@ -5,7 +5,9 @@ class Database {
     private $lastInsertId = null;
     
     public function __construct() {
-        $this->apiUrl = defined('D1_API_URL') ? D1_API_URL : '';
+        // Limpiamos la URL para evitar barras dobles al final
+        $url = defined('D1_API_URL') ? D1_API_URL : '';
+        $this->apiUrl = rtrim($url, '/');
         $this->apiToken = defined('D1_API_TOKEN') ? D1_API_TOKEN : '';
     }
 
@@ -18,7 +20,8 @@ class Database {
             return null;
         }
 
-        $ch = curl_init($this->apiUrl . '/api/query');
+        $endpoint = $this->apiUrl . '/api/query';
+        $ch = curl_init($endpoint);
         $payload = json_encode([
             'sql' => $sql,
             'params' => $params,
@@ -30,6 +33,7 @@ class Database {
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
+            'Accept: application/json',
             'Authorization: Bearer ' . $this->apiToken
         ]);
 

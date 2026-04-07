@@ -6,21 +6,25 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
+		const pathname = url.pathname.replace(/\/+$/, "") || "/"; // Normalizar: eliminar barras finales
 
 		// --- 0. SEGURIDAD (Token API) ---
 		const authHeader = request.headers.get("Authorization");
-		const isPublicScan = url.pathname === "/api/validate" && request.method === "POST";
-		const isPublicCreate = url.pathname === "/api/create-ticket" && request.method === "POST";
-		const isVisual = url.pathname === "/" && request.method === "GET";
+		const isPublicScan = pathname === "/api/validate" && request.method === "POST";
+		const isPublicCreate = pathname === "/api/create-ticket" && request.method === "POST";
+		const isVisual = (pathname === "" || pathname === "/") && request.method === "GET";
 
 		if (!isPublicScan && !isPublicCreate && !isVisual) {
 			if (!authHeader || authHeader !== `Bearer ${env.D1_API_TOKEN}`) {
-				return Response.json({ success: false, message: "No autorizado" }, { status: 401 });
+				return Response.json({ success: false, message: "No autorizado" }, { 
+					status: 401,
+					headers: { "X-Worker-Route": "Unauthorized" }
+				});
 			}
 		}
 
 		// --- A. PROXY GENÉRICO DE CONSULTAS (Para PHP) ---
-		if (url.pathname === "/api/query" && request.method === "POST") {
+		if (pathname === "/api/query" && request.method === "POST") {
 			try {
 				const body: any = await request.json();
 				const { sql, params, method } = body;
