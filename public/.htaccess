@@ -1,0 +1,21 @@
+# =================================================================
+# SEGURIDAD - .htaccess para /public
+# =================================================================
+
+# Deshabilitar listado de directorios
+Options -Indexes
+
+# URL amigables para eventos y tienda
+RewriteEngine On
+
+# Redirigir todo a index.php excepto archivos existentes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+)$ index.php [L]
+
+# Headers de seguridad adicionales
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

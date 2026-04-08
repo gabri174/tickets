@@ -1,0 +1,79 @@
+# =================================================================
+# SEGURIDAD - .htaccess Principal
+# =================================================================
+
+# Deshabilitar listado de directorios
+Options -Indexes
+
+# Prevenir acceso a archivos sensibles
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Proteger archivos de configuración y datos sensibles
+<FilesMatch "\.(env|sql|sqlite|db|ini|log|sh|md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevenir acceso directo a includes
+RewriteEngine On
+RewriteRule ^includes/ - [F,L]
+RewriteRule ^vendor/ - [F,L]
+RewriteRule ^\.git/ - [F,L]
+
+# Forzar HTTPS (descomentar en producción con SSL)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Prevenir hotlinking de imágenes
+RewriteCond %{HTTP_REFERER} !^$
+RewriteCond %{HTTP_REFERER} !^https?://(www\.)?ensupresencia\.eu [NC]
+RewriteCond %{HTTP_REFERER} !^https?://(www\.)?localhost [NC]
+RewriteRule \.(jpg|jpeg|png|gif|webp|svg)$ - [F,NC]
+
+# Headers de seguridad
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Prevenir MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # XSS Protection
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Content Security Policy (ajustar según necesidades)
+    Header always set Content-Security-Policy "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https://tickets-api.crtv-technologies.workers.dev https://api.cloudflare.com;"
+
+    # Cache control para páginas dinámicas
+    <FilesMatch "\.(php)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </FilesMatch>
+</IfModule>
+
+# Prevenir ejecución de PHP en carpetas de uploads
+<Directory "/public/uploads">
+    php_flag engine off
+    AddType text/plain .php .php3 .php4 .php5 .phtml
+</Directory>
+
+<Directory "/public/qrcodes">
+    php_flag engine off
+    AddType text/plain .php .php3 .php4 .php5 .phtml
+</Directory>
+
+# Limitar tamaño de uploads
+LimitRequestBody 10485760
+
+# Proteger contra ataques de amplificación
+<IfModule mod_rewrite.c>
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|DEBUG)
+    RewriteRule ^.*$ - [F]
+</IfModule>

@@ -1,17 +1,67 @@
 <?php
-// Security headers
+// =================================================================
+// SEGURIDAD - Funciones de protección
+// =================================================================
+
+// Prevenir ejecución directa
+if (!defined('APP_ENV') && !isset($_SERVER['HTTP_HOST'])) {
+    http_response_code(403);
+    exit('Acceso denegado');
+}
+
+// Headers de seguridad (solo si no se han enviado headers)
 if (!headers_sent()) {
     header("X-Content-Type-Options: nosniff");
     header("X-Frame-Options: SAMEORIGIN");
     header("X-XSS-Protection: 1; mode=block");
-    header("Content-Security-Policy: default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval';");
+    header("Referrer-Policy: strict-origin-when-cross-origin");
+    header("Content-Security-Policy: default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https://tickets-api.crtv-technologies.workers.dev;");
 }
 
-// Funciones auxiliares del sistema
+// =================================================================
+// RATE LIMITING - Prevenir ataques de fuerza bruta
+// =================================================================
+function checkRateLimit($action, $maxAttempts = 5, $windowSeconds = 300) {
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $key = 'rate_' . $action . '_' . md5($ip);
 
-// Generar código único para ticket
+    if (!isset($_SESSION[$key])) {
+        $_SESSION[$key] = ['count' => 0, 'reset' => time() + $windowSeconds];
+    }
+
+    // Resetear si pasó la ventana de tiempo
+    if (time() > $_SESSION[$key]['reset']) {
+        $_SESSION[$key] = ['count' => 0, 'reset' => time() + $windowSeconds];
+    }
+
+    $_SESSION[$key]['count']++;
+
+    if ($_SESSION[$key]['count'] > $maxAttempts) {
+        return false; // Bloqueado
+    }
+
+    return true; // Permitido
+}
+
+function getRateLimitRemaining($action, $maxAttempts = 5) {
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $key = 'rate_' . $action . '_' . md5($ip);
+
+    if (!isset($_SESSION[$key])) {
+        return $maxAttempts;
+    }
+
+    return max(0, $maxAttempts - $_SESSION[$key]['count']);
+}
+
+// =================================================================
+// FUNCIONES AUXILIARES DEL SISTEMA
+// =================================================================
+
+// Generar código único para ticket (más seguro)
 function generateTicketCode() {
-    return 'TCK-' . strtoupper(uniqid()) . '-' . rand(1000, 9999);
+    // Usar random_bytes para mayor seguridad
+    return 'TCK-' . strtoupper(bin2hex(random_bytes(4))) . '-' . random_int(1000, 9999);
 }
 
 // Formatear fecha

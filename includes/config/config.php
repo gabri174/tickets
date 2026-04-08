@@ -1,4 +1,24 @@
 <?php
+// =================================================================
+// SEGURIDAD - Configuración endurecida
+// =================================================================
+
+// Prevenir acceso directo
+if (!defined('APP_ENV')) {
+    // Verificar que estamos siendo incluidos desde un archivo válido
+    $allowedEntryPoints = ['index.php', 'event.php', 'store.php', 'ticket.php', 'confirmation.php', 'buy.php', 'about.php', 'contact.php'];
+    $currentScript = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
+
+    // Si no es un entry point válido y no viene de un include, bloquear
+    if (!in_array($currentScript, $allowedEntryPoints) && strpos(__FILE__, $_SERVER['SCRIPT_FILENAME'] ?? '') === false) {
+        // Permitir includes desde admin
+        if (strpos(__DIR__, 'admin') === false) {
+            http_response_code(403);
+            exit('Acceso denegado');
+        }
+    }
+}
+
 // Configuración de Sesión (Debe ser lo primero)
 if (session_status() === PHP_SESSION_NONE) {
     // Configurar cookies seguras para HTTPS
@@ -6,11 +26,29 @@ if (session_status() === PHP_SESSION_NONE) {
         'lifetime' => 0,
         'path' => '/',
         'domain' => '',
-        'secure' => true,
-        'httponly' => true,
-        'samesite' => 'Lax'
+        'secure' => true,      // Solo HTTPS
+        'httponly' => true,    // No accesible desde JS
+        'samesite' => 'Strict' // Prevenir CSRF
     ]);
+
+    // Iniciar sesión con configuración de seguridad
     session_start();
+
+    // Regenerar ID de sesión periódicamente para prevenir session fixation
+    if (!isset($_SESSION['_created'])) {
+        $_SESSION['_created'] = time();
+    } elseif (time() - $_SESSION['_created'] > 1800) { // 30 minutos
+        session_regenerate_id(true);
+        $_SESSION['_created'] = time();
+    }
+
+    // Timeout de sesión después de 2 horas de inactividad
+    if (isset($_SESSION['_last_activity']) && (time() - $_SESSION['_last_activity'] > 7200)) {
+        session_unset();
+        session_destroy();
+        session_start();
+    }
+    $_SESSION['_last_activity'] = time();
 }
 
 // ──────────────────────────────────────────────────────────────────────
