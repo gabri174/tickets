@@ -46,7 +46,12 @@ export default {
 
 				return Response.json({ success: true, data: result });
 			} catch (e: any) {
-				return Response.json({ success: false, message: "Error D1: " + e.message }, { status: 500 });
+				const keys = Object.keys(env).join(", ");
+				return Response.json({ 
+					success: false, 
+					message: "Error D1: " + e.message,
+					debug: { available_env_keys: keys }
+				}, { status: 500 });
 			}
 		}
 

@@ -24,13 +24,14 @@ class Database {
 
     public function listTables() {
         $res = $this->callD1("SELECT name FROM sqlite_master WHERE type='table'", [], 'all');
-        return $res['results'] ?? null;
+        if (!$res || !isset($res['results'])) return null;
+        return $res['results'];
     }
 
     public function countAdmins() {
         $result = $this->callD1("SELECT COUNT(*) as total FROM admins", [], 'all');
-        // Con 'all', el resultado viene en ['results'][0]
-        return $result['results'][0] ?? null;
+        if (!$result || !isset($result['results'][0])) return null;
+        return $result['results'][0];
     }
 
     /**
