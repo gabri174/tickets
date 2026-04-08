@@ -1,13 +1,15 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once '../includes/config/config.php';
 require_once '../includes/classes/Database.php';
 
 session_start();
 
-// Verificar que haya una compra exitosa en sesión
+// Debug temporal
 if (!isset($_SESSION['purchase_success']) || !isset($_SESSION['purchase_result'])) {
-    header('Location: ../');
-    exit();
+    die('Error: No hay datos de compra en sesión. <a href="../">Volver al inicio</a>');
 }
 
 $result = $_SESSION['purchase_result'];
