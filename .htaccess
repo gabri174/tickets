@@ -18,20 +18,26 @@ Options -Indexes
 </FilesMatch>
 
 # Prevenir acceso directo a includes
-RewriteEngine On
-RewriteRule ^includes/ - [F,L]
-RewriteRule ^vendor/ - [F,L]
-RewriteRule ^\.git/ - [F,L]
-
-# Forzar HTTPS (descomentar en producción con SSL)
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-# Prevenir hotlinking de imágenes
-RewriteCond %{HTTP_REFERER} !^$
-RewriteCond %{HTTP_REFERER} !^https?://(www\.)?ensupresencia\.eu [NC]
-RewriteCond %{HTTP_REFERER} !^https?://(www\.)?localhost [NC]
-RewriteRule \.(jpg|jpeg|png|gif|webp|svg)$ - [F,NC]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^includes/ - [F,L]
+    RewriteRule ^vendor/ - [F,L]
+    RewriteRule ^\.git/ - [F,L]
+    
+    # Forzar HTTPS (descomentar en producción con SSL válido)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    # Prevenir hotlinking de imágenes (simplificado)
+    RewriteCond %{HTTP_REFERER} !^$
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?ensupresencia\.eu [NC]
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?localhost [NC]
+    RewriteRule \.(jpg|jpeg|png|gif|webp|svg)$ - [F,NC]
+    
+    # Proteger contra ataques de amplificación
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|DEBUG)
+    RewriteRule ^.*$ - [F]
+</IfModule>
 
 # Headers de seguridad
 <IfModule mod_headers.c>
@@ -47,7 +53,7 @@ RewriteRule \.(jpg|jpeg|png|gif|webp|svg)$ - [F,NC]
     # Referrer Policy
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
-    # Content Security Policy (ajustar según necesidades)
+    # Content Security Policy (ajustado para evitar problemas)
     Header always set Content-Security-Policy "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https://tickets-api.crtv-technologies.workers.dev https://api.cloudflare.com;"
 
     # Cache control para páginas dinámicas
@@ -59,21 +65,19 @@ RewriteRule \.(jpg|jpeg|png|gif|webp|svg)$ - [F,NC]
 </IfModule>
 
 # Prevenir ejecución de PHP en carpetas de uploads
-<Directory "/public/uploads">
-    php_flag engine off
+<Directory "public/uploads">
+    <IfModule mod_php.c>
+        php_flag engine off
+    </IfModule>
     AddType text/plain .php .php3 .php4 .php5 .phtml
 </Directory>
 
-<Directory "/public/qrcodes">
-    php_flag engine off
+<Directory "public/qrcodes">
+    <IfModule mod_php.c>
+        php_flag engine off
+    </IfModule>
     AddType text/plain .php .php3 .php4 .php5 .phtml
 </Directory>
 
 # Limitar tamaño de uploads
 LimitRequestBody 10485760
-
-# Proteger contra ataques de amplificación
-<IfModule mod_rewrite.c>
-    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|DEBUG)
-    RewriteRule ^.*$ - [F]
-</IfModule>

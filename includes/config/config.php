@@ -5,30 +5,26 @@
 
 // Prevenir acceso directo
 if (!defined('APP_ENV')) {
-    // Verificar que estamos siendo incluidos desde un archivo válido
-    $allowedEntryPoints = ['index.php', 'event.php', 'store.php', 'ticket.php', 'confirmation.php', 'buy.php', 'about.php', 'contact.php'];
-    $currentScript = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
-
-    // Si no es un entry point válido y no viene de un include, bloquear
-    if (!in_array($currentScript, $allowedEntryPoints) && strpos(__FILE__, $_SERVER['SCRIPT_FILENAME'] ?? '') === false) {
-        // Permitir includes desde admin
-        if (strpos(__DIR__, 'admin') === false) {
-            http_response_code(403);
-            exit('Acceso denegado');
-        }
-    }
+    // Permitir que los archivos principales incluyan este config sin restricciones
+    // La seguridad se maneja mejor a nivel de servidor/firewall
+    // que con validaciones en PHP que pueden causar errores 500
 }
 
 // Configuración de Sesión (Debe ser lo primero)
 if (session_status() === PHP_SESSION_NONE) {
-    // Configurar cookies seguras para HTTPS
+    // Detectar si estamos en HTTPS
+    $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || 
+                 isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ||
+                 (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+    
+    // Configurar cookies seguras (adaptar al entorno)
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
         'domain' => '',
-        'secure' => true,      // Solo HTTPS
-        'httponly' => true,    // No accesible desde JS
-        'samesite' => 'Strict' // Prevenir CSRF
+        'secure' => $isSecure,      // Solo HTTPS en producción
+        'httponly' => true,         // No accesible desde JS
+        'samesite' => 'Lax'         // Prevenir CSRF pero permitir navegación
     ]);
 
     // Iniciar sesión con configuración de seguridad
@@ -146,7 +142,7 @@ define('SALT_LENGTH', 32);
 // Zona horaria
 // ──────────────────────────────────────────────────────────────────────
 
-date_default_timezone_set('America/Mexico_City');
+date_default_timezone_set('Europe/Madrid');
 
 // ──────────────────────────────────────────────────────────────────────
 // Entorno (development / production)
