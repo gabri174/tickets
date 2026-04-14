@@ -1,12 +1,21 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+// =================================================================
+// DEBUG - Solo para desarrollo. DESACTIVAR en producción.
+// =================================================================
+// ini_set('display_errors', 1);
+// error_reporting(E_ALL);
 
 require_once '../includes/config/config.php';
 require_once '../includes/classes/Database.php';
 require_once '../includes/functions/functions.php';
 
-$db = new Database();
+try {
+    $db = new Database();
+} catch (Exception $e) {
+    error_log("Error al inicializar Database: " . $e->getMessage());
+    die('Error de configuración del sistema. Por favor, contacta al administrador.');
+}
+
 $error = '';
 $success = '';
 
@@ -18,19 +27,27 @@ if (!$eventId) {
 }
 
 // Obtener datos del evento
-$event = $db->getEventById($eventId);
+try {
+    $event = $db->getEventById($eventId);
+} catch (Exception $e) {
+    error_log("Error al obtener evento: " . $e->getMessage());
+    die('Error al cargar los datos del evento.');
+}
+
 if (!$event || $event['status'] !== 'active') {
     die('Error: Evento no encontrado o no está activo');
 }
 
 // Obtener tipos de entrada del evento
-$ticketTypes = $db->getTicketTypesByEvent($eventId);
-
-// Si no hay tipos de entrada, crear uno por defecto
-if (empty($ticketTypes) && $event['price'] > 0) {
-    $db->createTicketType($eventId, 'Entrada General', 'Acceso general al evento', $event['price'], $event['max_tickets'], 0);
+try {
     $ticketTypes = $db->getTicketTypesByEvent($eventId);
+} catch (Exception $e) {
+    error_log("Error al obtener tipos de entrada: " . $e->getMessage());
+    $ticketTypes = []; // Continuar sin tipos de entrada
 }
+
+// NOTA: Ya no creamos tipos de entrada automáticamente aquí.
+// Si no hay tipos definidos, usamos el precio base del evento.
 
 // Procesar compra
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
