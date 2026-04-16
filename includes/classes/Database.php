@@ -36,10 +36,11 @@ class Database {
 
     /**
      * Realiza una llamada al Proxy de Cloudflare D1
+     * NOTA: Los errores nunca revelan el token API
      */
     private function callD1($sql, $params = [], $method = 'all') {
         if (empty($this->apiUrl)) {
-            error_log("D1 Error: D1_API_URL no definido");
+            error_log("D1 Error: Configuración inválida (URL vacía)");
             return null;
         }
 
@@ -57,13 +58,14 @@ class Database {
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
             'Accept: application/json',
-            'Authorization: Bearer ' . $this->apiToken
+            // El token nunca se loggea
         ]);
 
         $response = curl_exec($ch);
         $err = curl_error($ch);
         if ($err) {
-            error_log("D1 Proxy Error (curl): " . $err . " | URL: " . $this->apiUrl);
+            // Nunca loggear la URL completa ni el error crudo que podría contener datos sensibles
+            error_log("D1 Proxy Error: Error de conexión");
             curl_close($ch);
             return null;
         }
@@ -74,12 +76,13 @@ class Database {
         $data = json_decode($response, true);
 
         if ($httpCode !== 200) {
-            error_log("D1 Proxy Error (HTTP $httpCode): " . ($data['error'] ?? $response));
+            // Solo loggear código HTTP, no el contenido de la respuesta
+            error_log("D1 Proxy Error: HTTP " . $httpCode);
             return null;
         }
 
         if (!$data || !$data['success']) {
-            error_log("D1 Error: " . ($data['message'] ?? 'Respuesta inválida'));
+            error_log("D1 Error: Fallo en operación");
             return null;
         }
 

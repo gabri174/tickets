@@ -1,11 +1,14 @@
 # =================================================================
-# SEGURIDAD - .htaccess para /public
+# SEGURIDAD - .htaccess para /public (BLINDADO)
 # =================================================================
 
 # Deshabilitar listado de directorios
 Options -Indexes
 
-# URL amigables para eventos y tienda
+# =================================================================
+# REWRITE RULES
+# =================================================================
+
 RewriteEngine On
 
 # Redirigir todo a index.php excepto archivos existentes
@@ -13,9 +16,37 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.+)$ index.php [L]
 
-# Headers de seguridad adicionales
+# =================================================================
+# HEADERS DE SEGURIDAD
+# =================================================================
+
 <IfModule mod_headers.c>
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-XSS-Protection "1; mode=block"
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "DENY"
+
+    # Prevenir MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # XSS Protection
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Cache control para páginas dinámicas
+    <FilesMatch "\.(php)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </FilesMatch>
 </IfModule>
+
+# =================================================================
+# PROTECCIÓN DE ARCHIVOS
+# =================================================================
+
+# Prevenir acceso a archivos .htaccess
+<FilesMatch "\.htaccess$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

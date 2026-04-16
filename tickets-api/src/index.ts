@@ -44,13 +44,11 @@ export default {
 					result = { results, meta };
 				}
 
-				return Response.json({ success: true, data: result });
+			return Response.json({ success: true, data: result });
 			} catch (e: any) {
-				const keys = Object.keys(env).join(", ");
 				return Response.json({ 
 					success: false, 
-					message: "Error D1: " + e.message,
-					debug: { available_env_keys: keys }
+					message: "Error interno del servidor"
 				}, { status: 500 });
 			}
 		}
