@@ -3,8 +3,10 @@
 // SEGURIDAD - Configuración Blindada (v2.0)
 // =================================================================
 
-// Prevenir acceso directo al archivo config
-defined('APP_ENV') || die('Acceso directo denegado');
+// Prevenir acceso directo al archivo config (bloquea si se abre directamente por URL)
+if (isset($_SERVER['SCRIPT_FILENAME']) && basename($_SERVER['SCRIPT_FILENAME']) === 'config.php') {
+    die('Acceso directo denegado');
+}
 
 // =================================================================
 // PROTECCIÓN CONTRA FUGAS DE INFORMACIÓN
