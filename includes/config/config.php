@@ -12,12 +12,10 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && basename($_SERVER['SCRIPT_FILENAME']) 
 // PROTECCIÓN CONTRA FUGAS DE INFORMACIÓN
 // =================================================================
 
-// Nunca mostrar errores en producción
-if (!defined('APP_ENV') || APP_ENV !== 'development') {
-    error_reporting(0);
-    ini_set('display_errors', 0);
-    ini_set('display_startup_errors', 0);
-}
+// MOSTRAR ERRORES TEMPORALMENTE PARA DEPURAR (Cambiar a 0 en producción real)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 
 // Ocultar versión de PHP
 ini_set('expose_php', 'off');
