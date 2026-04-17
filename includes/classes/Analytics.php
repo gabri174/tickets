@@ -1,11 +1,12 @@
 <?php
+/**
+ * Clase de Analíticas - Adaptada para Cloudflare D1 (v2.0)
+ */
 class Analytics {
     private $db;
-    private $pdo;
 
     public function __construct($db) {
         $this->db = $db;
-        $this->pdo = $db->getPdo();
     }
 
     /**
@@ -25,23 +26,18 @@ class Analytics {
                       FROM event_visits ev 
                       JOIN events e ON ev.event_id = e.id 
                       WHERE e.admin_id = ?" . $eventFilter;
-        $stmt = $this->pdo->prepare($sqlVisits);
-        $stmt->execute($params);
-        $visits = $stmt->fetchColumn();
-
-        // 2. Tickets Iniciados (No tenemos una tabla de 'cart_started', 
-        // pero podemos usar visitas a buy.php como proxy o añadir un log en el POST fallido.
-        // Por ahora, usemos el total de visitas como proxy de 'interés' 
-        // y tickets creados como 'conversión').
         
-        // 3. Tickets Pagados (Status 'valid')
+        $resVisits = $this->db->query($sqlVisits, $params);
+        $visits = $resVisits[0]['total'] ?? 0;
+
+        // 2. Tickets Pagados (Status 'valid')
         $sqlPaid = "SELECT COUNT(*) as total 
                     FROM tickets t 
                     JOIN events e ON t.event_id = e.id 
                     WHERE e.admin_id = ? AND t.status = 'valid'" . $eventFilter;
-        $stmt = $this->pdo->prepare($sqlPaid);
-        $stmt->execute($params);
-        $paid = $stmt->fetchColumn();
+        
+        $resPaid = $this->db->query($sqlPaid, $params);
+        $paid = $resPaid[0]['total'] ?? 0;
 
         return [
             'visits' => (int)$visits,
@@ -70,9 +66,7 @@ class Analytics {
                 GROUP BY t.referral
                 ORDER BY sales DESC";
         
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $this->db->query($sql, $params);
     }
 
     /**
@@ -95,9 +89,7 @@ class Analytics {
                 GROUP BY t.zip_code
                 ORDER BY total DESC";
         
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $this->db->query($sql, $params);
     }
 
     /**
@@ -112,9 +104,7 @@ class Analytics {
                 HAVING appearances > 1
                 ORDER BY appearances DESC";
         
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$organizerId]);
-        return $stmt->fetchAll();
+        return $this->db->query($sql, [$organizerId]);
     }
 
     /**
@@ -128,9 +118,7 @@ class Analytics {
                 FROM events e
                 WHERE e.id = ?";
         
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$eventId]);
-        $data = $stmt->fetch();
+        $data = $this->db->query($sql, [$eventId], 'first');
 
         if (!$data || $data['sales_last_24h'] == 0) return "Estable";
 

@@ -22,6 +22,17 @@ class Database {
         ];
     }
 
+    /**
+     * Puente público para ejecutar consultas personalizadas
+     */
+    public function query($sql, $params = [], $method = 'all') {
+        $res = $this->callD1($sql, $params, $method);
+        if ($method === 'all') {
+            return $res['results'] ?? [];
+        }
+        return $res;
+    }
+
     public function listTables() {
         $res = $this->callD1("SELECT name FROM sqlite_master WHERE type='table'", [], 'all');
         if (!$res || !isset($res['results'])) return null;
