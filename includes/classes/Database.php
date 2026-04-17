@@ -233,15 +233,22 @@ class Database {
         return $this->callD1($sql, [$code], 'first');
     }
 
-    public function getRecentTicketsByEmail($email, $eventId, $minutes = 10) {
-        // Adaptación SQLite para DATE_SUB
-        $sql = "SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_email = ? AND t.event_id = ? AND t.purchase_date > datetime('now', '-' || ? || ' minutes') ORDER BY t.id ASC";
+    public function getRecentTicketsByEmail($email, $eventId, $minutes = 30) {
+        // Aumentamos el margen a 30 minutos para evitar problemas de sincronización de reloj
+        $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
+                LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
+                WHERE t.attendee_email = ? AND t.event_id = ? 
+                AND t.purchase_date > datetime('now', '-' || ? || ' minutes') 
+                ORDER BY t.id DESC";
         return $this->query($sql, [$email, $eventId, $minutes]);
     }
 
-    public function getRecentTicketsByPhone($phone, $eventId, $minutes = 10) {
-        // Adaptación SQLite para DATE_SUB
-        $sql = "SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_phone = ? AND t.event_id = ? AND t.purchase_date > datetime('now', '-' || ? || ' minutes') ORDER BY t.id ASC";
+    public function getRecentTicketsByPhone($phone, $eventId, $minutes = 30) {
+        $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
+                LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
+                WHERE t.attendee_phone = ? AND t.event_id = ? 
+                AND t.purchase_date > datetime('now', '-' || ? || ' minutes') 
+                ORDER BY t.id DESC";
         return $this->query($sql, [$phone, $eventId, $minutes]);
     }
 

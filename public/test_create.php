@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/config/config.php';
+require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
 
 error_reporting(E_ALL);
@@ -15,12 +16,21 @@ $db = new Database();
 $eventId = 9; // El evento Joel Acosta
 $ticketCode = 'TEST-' . time();
 $name = 'Test User';
-$email = 'test@example.com';
-$phone = '123456789';
-$qrPath = 'qrcodes/test.png';
+$email = 'test' . time() . '@example.com'; // Email único cada vez
+$phone = '600000000';
 $ticketTypeId = null;
 
-echo "Intentando crear ticket: $ticketCode...\n";
+echo "Intentando generar QR real...\n";
+try {
+    $qrData = SITE_URL . "/ticket.php?code=" . $ticketCode;
+    $qrPath = generateQRCode($qrData, $ticketCode);
+    echo "✅ ÉXITO: QR generado en $qrPath\n";
+} catch (Exception $e) {
+    echo "❌ FALLO al generar QR: " . $e->getMessage() . "\n";
+    $qrPath = 'qrcodes/failed.png';
+}
+
+echo "Intentando crear ticket en D1: $ticketCode...\n";
 
 $sql = "INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path, referral, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 $params = [$eventId, $ticketTypeId, $ticketCode, $name, $email, $phone, $qrPath, null, '28001'];

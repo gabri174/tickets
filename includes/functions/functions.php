@@ -530,12 +530,16 @@ function completePurchase($data, $db) {
             $referral = $_SESSION['referral'] ?? null;
             $zipCode = $data['zip_code'] ?? null;
 
-            if (function_exists('qLog')) qLog("[TRACE] Creando ticket en DB MySQL...");
-            $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId, $referral, $zipCode);
+            if (function_exists('qLog')) qLog("[TRACE] Creando ticket en DB MySQL (D1)...");
+            $success = $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId, $referral, $zipCode);
+            
+            if (!$success) {
+                if (function_exists('qLog')) qLog("[ERROR] Fallo al crear ticket para: " . $ticketCode);
+                throw new Exception("Error al emitir el ticket. Por favor contacte con soporte.");
+            }
+            
             if (function_exists('qLog')) qLog("[TRACE] Ticket creado OK.");
             
-            // El ticket ya se crea directamente en D1 a través de $db->createTicket
-
             $tickets[] = [
                 'code' => $ticketCode,
                 'qr_path' => $qrPath,
