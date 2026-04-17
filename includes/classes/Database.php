@@ -72,7 +72,7 @@ class Database {
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
             'Accept: application/json',
-            // El token nunca se loggea
+            'Authorization: Bearer ' . $this->apiToken
         ]);
 
         $response = curl_exec($ch);

@@ -24,7 +24,10 @@ $ch = curl_init($status['url'] . '/api/query');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['sql' => 'SELECT 1 as test', 'method' => 'first']));
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/json',
+    'Authorization: Bearer ' . (defined('D1_API_TOKEN') ? D1_API_TOKEN : '')
+]);
 $response = curl_exec($ch);
 $curlError = curl_error($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
