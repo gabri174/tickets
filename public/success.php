@@ -81,6 +81,22 @@ if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
                 'type_name' => $rt['type_name']
             ];
         }
+    } else {
+        // --- FAILSAFE: Si no hay tickets pero hay compra pendiente en sesión, procesar ahora ---
+        if (isset($_SESSION['pending_purchase']) && $_SESSION['pending_purchase']['event_id'] == $eventId) {
+            try {
+                $db = new Database();
+                $result = completePurchase($_SESSION['pending_purchase'], $db);
+                $_SESSION['purchase_success'] = $result;
+                unset($_SESSION['pending_purchase']);
+                
+                $isAsync = false;
+                $purchase = $result;
+            } catch (Throwable $e) {
+                // Loguear error pero mantener modo asíncrono por si acaso el worker real funciona
+                error_log("Failsafe en success.php falló: " . $e->getMessage());
+            }
+        }
     }
 }
 
