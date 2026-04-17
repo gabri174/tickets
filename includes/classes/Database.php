@@ -88,15 +88,14 @@ class Database {
         curl_close($ch);
 
         $data = json_decode($response, true);
-
         if ($httpCode !== 200) {
-            // Solo loggear código HTTP, no el contenido de la respuesta
-            error_log("D1 Proxy Error: HTTP " . $httpCode);
+            error_log("D1 Proxy Error: HTTP " . $httpCode . " - " . ($data['message'] ?? 'Sin mensaje'));
             return null;
         }
 
         if (!$data || !$data['success']) {
-            error_log("D1 Error: Fallo en operación");
+            $msg = $data['message'] ?? 'Fallo desconocido';
+            error_log("D1 API Error: " . $msg);
             return null;
         }
 
