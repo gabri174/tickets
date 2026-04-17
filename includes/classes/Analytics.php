@@ -131,4 +131,3 @@ class Analytics {
         return "Normal";
     }
 }
-?>

@@ -473,8 +473,5 @@ class Database {
             $values = array_values($row);
             return $values[$column] ?? null;
         }
-        return $row;
     }
 }
-?>
-

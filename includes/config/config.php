@@ -186,7 +186,4 @@ if (!defined('UPSTASH_QSTASH_TOKEN')) define('UPSTASH_QSTASH_TOKEN', '');
 if (!defined('QSTASH_URL')) define('QSTASH_URL', 'https://qstash.upstash.io');
 if (!defined('QSTASH_CURRENT_SIGNING_KEY')) define('QSTASH_CURRENT_SIGNING_KEY', '');
 if (!defined('QSTASH_NEXT_SIGNING_KEY')) define('QSTASH_NEXT_SIGNING_KEY', '');
-if (!defined('QUEUE_WORKER_URL')) define('QUEUE_WORKER_URL', SITE_URL . '/queue_worker.php');
-
-?>
-
+if (!defined('QUEUE_WORKER_URL'))    define('QUEUE_WORKER_URL', SITE_URL . '/queue_worker.php');
