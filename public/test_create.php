@@ -30,8 +30,18 @@ $params = [$eventId, $ticketTypeId, $ticketCode, $name, $email, $phone, $qrPath,
 $res = $db->query($sql, $params, 'run');
 
 if ($res) {
-    echo "✅ ÉXITO: Ticket creado.\n";
-    print_r($res);
+    echo "✅ ÉXITO: Ticket creado (ID: " . ($res['meta']['last_row_id'] ?? '??') . ").\n";
+    
+    echo "\nProbando búsqueda de tickets recientes para: $email...\n";
+    $recent = $db->getRecentTicketsByEmail($email, $eventId, 10);
+    
+    if (count($recent) > 0) {
+        echo "✅ ÉXITO: Se encontraron " . count($recent) . " tickets recientes.\n";
+        print_r($recent);
+    } else {
+        echo "❌ FALLO: No se encontraron tickets a pesar de haberlo creado justo ahora.\n";
+        echo "Esto confirma un desajuste en la comparación de fechas (SQLite datetime).\n";
+    }
 } else {
     echo "❌ FALLO: No se pudo crear el ticket.\n";
     echo "Revisa el error_log del servidor para ver el mensaje detallado de la API D1.\n";
