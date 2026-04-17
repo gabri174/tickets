@@ -20,7 +20,8 @@ class QueueService {
         $baseUrl           = defined('QSTASH_URL')           ? QSTASH_URL           : (getenv('QSTASH_URL') ?: 'https://qstash.upstash.io');
         
         $this->qstashUrl   = rtrim($baseUrl, '/') . '/v2/publish/';
-        $this->enabled     = !empty($this->qstashToken) && !empty($this->workerUrl);
+        // Desactivamos la cola temporalmente para asegurar procesamiento directo con D1
+        $this->enabled     = false; 
     }
 
     /**
