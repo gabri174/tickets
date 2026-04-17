@@ -27,6 +27,9 @@ class Database {
      */
     public function query($sql, $params = [], $method = 'all') {
         $res = $this->callD1($sql, $params, $method);
+        if ($res === null) {
+            return ($method === 'all') ? [] : null;
+        }
         if ($method === 'all') {
             return $res['results'] ?? [];
         }
