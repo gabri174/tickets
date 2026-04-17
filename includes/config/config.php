@@ -12,10 +12,12 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && basename($_SERVER['SCRIPT_FILENAME']) 
 // PROTECCIÓN CONTRA FUGAS DE INFORMACIÓN
 // =================================================================
 
-// MOSTRAR ERRORES TEMPORALMENTE PARA DEPURAR (Cambiar a 0 en producción real)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Nunca mostrar errores en producción
+if (!defined('APP_ENV') || APP_ENV !== 'production') {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+}
 
 // Ocultar versión de PHP
 ini_set('expose_php', 'off');
@@ -186,140 +188,6 @@ if (!defined('QSTASH_CURRENT_SIGNING_KEY')) define('QSTASH_CURRENT_SIGNING_KEY',
 if (!defined('QSTASH_NEXT_SIGNING_KEY')) define('QSTASH_NEXT_SIGNING_KEY', '');
 if (!defined('QUEUE_WORKER_URL')) define('QUEUE_WORKER_URL', SITE_URL . '/queue_worker.php');
 
-// =================================================================
-// FUNCIONES DE SEGURIDAD
-// =================================================================
-
-/**
- * Genera un token CSRF único por sesión
- */
-function generate_csrf_token() {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION['csrf_token'];
-}
-
-/**
- * Verifica un token CSRF con timing-safe comparison
- */
-function verify_csrf_token($token) {
-    if (empty($_SESSION['csrf_token']) || empty($token)) {
-        return false;
-    }
-    return hash_equals($_SESSION['csrf_token'], $token);
-}
-
-/**
- * Regenera el token CSRF (usar después de login)
- */
-function regenerate_csrf_token() {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-/**
- * Sanitiza input contra XSS
- */
-function sanitize_input($data) {
-    if (is_array($data)) {
-        return array_map('sanitize_input', $data);
-    }
-    $data = trim($data);
-    $data = stripslashes($data);
-    $data = htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    // Remover caracteres de control
-    $data = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $data);
-    return $data;
-}
-
-/**
- * Valida y sanitiza email
- */
-function sanitize_email($email) {
-    $email = filter_var($email, FILTER_SANITIZE_EMAIL);
-    return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : false;
-}
-
-/**
- * Valida teléfono (formato internacional)
- */
-function sanitize_phone($phone) {
-    $phone = preg_replace('/[^0-9+]/', '', $phone);
-    return (strlen($phone) >= 10 && strlen($phone) <= 15) ? $phone : false;
-}
-
-/**
- * Hash seguro para contraseñas (bcrypt con coste 12)
- */
-function hash_password($password) {
-    return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-}
-
-/**
- * Verifica contraseña contra hash
- */
-function verify_password($password, $hash) {
-    return password_verify($password, $hash);
-}
-
-/**
- * Log de seguridad (auditoría)
- */
-function security_log($action, $details = []) {
-    $logFile = ROOT_PATH . '/logs/security.log';
-    $logDir = dirname($logFile);
-
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0750, true);
-    }
-
-    $logEntry = json_encode([
-        'timestamp' => date('Y-m-d H:i:s'),
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
-        'action' => $action,
-        'details' => $details,
-        'user' => $_SESSION['admin_id'] ?? 'anonymous'
-    ]);
-
-    file_put_contents($logFile, $logEntry . "\n", FILE_APPEND | LOCK_EX);
-}
-
-/**
- * Rate limiting simple basado en sesión
- */
-function rate_limit($action, $maxAttempts = 5, $windowSeconds = 300) {
-    $key = 'rate_' . $action;
-    $now = time();
-
-    if (!isset($_SESSION[$key])) {
-        $_SESSION[$key] = ['count' => 0, 'reset' => $now + $windowSeconds];
-    }
-
-    if ($now > $_SESSION[$key]['reset']) {
-        $_SESSION[$key] = ['count' => 0, 'reset' => $now + $windowSeconds];
-    }
-
-    $_SESSION[$key]['count']++;
-
-    if ($_SESSION[$key]['count'] > $maxAttempts) {
-        security_log('rate_limit_exceeded', ['action' => $action, 'attempts' => $_SESSION[$key]['count']]);
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Headers de seguridad para enviar en respuestas
- */
-function send_security_headers() {
-    header('X-Frame-Options: DENY');
-    header('X-Content-Type-Options: nosniff');
-    header('X-XSS-Protection: 1; mode=block');
-    header('Referrer-Policy: strict-origin-when-cross-origin');
-    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
-}
-
 ?>
+
 
