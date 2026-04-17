@@ -4,6 +4,11 @@ require_once '../../includes/functions/functions.php';
 require_once '../../includes/classes/Database.php';
 require_once '../../includes/classes/Analytics.php';
 
+// Debug temporal para encontrar el error de pantalla en blanco
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+
 checkAdminSession();
 
 $db = new Database();

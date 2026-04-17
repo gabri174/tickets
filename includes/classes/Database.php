@@ -114,16 +114,14 @@ class Database {
 
     public function getActiveEvents($category = null) {
         if ($category && $category !== 'todos') {
-            $res = $this->callD1("SELECT * FROM events WHERE status = 'active' AND category = ? ORDER BY date_event ASC", [$category]);
+            return $this->query("SELECT * FROM events WHERE status = 'active' AND category = ? ORDER BY date_event ASC", [$category]);
         } else {
-            $res = $this->callD1("SELECT * FROM events WHERE status = 'active' ORDER BY date_event ASC");
+            return $this->query("SELECT * FROM events WHERE status = 'active' ORDER BY date_event ASC");
         }
-        return $res['results'] ?? [];
     }
 
     public function getActiveEventsByOrganizer($adminId) {
-        $res = $this->callD1("SELECT * FROM events WHERE status = 'active' AND admin_id = ? ORDER BY date_event ASC", [$adminId]);
-        return $res['results'] ?? [];
+        return $this->query("SELECT * FROM events WHERE status = 'active' AND admin_id = ? ORDER BY date_event ASC", [$adminId]);
     }
 
     public function getEventById($id, $adminId = null) {
@@ -169,11 +167,10 @@ class Database {
 
     public function getAllEvents($adminId = null) {
         if ($adminId) {
-            $res = $this->callD1("SELECT * FROM events WHERE admin_id = ? ORDER BY created_at DESC", [$adminId]);
+            return $this->query("SELECT * FROM events WHERE admin_id = ? ORDER BY created_at DESC", [$adminId]);
         } else {
-            $res = $this->callD1("SELECT * FROM events ORDER BY created_at DESC");
+            return $this->query("SELECT * FROM events ORDER BY created_at DESC");
         }
-        return $res['results'] ?? [];
     }
 
     public function trackVisit($eventId, $sessionId, $ipHash) {
@@ -186,8 +183,7 @@ class Database {
     // ─────────────────────────────────────────────
 
     public function getTicketTypesByEvent($eventId) {
-        $res = $this->callD1("SELECT * FROM ticket_types WHERE event_id = ? ORDER BY sort_order ASC, id ASC", [$eventId]);
-        return $res['results'] ?? [];
+        return $this->query("SELECT * FROM ticket_types WHERE event_id = ? ORDER BY sort_order ASC, id ASC", [$eventId]);
     }
 
     public function getTicketTypeById($id) {
@@ -230,8 +226,7 @@ class Database {
 
     public function getTicketsByEvent($eventId) {
         $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE t.event_id = ? ORDER BY t.purchase_date DESC";
-        $res = $this->callD1($sql, [$eventId]);
-        return $res['results'] ?? [];
+        return $this->query($sql, [$eventId]);
     }
 
     public function getTicketByCode($code) {
@@ -242,15 +237,13 @@ class Database {
     public function getRecentTicketsByEmail($email, $eventId, $minutes = 10) {
         // Adaptación SQLite para DATE_SUB
         $sql = "SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_email = ? AND t.event_id = ? AND t.purchase_date > datetime('now', '-' || ? || ' minutes') ORDER BY t.id ASC";
-        $res = $this->callD1($sql, [$email, $eventId, $minutes]);
-        return $res['results'] ?? [];
+        return $this->query($sql, [$email, $eventId, $minutes]);
     }
 
     public function getRecentTicketsByPhone($phone, $eventId, $minutes = 10) {
         // Adaptación SQLite para DATE_SUB
         $sql = "SELECT t.*, tt.name as type_name FROM tickets t LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.attendee_phone = ? AND t.event_id = ? AND t.purchase_date > datetime('now', '-' || ? || ' minutes') ORDER BY t.id ASC";
-        $res = $this->callD1($sql, [$phone, $eventId, $minutes]);
-        return $res['results'] ?? [];
+        return $this->query($sql, [$phone, $eventId, $minutes]);
     }
 
     // ─────────────────────────────────────────────
@@ -299,21 +292,20 @@ class Database {
     public function getAllTickets($adminId = null) {
         if ($adminId) {
             $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ? ORDER BY t.purchase_date DESC";
-            $res = $this->callD1($sql, [$adminId]);
+            return $this->query($sql, [$adminId]);
         } else {
             $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id ORDER BY t.purchase_date DESC";
-            $res = $this->callD1($sql);
+            return $this->query($sql);
         }
-        return $res['results'] ?? [];
     }
 
     public function countTickets($adminId = null) {
         if ($adminId) {
             $sql = "SELECT COUNT(t.id) as total FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ?";
-            $res = $this->callD1($sql, [$adminId], 'first');
+            $res = $this->query($sql, [$adminId], 'first');
         } else {
             $sql = "SELECT COUNT(*) as total FROM tickets";
-            $res = $this->callD1($sql, [], 'first');
+            $res = $this->query($sql, [], 'first');
         }
         return $res['total'] ?? 0;
     }
@@ -321,10 +313,10 @@ class Database {
     public function countEvents($adminId = null) {
         if ($adminId) {
             $sql = "SELECT COUNT(*) as total FROM events WHERE status = 'active' AND admin_id = ?";
-            $res = $this->callD1($sql, [$adminId], 'first');
+            $res = $this->query($sql, [$adminId], 'first');
         } else {
             $sql = "SELECT COUNT(*) as total FROM events WHERE status = 'active'";
-            $res = $this->callD1($sql, [], 'first');
+            $res = $this->query($sql, [], 'first');
         }
         return $res['total'] ?? 0;
     }
