@@ -19,11 +19,25 @@ echo "API URL: " . $status['url'] . "\n";
 echo "Token configurado: " . $status['token'] . "\n";
 
 echo "\n--- PRUEBA DE CONSULTA ---\n";
-if ($status['result']) {
-    echo "✅ ÉXITO: La base de datos responde.\n";
-    print_r($status['result']);
+// Para ver el error exacto, llamaremos a callD1 pero capturando el error si falla
+$ch = curl_init($status['url'] . '/api/query');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['sql' => 'SELECT 1 as test', 'method' => 'first']));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+$response = curl_exec($ch);
+$curlError = curl_error($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+if ($curlError) {
+    echo "❌ ERROR DE RED (CURL): " . $curlError . "\n";
+} elseif ($httpCode !== 200) {
+    echo "❌ ERROR HTTP " . $httpCode . ": El servidor de Cloudflare respondió con un error.\n";
+    echo "Respuesta: " . $response . "\n";
 } else {
-    echo "❌ ERROR: No se recibió respuesta de Cloudflare.\n";
+    echo "✅ ÉXITO: Conexión establecida.\n";
+    print_r(json_decode($response, true));
 }
 
 // 3. Verificar Tablas
