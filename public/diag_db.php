@@ -94,4 +94,52 @@ $results['session_purchase_data'] = [
     'purchase_success'  => isset($_SESSION['purchase_success'])  ? '✅ EXISTE' : '❌ No existe',
 ];
 
+// 10. Tipos de entrada del evento 9
+try {
+    $types = $db->query("SELECT id, name, price, available_tickets FROM ticket_types WHERE event_id = 9", []);
+    $results['ticket_types_event_9'] = $types ?: 'Sin tipos de entrada (usa precio del evento)';
+} catch (Throwable $e) {
+    $results['ticket_types_event_9'] = '❌ Error: ' . $e->getMessage();
+}
+
+// 11. Verificar directorio de QR codes
+$qrDir = __DIR__ . '/qrcodes';
+$results['qr_directory'] = [
+    'path'     => $qrDir,
+    'exists'   => is_dir($qrDir)    ? '✅ Existe' : '❌ NO EXISTE',
+    'writable' => is_writable($qrDir) ? '✅ Escribible' : '❌ NO ESCRIBIBLE',
+];
+
+// Si no existe, intentar crearlo
+if (!is_dir($qrDir)) {
+    $created = mkdir($qrDir, 0755, true);
+    $results['qr_directory']['created_now'] = $created ? '✅ Creado ahora' : '❌ No se pudo crear';
+}
+
+// 12. Test de completePurchase() con datos reales
+require_once '../includes/functions/functions.php';
+$testPurchaseData = [
+    'event_id'       => 9,
+    'ticket_type_id' => null,
+    'quantity'       => 1,
+    'attendees'      => [['name' => 'Test Diagnostico', 'email' => 'diag@test.local', 'phone' => '000000001']],
+    'phone'          => '000000001',
+    'zip_code'       => null,
+    'total_price'    => 0,
+    'referral'       => null,
+];
+try {
+    $purchaseResult = completePurchase($testPurchaseData, $db);
+    $results['complete_purchase_test'] = [
+        'success'      => '✅ completePurchase() funcionó',
+        'tickets_count' => count($purchaseResult['tickets'] ?? []),
+        'event_title'   => $purchaseResult['event_title'] ?? '?',
+    ];
+    // Limpiar: borrar el ticket de prueba
+    $db->query("DELETE FROM tickets WHERE attendee_email = ?", ['diag@test.local'], 'run');
+    $results['complete_purchase_test']['cleanup'] = '✅ Ticket de prueba eliminado';
+} catch (Throwable $e) {
+    $results['complete_purchase_test'] = '❌ FALLO: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine();
+}
+
 echo json_encode($results, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
