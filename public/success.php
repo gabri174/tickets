@@ -5,6 +5,11 @@ require_once '../includes/classes/Database.php';
 
 $isAsync = isset($_GET['async_success']) && $_GET['async_success'] === 'true';
 
+// Si ya tenemos el éxito en la sesión, forzamos modo síncrono para mostrar tickets.
+if (isset($_SESSION['purchase_success']) && !empty($_SESSION['purchase_success']['tickets'])) {
+    $isAsync = false;
+}
+
 // --- ENDPOINT PARA POLLING DE ESTADO ---
 if (isset($_GET['check_status']) && $_GET['check_status'] === '1') {
     header('Content-Type: application/json');
@@ -95,13 +100,26 @@ if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
             } catch (Throwable $e) {
                 // Loguear error pero mantener modo asíncrono por si acaso el worker real funciona
                 error_log("Failsafe en success.php falló: " . $e->getMessage());
+                $_SESSION['email_error'] = "Error procesando tu reserva: " . $e->getMessage();
+            }
+        }
+        
+        // Si sigue en modo asíncrono, verificamos si realmente hay un worker
+        if ($isAsync) {
+            require_once '../includes/classes/QueueService.php';
+            $queue = new QueueService();
+            if (!$queue->isEnabled()) {
+                // El worker está desactivado. Nunca se generarán los tickets asíncronamente.
+                // Y el failsafe falló o no tenía la sesión. Mostramos error.
+                $isAsync = false;
+                $_SESSION['email_error'] = "La sesión expiró o hubo un problema de conexión con la pasarela. Por favor, revisa tu correo o contacta con soporte.";
             }
         }
     }
 }
 
 // Verificar si hay datos de compra o si es asíncrona
-if (!isset($_SESSION['purchase_success']) && !$isAsync && (!isset($purchase['tickets']) || count($purchase['tickets']) == 0)) {
+if (!isset($_SESSION['purchase_success']) && !isset($_SESSION['email_error']) && !$isAsync && (!isset($purchase['tickets']) || count($purchase['tickets']) == 0)) {
     header('Location: index.php');
     exit();
 }
@@ -275,7 +293,7 @@ require_once '../includes/partials/header.php';
                     pollInterval = setInterval(checkStatus, 1000); // 1 segundo
                 });
             </script>
-        <?php else: ?>
+        <?php elseif (!empty($purchase['tickets'])): ?>
             <!-- Tickets Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
                 <?php foreach ($purchase['tickets'] as $index => $ticket): ?>
@@ -348,7 +366,9 @@ require_once '../includes/partials/header.php';
                     </div>
                 <?php endforeach; ?>
             </div>
+        <?php endif; ?>
 
+        <?php if (!$isAsync): ?>
             <!-- Botón Volver al Inicio -->
             <div class="text-center mt-8">
                 <a href="index.php" class="btn-modern btn-lime inline-flex items-center gap-2 px-8 py-4 text-base font-bold">

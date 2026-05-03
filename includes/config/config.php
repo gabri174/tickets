@@ -34,9 +34,9 @@ if (session_status() === PHP_SESSION_NONE) {
         'lifetime' => 0,
         'path' => '/',
         'domain' => '',
-        'secure' => $isSecure,      // Solo HTTPS en producción
+        'secure' => $isSecure,
         'httponly' => true,         // No accesible desde JS
-        'samesite' => 'Lax'         // Prevenir CSRF pero permitir navegación
+        'samesite' => $isSecure ? 'None' : 'Lax' // Permitir cookies en cross-site redirects solo en HTTPS
     ]);
 
     // Iniciar sesión con configuración de seguridad
