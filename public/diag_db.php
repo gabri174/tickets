@@ -72,4 +72,26 @@ try {
     $results['recent_tickets_24h'] = '❌ Error: ' . $e->getMessage();
 }
 
+// 7. Método de pago del admin para evento 9
+try {
+    $event9 = $db->query("SELECT e.id, e.title, e.price, e.admin_id, a.preferred_payment_method, a.payment_config FROM events e JOIN admins a ON e.admin_id = a.id WHERE e.id = 9", [], 'first');
+    $results['event_9_payment'] = [
+        'title'                    => $event9['title'] ?? '?',
+        'price'                    => $event9['price'] ?? '?',
+        'preferred_payment_method' => $event9['preferred_payment_method'] ?? '❌ NO ENCONTRADO',
+        'payment_config_keys'      => array_keys(json_decode($event9['payment_config'] ?? '{}', true)),
+    ];
+} catch (Throwable $e) {
+    $results['event_9_payment'] = '❌ Error: ' . $e->getMessage();
+}
+
+// 8. ¿Existe queue_worker.php?
+$results['queue_worker_exists'] = file_exists(__DIR__ . '/queue_worker.php') ? '✅ Existe' : '❌ No existe';
+
+// 9. Verificar si la sesión actual tiene purchase data
+$results['session_purchase_data'] = [
+    'pending_purchase'  => isset($_SESSION['pending_purchase'])  ? '✅ EXISTE' : '❌ No existe',
+    'purchase_success'  => isset($_SESSION['purchase_success'])  ? '✅ EXISTE' : '❌ No existe',
+];
+
 echo json_encode($results, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
