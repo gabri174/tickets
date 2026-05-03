@@ -15,7 +15,7 @@ if (!headers_sent()) {
     header("X-Frame-Options: SAMEORIGIN");
     header("X-XSS-Protection: 1; mode=block");
     header("Referrer-Policy: strict-origin-when-cross-origin");
-    header("Content-Security-Policy: default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https://tickets-api.crtv-technologies.workers.dev;");
+    header("Content-Security-Policy: default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; font-src 'self' https: data:; script-src 'self' https: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://tickets-api.crtv-technologies.workers.dev https://static.cloudflareinsights.com https://cloudflareinsights.com;");
 }
 
 // =================================================================
