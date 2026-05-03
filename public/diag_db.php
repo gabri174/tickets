@@ -142,4 +142,28 @@ try {
     $results['complete_purchase_test'] = '❌ FALLO: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine();
 }
 
+// 13. Verificar qué versión de buy.php está en el servidor
+$buyPhpPath = __DIR__ . '/buy.php';
+if (file_exists($buyPhpPath)) {
+    $buyContent = file_get_contents($buyPhpPath);
+    $results['buy_php_version_check'] = [
+        'file_exists'                  => '✅ buy.php encontrado',
+        'has_async_success_redirect'   => strpos($buyContent, 'async_success') !== false
+                                          ? '❌ VIEJO: tiene async_success en redirect'
+                                          : '✅ NUEVO: no genera async_success',
+        'has_totalPrice_check'         => strpos($buyContent, 'totalPrice <= 0') !== false
+                                          ? '✅ NUEVO: tiene check de precio cero'
+                                          : '❌ VIEJO: no tiene check de precio cero',
+        'has_empty_paymentConfig_check' => strpos($buyContent, 'empty($paymentConfig)') !== false
+                                          ? '✅ NUEVO: valida config de pago'
+                                          : '❌ VIEJO: no valida config de pago',
+        'finassets_success_url_line'   => '',
+    ];
+    // Extraer la línea con el successUrl de Finassets
+    preg_match('/successUrl\s*=\s*[^;]+;/', $buyContent, $matches);
+    $results['buy_php_version_check']['finassets_success_url_line'] = $matches[0] ?? 'No encontrado';
+} else {
+    $results['buy_php_version_check'] = '❌ buy.php NO ENCONTRADO en ' . $buyPhpPath;
+}
+
 echo json_encode($results, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
