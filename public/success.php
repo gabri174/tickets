@@ -19,14 +19,14 @@ if (isset($_GET['check_status']) && $_GET['check_status'] === '1') {
 
     if (($email || $phone) && $eventId) {
         $db = new Database();
-        // Buscar por email o por teléfono
+        // Buscar por email o por teléfono (ventana ampliada a 60 min)
         $recentTickets = [];
         if ($email) {
-            $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 10);
+            $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 60);
         }
         // Si no hay por email, intentar por teléfono
         if (empty($recentTickets) && $phone) {
-            $recentTickets = $db->getRecentTicketsByPhone($phone, $eventId, 10);
+            $recentTickets = $db->getRecentTicketsByPhone($phone, $eventId, 60);
         }
 
         if (count($recentTickets) > 0) {
@@ -52,25 +52,29 @@ if (isset($_GET['debug_params']) && $_GET['debug_params'] === '1') {
     exit();
 }
 
-// --- AUTO-DETECTION PARA TICKETS EN COLA ---
-// Si estamos en modo espera pero ya existen los tickets en DB (aunque el mail tarde), los mostramos.
+// ─────────────────────────────────────────────────────────────────
+// AUTO-DETECTION: buscar tickets en DB (ventana 60 min, no 10 min)
+// ─────────────────────────────────────────────────────────────────
 $phone = $_GET['phone'] ?? '';
+$hasError = false; // flag para mostrar estado de error en la UI
+$errorMsg = '';
+
 if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
-    $email = $_GET['email'];
+    $email   = $_GET['email'];
     $eventId = $_GET['event_id'];
-    $db = new Database();
-    // Buscamos tickets para este mail/evento en los últimos 10 minutos
+    $db      = new Database();
+
     $recentTickets = [];
     if ($email) {
-        $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 10);
+        $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 60);
     }
-    // Si no hay por email, intentar por teléfono
     if (empty($recentTickets) && $phone) {
-        $recentTickets = $db->getRecentTicketsByPhone($phone, $eventId, 10);
+        $recentTickets = $db->getRecentTicketsByPhone($phone, $eventId, 60);
     }
 
     if (count($recentTickets) > 0) {
-        $isAsync = false; // Cambiamos a modo éxito total - tickets encontrados
+        // ✅ Tickets encontrados en DB → mostrar normalmente
+        $isAsync = false;
         $purchase = [
             'event_id' => $eventId,
             'event_title' => '', // Se actualizará abajo con getEventById
@@ -174,21 +178,44 @@ require_once '../includes/partials/header.php';
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <!-- Success Status -->
+        <?php if ($hasError): ?>
+        <!-- ERROR STATE -->
+        <div class="flex flex-col md:flex-row items-center gap-8 mb-12 py-10 bg-red-500/5 border border-red-500/20 rounded-[2.5rem] px-10 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-[100px] -mr-32 -mt-32"></div>
+            <div class="h-20 w-20 bg-red-500/20 border border-red-500/30 rounded-3xl flex items-center justify-center text-red-400 shadow-2xl flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-4xl"></i>
+            </div>
+            <div class="text-center md:text-left">
+                <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">Compra Pendiente</h2>
+                <p class="text-gray-400 font-medium text-lg"><?php echo $errorMsg; ?></p>
+            </div>
+            <div class="md:ml-auto">
+                <a href="index.php" class="btn-modern bg-white/10 text-white px-6 py-3 text-sm font-bold"><i class="fas fa-home mr-2"></i>Volver al Inicio</a>
+            </div>
+        </div>
+        <?php elseif ($isAsync): ?>
+        <!-- ASYNC WAITING STATE -->
         <div class="flex flex-col md:flex-row items-center gap-8 mb-12 py-10 bg-lime-400/5 border border-lime-400/10 rounded-[2.5rem] px-10 shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 right-0 w-64 h-64 bg-lime-400/10 blur-[100px] -mr-32 -mt-32"></div>
             <div class="h-20 w-20 bg-lime-400 rounded-3xl flex items-center justify-center text-black shadow-2xl shadow-lime-400/30 flex-shrink-0 animate-bounce">
                 <i class="fas fa-check text-4xl"></i>
             </div>
             <div class="text-center md:text-left">
-                <?php if ($isAsync): ?>
-                    <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Reserva Recibida!</h2>
-                    <p class="text-gray-400 font-medium text-lg">Estamos generando tus códigos. Recibirás tus entradas en <span class="text-white">breve en tu correo</span>.</p>
-                <?php else: ?>
-                    <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Compra Completada!</h2>
-                    <p class="text-gray-400 font-medium text-lg">Tus tickets están listos. Hemos enviado un correo a <span class="text-white"><?php echo htmlspecialchars($purchase['email']); ?></span></p>
-                <?php endif; ?>
+                <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Reserva Recibida!</h2>
+                <p class="text-gray-400 font-medium text-lg">Estamos generando tus códigos. Recibirás tus entradas en <span class="text-white">breve en tu correo</span>.</p>
             </div>
-            <?php if (!$isAsync): ?>
+        </div>
+        <?php else: ?>
+        <!-- SUCCESS STATE -->
+        <div class="flex flex-col md:flex-row items-center gap-8 mb-12 py-10 bg-lime-400/5 border border-lime-400/10 rounded-[2.5rem] px-10 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-lime-400/10 blur-[100px] -mr-32 -mt-32"></div>
+            <div class="h-20 w-20 bg-lime-400 rounded-3xl flex items-center justify-center text-black shadow-2xl shadow-lime-400/30 flex-shrink-0 animate-bounce">
+                <i class="fas fa-check text-4xl"></i>
+            </div>
+            <div class="text-center md:text-left">
+                <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Compra Completada!</h2>
+                <p class="text-gray-400 font-medium text-lg">Tus tickets están listos. Hemos enviado un correo a <span class="text-white"><?php echo htmlspecialchars($purchase['email'] ?? ''); ?></span></p>
+            </div>
             <div class="md:ml-auto flex flex-col items-center gap-2">
                  <div id="whatsappStatus" class="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-gray-400">
                     <div class="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
@@ -196,12 +223,12 @@ require_once '../includes/partials/header.php';
                  </div>
                  <button onclick="shareOnWhatsApp()" class="text-[10px] text-lime-400 uppercase font-black tracking-widest hover:underline">¿No se abrió? Reenviar</button>
             </div>
-            <?php endif; ?>
         </div>
+        <?php endif; ?>
 
         <?php if ($emailError): ?>
-            <div class="glass-card mb-8 p-4 border-red-500/20 bg-red-500/5 text-red-400 text-xs text-center">
-                <i class="fas fa-exclamation-triangle mr-1"></i> <?php echo htmlspecialchars($emailError); ?>
+            <div class="glass-card mb-8 p-4 border-yellow-500/20 bg-yellow-500/5 text-yellow-400 text-sm text-center rounded-2xl">
+                <i class="fas fa-envelope-open-text mr-2"></i> <?php echo htmlspecialchars($emailError); ?>
             </div>
         <?php endif; ?>
 
