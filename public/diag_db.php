@@ -166,4 +166,22 @@ if (file_exists($buyPhpPath)) {
     $results['buy_php_version_check'] = '❌ buy.php NO ENCONTRADO en ' . $buyPhpPath;
 }
 
+// 14. Verificar qué versión de callback_finassets.php está en el servidor
+$callbackPath = __DIR__ . '/callback_finassets.php';
+if (file_exists($callbackPath)) {
+    $callbackContent = file_get_contents($callbackPath);
+    $results['callback_php_version_check'] = [
+        'file_exists'                => '✅ callback_finassets.php encontrado',
+        'has_old_redirect_params'    => strpos($callbackContent, 'async_success=true') !== false
+                                        ? '❌ VIEJO: tiene parámetros en el redirect'
+                                        : '✅ NUEVO: redirect limpio a success.php',
+        'redirect_line'              => '',
+    ];
+    // Extraer la línea del redirect
+    preg_match('/header\(\'Location: success\.php[^\']*\'\);/', $callbackContent, $matches);
+    $results['callback_php_version_check']['redirect_line'] = $matches[0] ?? 'No encontrado';
+} else {
+    $results['callback_php_version_check'] = '❌ callback_finassets.php NO ENCONTRADO';
+}
+
 echo json_encode($results, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
