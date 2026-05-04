@@ -136,8 +136,9 @@ if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
 
 // Verificar si hay datos de compra o si es asíncrona
 if (!isset($_SESSION['purchase_success']) && !isset($_SESSION['email_error']) && !$isAsync && (!isset($purchase['tickets']) || count($purchase['tickets']) == 0)) {
-    header('Location: index.php');
-    exit();
+    // Ya no redirigimos al inicio, dejamos que se muestre el estado de error
+    $hasError = true;
+    $errorMsg = "No se encontraron datos de compra en la sesión.";
 }
 
 $purchase = $_SESSION['purchase_success'] ?? $purchase ?? ['event_id' => $_GET['event_id'] ?? 0, 'email' => 'tu correo electrónico'];
@@ -148,13 +149,15 @@ if ($debugMode) {
     $_SESSION['debug_email'] = true;
 }
 
-// Limpiar sesión después de mostrar
+// COMENTADO: No borramos la sesión automáticamente para evitar perderla en redirecciones
+/*
 if (!$debugMode) {
     unset($_SESSION['purchase_success']);
     unset($_SESSION['email_error']);
     unset($_SESSION['smtp_log']);
     unset($_SESSION['debug_email']);
 }
+*/
 
 $db = new Database();
 $eventData = $db->getEventById($purchase['event_id'] ?? 0);

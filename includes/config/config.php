@@ -34,15 +34,15 @@ if (session_status() === PHP_SESSION_NONE) {
     );
     
     // Configurar cookies seguras
-    // FORZAMOS SameSite=None y Secure si estamos en producción para evitar el fallo de la pasarela
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
-        'domain' => '', // Dejar vacío para que use el dominio actual
-        'secure' => true, // Forzamos true ya que tu sitio ES https
+        'domain' => '',
+        'secure' => $isSecure,
         'httponly' => true,
-        'samesite' => 'None' 
+        'samesite' => 'Lax' // Volvemos a Lax (estándar) para máxima compatibilidad interna
     ]);
+
 
 
     // Iniciar sesión con configuración de seguridad
