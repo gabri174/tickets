@@ -10,6 +10,9 @@ if (isset($_GET['async_success']) && !isset($_GET['cleaned'])) {
     $cleanUrl = 'success.php?cleaned=1';
     // Preservamos solo el ID del evento si es necesario para el fallback
     if (isset($_GET['event_id'])) $cleanUrl .= '&event_id=' . $_GET['event_id'];
+    if (isset($_GET['email'])) $cleanUrl .= '&email=' . urlencode($_GET['email']);
+    if (isset($_GET['phone'])) $cleanUrl .= '&phone=' . urlencode($_GET['phone']);
+    
     header("Location: $cleanUrl");
     exit();
 }
