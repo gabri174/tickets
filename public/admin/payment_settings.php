@@ -11,11 +11,9 @@ $message = '';
 $error = '';
 
 // Obtener configuración actual del admin
-$stmt = $db->getPdo()->prepare("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?");
-$stmt->execute([$adminId]);
-$admin = $stmt->fetch();
+$admin = $db->query("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?", [$adminId], 'first');
 
-$paymentMethod = $admin['preferred_payment_method'] ?? 'finassets';
+$paymentMethod = $admin['preferred_payment_method'] ?? 'none';
 $paymentConfig = json_decode($admin['payment_config'] ?? '{}', true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -27,10 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $config = [];
     
     switch ($paymentMethod) {
-        case 'finassets':
-            $config['url'] = cleanInput($_POST['finassets_url']);
-            $config['key'] = cleanInput($_POST['finassets_key']);
-            break;
         case 'stripe':
             $config['public_key'] = cleanInput($_POST['stripe_public_key']);
             $config['secret_key'] = cleanInput($_POST['stripe_secret_key']);
@@ -53,13 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $configJson = json_encode($config);
     
         try {
-            $stmt = $db->getConnection()->prepare("UPDATE admins SET preferred_payment_method = ?, payment_config = ? WHERE id = ?");
-            if ($stmt->execute([$paymentMethod, $configJson, $adminId])) {
-                $message = 'Configuración de pago actualizada correctamente.';
-                $paymentConfig = $config;
-            } else {
-                $error = 'Error al actualizar la configuración.';
-            }
+            $sql = "UPDATE admins SET preferred_payment_method = ?, payment_config = ? WHERE id = ?";
+            $db->query($sql, [$paymentMethod, $configJson, $adminId], 'run');
+            $message = 'Configuración de pago actualizada correctamente.';
+            $paymentConfig = $config;
         } catch (Exception $e) {
             $error = 'Error en la base de datos: ' . $e->getMessage();
         }
@@ -116,28 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="glass-card p-8 rounded-[2rem]">
                         <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Método Preferido</label>
                         <select name="payment_method" id="payment_method" class="w-full p-4 rounded-2xl outline-none" onchange="toggleConfig(this.value)">
-                            <option value="none" <?php echo $paymentMethod === 'none' ? 'selected' : ''; ?>>Ninguno (Simular pago)</option>
-                            <option value="finassets" <?php echo $paymentMethod === 'finassets' ? 'selected' : ''; ?>>Finassets.io (Crypto)</option>
+                            <option value="none" <?php echo $paymentMethod === 'none' ? 'selected' : ''; ?>>Ninguno (Entradas gratuitas o simulación)</option>
                             <option value="stripe" <?php echo $paymentMethod === 'stripe' ? 'selected' : ''; ?>>Stripe</option>
                             <option value="paypal" <?php echo $paymentMethod === 'paypal' ? 'selected' : ''; ?>>PayPal</option>
                             <option value="checkout" <?php echo $paymentMethod === 'checkout' ? 'selected' : ''; ?>>Checkout.com</option>
                             <option value="redsys" <?php echo $paymentMethod === 'redsys' ? 'selected' : ''; ?>>Redsys España</option>
                         </select>
-                    </div>
-
-                    <!-- Finassets Config -->
-                    <div id="config_finassets" class="payment-config glass-card p-8 rounded-[2rem] <?php echo $paymentMethod !== 'finassets' ? 'hidden' : ''; ?>">
-                        <h3 class="font-bold mb-6 flex items-center gap-2"><i class="fas fa-coins text-lime-400"></i> Configuración Finassets.io</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-xs text-gray-500 font-bold uppercase">URL del API</label>
-                                <input type="text" name="finassets_url" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['url'] ?? 'https://demopay.finassets.io'); ?>">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500 font-bold uppercase">API Key</label>
-                                <input type="text" name="finassets_key" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['key'] ?? ''); ?>" placeholder="Introduce tu API Key">
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Stripe Config -->
