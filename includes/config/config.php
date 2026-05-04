@@ -24,20 +24,26 @@ ini_set('expose_php', 'off');
 
 // Configuración de Sesión (Debe ser lo primero)
 if (session_status() === PHP_SESSION_NONE) {
-    // Detectar si estamos en HTTPS
-    $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || 
-                 isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ||
-                 (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+    // Detectar si estamos en HTTPS (añadimos más checks para proxies comunes)
+    $isSecure = (
+        (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1)) ||
+        (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+        (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') ||
+        (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
+        (strpos(SITE_URL, 'https://') === 0) // Si SITE_URL es https, forzamos
+    );
     
-    // Configurar cookies seguras (adaptar al entorno)
+    // Configurar cookies seguras
+    // FORZAMOS SameSite=None y Secure si estamos en producción para evitar el fallo de la pasarela
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
-        'domain' => '',
-        'secure' => $isSecure,
-        'httponly' => true,         // No accesible desde JS
-        'samesite' => $isSecure ? 'None' : 'Lax' // Permitir cookies en cross-site redirects solo en HTTPS
+        'domain' => '', // Dejar vacío para que use el dominio actual
+        'secure' => true, // Forzamos true ya que tu sitio ES https
+        'httponly' => true,
+        'samesite' => 'None' 
     ]);
+
 
     // Iniciar sesión con configuración de seguridad
     session_start();
