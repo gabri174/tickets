@@ -2,8 +2,6 @@
 require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
-require_once '../includes/classes/PaymentGateway.php';
-require_once '../includes/classes/FinassetsGateway.php';
 require_once '../includes/classes/RedisCache.php';
 require_once '../includes/classes/InventoryLock.php';
 require_once '../includes/classes/QueueService.php';
