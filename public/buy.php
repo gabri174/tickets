@@ -146,12 +146,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$inventoryBlocked && empty($errors)):
         try {
-            $pdo = $db->getPdo();
-            
             // Obtener configuración de pago del organizador
-            $stmt = $pdo->prepare("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?");
-            $stmt->execute([$event['admin_id']]);
-            $admin = $stmt->fetch();
+            $admin = $db->query("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?", [$event['admin_id']], 'first');
+
             
             $paymentMethod = $admin['preferred_payment_method'] ?? 'none';
             $paymentConfig = json_decode($admin['payment_config'] ?? '{}', true);

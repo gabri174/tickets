@@ -134,16 +134,23 @@ function generateQRCode($data, $filename) {
     }
 
     // Intentar usar TCPDF2DBarcode (más robusto contra conflictos de nombres)
+    $success = false;
     if (class_exists('TCPDF2DBarcode')) {
-        $barcodeobj = new TCPDF2DBarcode($data, 'QRCODE,M');
-        $pngData = $barcodeobj->getBarcodePngData();
-        if ($pngData) {
-            file_put_contents($filepath, $pngData);
-        } else {
-            throw new Exception("Error al generar los datos del QR con TCPDF.");
+        try {
+            $barcodeobj = new TCPDF2DBarcode($data, 'QRCODE,M');
+            $pngData = $barcodeobj->getBarcodePngData();
+            if ($pngData) {
+                if (@file_put_contents($filepath, $pngData)) {
+                    $success = true;
+                }
+            }
+        } catch (Throwable $e) {
+            error_log("Error con TCPDF2DBarcode: " . $e->getMessage());
         }
-    } else {
-        // Fallback a PHPQRCode si TCPDF2DBarcode no está disponible
+    }
+
+    if (!$success) {
+        // Fallback a PHPQRCode si TCPDF2DBarcode no está disponible o falló
         if (!class_exists('QRcode')) {
             $paths = [
                 ROOT_PATH . '/vendor/phpqrcode/phpqrcode/qrlib.php',
@@ -157,19 +164,25 @@ function generateQRCode($data, $filename) {
             }
         }
         
-        // Solo llamamos a QRcode::png si sabemos que no es el de TCPDF (que no tiene png)
         if (class_exists('QRcode') && method_exists('QRcode', 'png')) {
-            QRcode::png($data, $filepath, QR_ECLEVEL_M, 10);
-        } else {
-            throw new Exception("Error: Conflicto de librerías QR detectado. Por favor, asegúrate de que el servidor ha sido actualizado correctamente.");
+            try {
+                if (@QRcode::png($data, $filepath, QR_ECLEVEL_M, 10)) {
+                    $success = true;
+                }
+            } catch (Throwable $e) {
+                error_log("Error con QRcode local: " . $e->getMessage());
+            }
         }
     }
-    
-    if (!file_exists($filepath)) {
-        throw new Exception("Error interno: No se pudo generar el archivo de imagen QR.");
+
+    // FALLBACK FINAL: Si el servidor no tiene permisos de escritura, usamos la API de Google
+    // Esto garantiza que el flujo de compra NO SE DETENGA.
+    if (!$success || !file_exists($filepath)) {
+        $qrApiUrl = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" . urlencode($data) . "&choe=UTF-8";
+        return $qrApiUrl; // Devolvemos la URL directa de la API
     }
     
-    return $filepath;
+    return 'qrcodes/' . $filename . '.png';
 }
 
 // Enviar email con ticket
@@ -499,20 +512,33 @@ function completePurchase($data, $db) {
         }
 
         // --- IDEMPOTENCY CHECK ---
-        // Buscar tickets existentes por teléfono (más fiable que email cuando hay múltiples asistentes)
+        // Buscar tickets existentes por teléfono Y por el email principal para ser más precisos
         $existingTickets = $db->getRecentTicketsByPhone($phone, $eventId, 10);
-        if (function_exists('qLog')) qLog("[TRACE] Check Idempotencia: " . count($existingTickets) . " tickets encontrados para teléfono $phone");
-
+        
+        // Filtrar los que coincidan con el email del comprador principal para evitar falsos positivos
+        $isDuplicate = false;
         if (count($existingTickets) >= $quantity) {
-            if (function_exists('qLog')) qLog("[TRACE] Idempotencia activa: Ya existen tickets recientes (" . count($existingTickets) . "). Saltando inserción DB.");
             foreach ($existingTickets as $et) {
-                $tickets[] = [
-                    'code' => $et['ticket_code'],
-                    'qr_path' => $et['qr_code_path'],
-                    'name' => $et['attendee_name'],
-                    'email' => $et['attendee_email'],
-                    'type_name' => $et['type_name']
-                ];
+                if ($et['attendee_email'] === $primary_email) {
+                    $isDuplicate = true;
+                    break;
+                }
+            }
+        }
+
+        if ($isDuplicate) {
+            if (function_exists('qLog')) qLog("[TRACE] Idempotencia activa: Ya existen tickets recientes para este email y teléfono. Saltando inserción DB.");
+            $tickets = [];
+            foreach ($existingTickets as $et) {
+                if ($et['attendee_email'] === $primary_email) {
+                    $tickets[] = [
+                        'code' => $et['ticket_code'],
+                        'qr_path' => $et['qr_code_path'],
+                        'name' => $et['attendee_name'],
+                        'email' => $et['attendee_email'],
+                        'type_name' => $et['type_name']
+                    ];
+                }
             }
         } else {
 
@@ -549,9 +575,16 @@ function completePurchase($data, $db) {
             ];
         }
         
-        $db->updateAvailableTickets($eventId, $quantity);
+        if (!$db->updateAvailableTickets($eventId, $quantity)) {
+            if (function_exists('qLog')) qLog("[ERROR] No se pudo descontar el stock general para el evento $eventId");
+            // No lanzamos excepción aquí para no bloquear la compra si los tickets ya se crearon,
+            // pero lo logueamos para auditoría.
+        }
+
         if ($ticketTypeId) {
-            $db->updateAvailableTicketType($ticketTypeId, $quantity);
+            if (!$db->updateAvailableTicketType($ticketTypeId, $quantity)) {
+                if (function_exists('qLog')) qLog("[ERROR] No se pudo descontar el stock del tipo de ticket $ticketTypeId");
+            }
         }
         } // Fin del else de idempotencia
         
@@ -560,8 +593,16 @@ function completePurchase($data, $db) {
         // Enviar email
         $subject = "Tus tickets para " . $event['title'];
         $emailBody = generateEmailBody($event, $tickets, $primary_name, $totalPrice);
-        $pdfPath = generateTicketPDF($event, $tickets, $totalPrice);
-        if (function_exists('qLog')) qLog("[TRACE] PDF generado: " . basename($pdfPath));
+        
+        $pdfPath = null;
+        try {
+            $pdfPath = generateTicketPDF($event, $tickets, $totalPrice);
+            if (function_exists('qLog')) qLog("[TRACE] PDF generado: " . basename($pdfPath));
+        } catch (Throwable $pdfEx) {
+            error_log("Error generando PDF de tickets: " . $pdfEx->getMessage());
+            if (function_exists('qLog')) qLog("[WARNING] No se pudo generar el PDF, continuando sin adjunto.");
+        }
+
         
         // Enviar email - SMTP con fallback a mail() nativo
         $emailSent = false;

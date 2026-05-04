@@ -163,11 +163,18 @@ class TicketPDF extends TCPDF {
         $currentY += 5;
         
         // QR CODE
-        if ($ticket['qr_path'] && file_exists($ticket['qr_path'])) {
+        $qrPath = $ticket['qr_path'];
+        $isUrl = (strpos($qrPath, 'http') === 0);
+        $localPath = ROOT_PATH . '/public/' . $qrPath;
+
+        if ($qrPath && ($isUrl || file_exists($localPath))) {
+            $qrImg = $isUrl ? $qrPath : $localPath;
             $qrSize = 40;
-            $this->Image($ticket['qr_path'], $x + ($w - $qrSize)/2, $currentY, $qrSize, $qrSize, 'PNG');
+            // TCPDF Image() puede manejar URLs si allow_url_fopen está ON
+            $this->Image($qrImg, $x + ($w - $qrSize)/2, $currentY, $qrSize, $qrSize, 'PNG');
             $currentY += $qrSize + 2;
         }
+
         
         // Ticket Code
         $this->SetFont('courier', '', 8);

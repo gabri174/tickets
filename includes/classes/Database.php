@@ -413,71 +413,7 @@ class Database {
         return $this->callD1("SELECT * FROM admins WHERE email = ?", [$email], 'first');
     }
 
-    public function getPdo() {
-        return $this; // Devolvemos el mismo objeto para compatibilidad de interfaz
-    }
-
-    /**
-     * Compatibilidad con prepare() - Retorna el mismo objeto
-     */
-    private $pendingSql;
-    public function prepare($sql) {
-        $this->pendingSql = $sql;
-        return $this;
-    }
-
-    /**
-     * Compatibilidad con execute()
-     */
-    private $lastResult;
-    public function execute($params = []) {
-        // Al ejecutar, realizamos la llamada real a D1
-        $method = stripos($this->pendingSql, 'SELECT') === 0 ? 'all' : 'run';
-        $result = $this->callD1($this->pendingSql, $params, $method);
-
-        // Normalizar estructura: callD1 con 'all' devuelve ['results' => [...], 'meta' => [...]]
-        // Pero 'first' o 'run' pueden devolver datos directos
-        if ($method === 'all' && $result !== null) {
-            // Asegurar que tenga estructura results
-            if (!isset($result['results'])) {
-                $this->lastResult = ['results' => [$result], 'meta' => []];
-            } else {
-                $this->lastResult = $result;
-            }
-        } else {
-            $this->lastResult = $result;
-        }
-
-        return $this->lastResult !== null;
-    }
-
-    /**
-     * Compatibilidad con fetchAll()
-     */
-    public function fetchAll() {
-        return $this->lastResult['results'] ?? [];
-    }
-
-    /**
-     * Compatibilidad con fetch()
-     */
-    public function fetch() {
-        // En D1 'all' devuelve results como lista. fetch() en PDO devuelve el primer elemento
-        if (isset($this->lastResult['results'][0])) {
-            return $this->lastResult['results'][0];
-        }
-        // Si usamos method 'first' en callD1 directamente
-        return $this->lastResult; 
-    }
-
-    /**
-     * Compatibilidad con fetchColumn()
-     */
-    public function fetchColumn($column = 0) {
-        $row = $this->fetch();
-        if ($row && is_array($row)) {
-            $values = array_values($row);
-            return $values[$column] ?? null;
-        }
+    public function lastInsertId() {
+        return $this->lastInsertId;
     }
 }
