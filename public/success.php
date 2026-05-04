@@ -3,6 +3,18 @@ require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
 
+// ─── 1. LIMPIEZA DE URL (Anti-Cache / Legacy) ────────────────────────────
+// Si venimos con parámetros antiguos que rompen la sesión en algunos navegadores,
+// los limpiamos y dejamos que la sesión mande.
+if (isset($_GET['async_success']) && !isset($_GET['cleaned'])) {
+    $cleanUrl = 'success.php?cleaned=1';
+    // Preservamos solo el ID del evento si es necesario para el fallback
+    if (isset($_GET['event_id'])) $cleanUrl .= '&event_id=' . $_GET['event_id'];
+    header("Location: $cleanUrl");
+    exit();
+}
+
+
 $isAsync = isset($_GET['async_success']) && $_GET['async_success'] === 'true';
 
 // Si ya tenemos el éxito en la sesión, forzamos modo síncrono para mostrar tickets.
