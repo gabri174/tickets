@@ -190,7 +190,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['purchase_success'] = $result;
                 }
 
-                header('Location: success.php');
+                // Redirigimos con el email como fallback por si la sesión falla
+                $fallbackEmail = urlencode($attendees[0]['email']);
+                header("Location: success.php?event_id=$eventId&email=$fallbackEmail");
                 exit();
             } else {
                 $errors[] = 'El método de pago configurado (' . $paymentMethod . ') no está disponible. Por favor, contacta con el organizador.';

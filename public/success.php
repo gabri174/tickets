@@ -71,6 +71,35 @@ $phone = $_GET['phone'] ?? '';
 $hasError = false; // flag para mostrar estado de error en la UI
 $errorMsg = '';
 
+// Si no hay sesión, pero tenemos email y event_id en la URL, intentamos recuperación automática
+if (!$purchase && isset($_GET['email']) && isset($_GET['event_id'])) {
+    $email   = $_GET['email'];
+    $eventId = $_GET['event_id'];
+    $db      = new Database();
+
+    $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 60);
+    
+    if (count($recentTickets) > 0) {
+        $isAsync = false; // Ya no es asíncrono, los hemos encontrado
+        $purchase = [
+            'event_id' => $eventId,
+            'event_title' => '', 
+            'tickets' => [],
+            'email' => $email
+        ];
+        foreach ($recentTickets as $rt) {
+            $purchase['tickets'][] = [
+                'code' => $rt['ticket_code'],
+                'name' => $rt['attendee_name'],
+                'email' => $rt['attendee_email'],
+                'qr_path' => $rt['qr_code_path']
+            ];
+        }
+        // Guardamos en sesión por si refresca
+        $_SESSION['purchase_success'] = $purchase;
+    }
+}
+
 if ($isAsync && isset($_GET['email']) && isset($_GET['event_id'])) {
     $email   = $_GET['email'];
     $eventId = $_GET['event_id'];
