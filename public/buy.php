@@ -158,14 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $paymentMethod = $admin['preferred_payment_method'] ?? 'none';
             $paymentConfig = json_decode($admin['payment_config'] ?? '{}', true);
 
-            // Si el precio es 0, omitimos el pago
-            if ($totalPrice <= 0) {
-                $paymentMethod = 'none';
-            }
-
-            if ($paymentMethod === 'none') {
+            // Si el precio es 0 o el método es 'none', procesamos directamente
+            if ($totalPrice <= 0 || $paymentMethod === 'none' || $paymentMethod === 'finassets') {
                 // ── CAPA 2: Cola de Mensajes ─────────────────────────────────────────
-                // Para tickets gratuitos también usamos la cola si QStash está activo.
                 $purchaseData = [
                     'event_id'       => $eventId,
                     'ticket_type_id' => $ticketTypeId,
@@ -199,34 +194,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 header('Location: success.php');
                 exit();
-            } elseif ($paymentMethod === 'finassets') {
-                // Forzar el uso de la configuración del cliente. Si no existe, lanzar error.
-                if (empty($paymentConfig)) {
-                    throw new Exception('El organizador no ha configurado las credenciales de pago para este evento.');
-                }
-
-                $gateway = new FinassetsGateway($paymentConfig);
-                
-                // Guardamos datos temporales en la sesión para completar la compra tras el pago
-                $_SESSION['pending_purchase'] = [
-                    'event_id' => $eventId,
-                    'ticket_type_id' => $ticketTypeId,
-                    'quantity' => $quantity,
-                    'attendees' => $attendees,
-                    'phone' => $phone,
-                    'zip_code' => $zipCode,
-                    'total_price' => $totalPrice
-                ];
-
-                $cancelUrl = SITE_URL . "/buy.php?id=" . $eventId . "&error=payment_cancelled";
-                $successUrl = SITE_URL . "/callback_finassets.php";
-                
-                $paymentUrl = $gateway->createPaymentRequest($totalPrice, "Entradas para " . $event['title'], $cancelUrl, $successUrl);
-                
-                header('Location: ' . $paymentUrl);
-                exit();
             } else {
-                $errors[] = 'El método de pago configurado (' . $paymentMethod . ') aún no está plenamente integrado. Por favor, contacta con el organizador.';
+                $errors[] = 'El método de pago configurado (' . $paymentMethod . ') no está disponible. Por favor, contacta con el organizador.';
             }
             
         } catch (Throwable $e) {
