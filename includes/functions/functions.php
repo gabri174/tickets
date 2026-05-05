@@ -480,7 +480,7 @@ function completePurchase($data, $db) {
     if (function_exists('qLog')) qLog("[TRACE] Entrando en completePurchase [v2.2 - Proteccion Duplicados + Fallback Mail]");
     
     $eventId = $data['event_id'];
-    $ticketTypeId = $data['ticket_type_id'];
+    $ticketTypeId = (!empty($data['ticket_type_id'])) ? $data['ticket_type_id'] : null;
     $quantity = $data['quantity'];
     $attendees = $data['attendees'];
     $phone = $data['phone'];
@@ -612,10 +612,10 @@ function completePurchase($data, $db) {
             if (function_exists('qLog')) qLog("[TRACE] Iniciando envío de email a " . $primary_email);
             $emailSent = sendTicketEmail($primary_email, $subject, $emailBody, $pdfPath);
             if ($emailSent) {
-                if (function_exists('qLog')) qLog("[TRACE] Email enviado OK.");
+                if (function_exists('qLog')) qLog("[TRACE] Email enviado con éxito a $primary_email");
             } else {
                 $emailError = "El envío de email falló (SMTP y mail() nativo)";
-                if (function_exists('qLog')) qLog("[WARNING] No se pudo enviar el email a " . $primary_email);
+                if (function_exists('qLog')) qLog("[ERROR] Falló el envío de email a $primary_email");
             }
         } catch (Exception $mailEx) {
             $emailError = "Error al enviar el correo: " . $mailEx->getMessage();

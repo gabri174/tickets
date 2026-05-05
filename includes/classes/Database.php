@@ -93,9 +93,11 @@ class Database {
             return null;
         }
 
-        if (!$data || !$data['success']) {
-            $msg = $data['message'] ?? 'Fallo desconocido';
-            error_log("D1 API Error: " . $msg);
+        if (!$data || !isset($data['success']) || !$data['success']) {
+            $msg = $data['message'] ?? ($data['error'] ?? 'Fallo desconocido');
+            error_log("D1 API Error: " . $msg . " | SQL: " . substr($sql, 0, 50));
+            // Log local para auditoría si qLog existe
+            if (function_exists('qLog')) qLog("D1 API Error: " . $msg);
             return null;
         }
 
@@ -235,7 +237,8 @@ class Database {
 
     public function getRecentTicketsByEmail($email, $eventId, $minutes = 60) {
         // Usamos COLLATE NOCASE para que no importe si el email tiene mayúsculas
-        $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
+        $sql = "SELECT t.*, tt.name as type_name, e.title as event_title FROM tickets t 
+                JOIN events e ON t.event_id = e.id
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
                 WHERE t.attendee_email = ? COLLATE NOCASE AND t.event_id = ? 
                 AND t.purchase_date > datetime('now', '-' || ? || ' minutes') 
@@ -244,12 +247,15 @@ class Database {
     }
 
     public function getRecentTicketsByPhone($phone, $eventId, $minutes = 60) {
-        $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
+        // Limpiamos el teléfono de espacios y caracteres raros para la búsqueda
+        $cleanPhone = preg_replace('/[^0-9+]/', '', $phone);
+        $sql = "SELECT t.*, tt.name as type_name, e.title as event_title FROM tickets t 
+                JOIN events e ON t.event_id = e.id
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
-                WHERE t.attendee_phone = ? AND t.event_id = ? 
+                WHERE (t.attendee_phone = ? OR t.attendee_phone = ?) AND t.event_id = ? 
                 AND t.purchase_date > datetime('now', '-' || ? || ' minutes') 
                 ORDER BY t.id DESC";
-        return $this->query($sql, [$phone, $eventId, $minutes]);
+        return $this->query($sql, [$phone, $cleanPhone, $eventId, $minutes]);
     }
 
     // ─────────────────────────────────────────────

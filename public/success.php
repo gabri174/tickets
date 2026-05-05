@@ -40,9 +40,24 @@ if (isset($_GET['check_status']) && $_GET['check_status'] === '1') {
         }
 
         if (count($recentTickets) > 0) {
-            echo json_encode(['ready' => true, 'count' => count($recentTickets), 'debug' => ['email' => $email, 'phone' => $phone]]);
+            $tickets = [];
+            foreach ($recentTickets as $rt) {
+                $tickets[] = [
+                    'code' => $rt['ticket_code'],
+                    'name' => $rt['attendee_name'],
+                    'qr_path' => $rt['qr_code_path']
+                ];
+            }
+            echo json_encode([
+                'ready' => true, 
+                'purchase' => [
+                    'event_title' => $recentTickets[0]['event_title'] ?? 'Tu Evento',
+                    'tickets' => $tickets,
+                    'phone' => $phone
+                ]
+            ]);
         } else {
-            echo json_encode(['ready' => false, 'message' => 'Generando tickets...', 'debug' => ['email' => $email, 'phone' => $phone, 'event' => $eventId]]);
+            echo json_encode(['ready' => false, 'message' => 'Generando tickets...', 'debug' => ['email' => $email, 'phone' => $phone, 'event' => $eventId, 'searched' => true]]);
         }
     } else {
         echo json_encode(['error' => 'Datos incompletos', 'email' => $email, 'phone' => $phone, 'event' => $eventId]);
