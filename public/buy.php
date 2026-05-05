@@ -2,6 +2,11 @@
 require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
+
+// Forzar que el navegador no use caché para evitar versiones antiguas del flujo
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 require_once '../includes/classes/RedisCache.php';
 require_once '../includes/classes/InventoryLock.php';
 require_once '../includes/classes/QueueService.php';

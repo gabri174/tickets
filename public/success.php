@@ -3,27 +3,22 @@ require_once '../includes/config/config.php';
 require_once '../includes/functions/functions.php';
 require_once '../includes/classes/Database.php';
 
-// ─── 1. LIMPIEZA DE URL (Anti-Cache / Legacy) ────────────────────────────
-// Si venimos con parámetros antiguos que rompen la sesión en algunos navegadores,
-// los limpiamos y dejamos que la sesión mande.
-if (isset($_GET['async_success']) && !isset($_GET['cleaned'])) {
-    $cleanUrl = 'success.php?cleaned=1';
-    // Preservamos solo el ID del evento si es necesario para el fallback
-    if (isset($_GET['event_id'])) $cleanUrl .= '&event_id=' . $_GET['event_id'];
-    if (isset($_GET['email'])) $cleanUrl .= '&email=' . urlencode($_GET['email']);
-    if (isset($_GET['phone'])) $cleanUrl .= '&phone=' . urlencode($_GET['phone']);
-    
-    header("Location: $cleanUrl");
-    exit();
-}
+// Forzar que el navegador no use caché para evitar versiones antiguas del flujo
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 
-
-$isAsync = isset($_GET['async_success']) && $_GET['async_success'] === 'true';
+// ─── 1. DETERMINAR ESTADO DE LA COMPRA ────────────────────────────
+$isAsync = (isset($_GET['async_success']) && $_GET['async_success'] === 'true');
 
 // Si ya tenemos el éxito en la sesión, forzamos modo síncrono para mostrar tickets.
 if (isset($_SESSION['purchase_success']) && !empty($_SESSION['purchase_success']['tickets'])) {
+    $purchase = $_SESSION['purchase_success'];
     $isAsync = false;
+} else {
+    $purchase = null;
 }
+
 
 // --- ENDPOINT PARA POLLING DE ESTADO ---
 if (isset($_GET['check_status']) && $_GET['check_status'] === '1') {
@@ -85,7 +80,8 @@ if (!$purchase && isset($_GET['email']) && isset($_GET['event_id'])) {
     
     // Intento 2: Si falla el tiempo, buscamos los últimos del usuario para este evento sin límite (Fallback de emergencia)
     if (empty($recentTickets)) {
-        $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
+        $sql = "SELECT t.*, tt.name as type_name, e.title as event_title FROM tickets t 
+                JOIN events e ON t.event_id = e.id
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
                 WHERE t.attendee_email = ? COLLATE NOCASE AND t.event_id = ? 
                 ORDER BY t.id DESC LIMIT 5";
