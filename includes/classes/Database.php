@@ -2,6 +2,7 @@
 class Database {
     private $apiUrl;
     private $apiToken;
+    public $lastError = null;
     private $lastInsertId = null;
     
     public function __construct() {
@@ -97,6 +98,7 @@ class Database {
 
         if (!$data || !isset($data['success']) || !$data['success']) {
             $msg = $data['message'] ?? ($data['error'] ?? 'Fallo desconocido');
+            $this->lastError = $msg;
             if (function_exists('qLog')) qLog("[DATABASE ERROR] SQL: $sql | Error: $msg");
             error_log("D1 API Error: " . $msg . " | SQL: " . substr($sql, 0, 50));
             return null;

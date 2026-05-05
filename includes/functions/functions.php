@@ -560,7 +560,9 @@ function completePurchase($data, $db) {
             $success = $db->createTicket($eventId, $ticketCode, $a_name, $a_email, $phone, $qrPath, $ticketTypeId, $referral, $zipCode);
             
             if (!$success) {
-                if (function_exists('qLog')) qLog("[ERROR] Fallo al crear ticket para: " . $ticketCode);
+                $dbError = "Fallo INSERT ticket: $ticketCode | Event: $eventId | Error: " . (isset($db->lastError) ? $db->lastError : 'Unknown');
+                file_put_contents(ROOT_PATH . '/ERROR_DB.txt', "[" . date('Y-m-d H:i:s') . "] " . $dbError . "\n", FILE_APPEND);
+                if (function_exists('qLog')) qLog("[ERROR] " . $dbError);
                 throw new Exception("Error al emitir el ticket. Por favor contacte con soporte.");
             }
             

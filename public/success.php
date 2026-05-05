@@ -109,7 +109,8 @@ if (!$purchase && isset($_GET['email']) && isset($_GET['event_id'])) {
             'event_id' => $eventId,
             'event_title' => $recentTickets[0]['event_title'] ?? 'Tu Evento', 
             'tickets' => [],
-            'email' => $email
+            'email' => $email,
+            'phone' => $phone
         ];
         foreach ($recentTickets as $rt) {
             $purchase['tickets'][] = [

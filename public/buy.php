@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $paymentConfig = json_decode($admin['payment_config'] ?? '{}', true);
 
             // Si el precio es 0 o el método es 'none', procesamos directamente
-            if ($totalPrice <= 0 || $paymentMethod === 'none' || $paymentMethod === 'finassets') {
+            if ($totalPrice <= 0 || $paymentMethod === 'none') {
                 // ── CAPA 2: Cola de Mensajes ─────────────────────────────────────────
                 $purchaseData = [
                     'event_id'       => $eventId,
@@ -182,6 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'tickets'     => [], // El worker los generará asincrónicamente
                         'queued'      => true,
                         'email'       => $attendees[0]['email'],
+                        'phone'       => $phone,
                         'total_price' => $totalPrice,
                     ];
                 } else {
@@ -192,12 +193,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['purchase_success'] = $result;
                 }
 
-                // Redirigimos con el email como fallback por si la sesión falla
+                // Redirigimos sin parámetros extraños, solo los necesarios
                 $fallbackEmail = urlencode($attendees[0]['email']);
-                header("Location: success.php?event_id=$eventId&email=$fallbackEmail");
+                header("Location: success.php?event_id=$eventId&email=$fallbackEmail&phone=" . urlencode($phone));
                 exit();
             } else {
-                $errors[] = 'El método de pago configurado (' . $paymentMethod . ') no está disponible. Por favor, contacta con el organizador.';
+                $errors[] = 'El método de pago configurado (' . $paymentMethod . ') no está disponible para compras directas. Por favor, usa el flujo de pago estándar.';
             }
             
         } catch (Throwable $e) {
