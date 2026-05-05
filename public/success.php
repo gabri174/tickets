@@ -76,17 +76,27 @@ $errorMsg = '';
 
 // Si no hay sesión, pero tenemos email y event_id en la URL, intentamos recuperación automática
 if (!$purchase && isset($_GET['email']) && isset($_GET['event_id'])) {
-    $email   = $_GET['email'];
+    $email   = trim($_GET['email']);
     $eventId = $_GET['event_id'];
     $db      = new Database();
 
-    $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 60);
+    // Intento 1: Ventana de 120 minutos (muy generosa)
+    $recentTickets = $db->getRecentTicketsByEmail($email, $eventId, 120);
+    
+    // Intento 2: Si falla el tiempo, buscamos los últimos del usuario para este evento sin límite (Fallback de emergencia)
+    if (empty($recentTickets)) {
+        $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
+                LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
+                WHERE t.attendee_email = ? COLLATE NOCASE AND t.event_id = ? 
+                ORDER BY t.id DESC LIMIT 5";
+        $recentTickets = $db->query($sql, [$email, $eventId]);
+    }
     
     if (count($recentTickets) > 0) {
         $isAsync = false; // Ya no es asíncrono, los hemos encontrado
         $purchase = [
             'event_id' => $eventId,
-            'event_title' => '', 
+            'event_title' => $recentTickets[0]['event_title'] ?? 'Tu Evento', 
             'tickets' => [],
             'email' => $email
         ];
@@ -95,7 +105,8 @@ if (!$purchase && isset($_GET['email']) && isset($_GET['event_id'])) {
                 'code' => $rt['ticket_code'],
                 'name' => $rt['attendee_name'],
                 'email' => $rt['attendee_email'],
-                'qr_path' => $rt['qr_code_path']
+                'qr_path' => $rt['qr_code_path'],
+                'type_name' => $rt['type_name'] ?? 'General'
             ];
         }
         // Guardamos en sesión por si refresca

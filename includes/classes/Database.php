@@ -233,17 +233,17 @@ class Database {
         return $this->callD1($sql, [$code], 'first');
     }
 
-    public function getRecentTicketsByEmail($email, $eventId, $minutes = 30) {
-        // Aumentamos el margen a 30 minutos para evitar problemas de sincronización de reloj
+    public function getRecentTicketsByEmail($email, $eventId, $minutes = 60) {
+        // Usamos COLLATE NOCASE para que no importe si el email tiene mayúsculas
         $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
-                WHERE t.attendee_email = ? AND t.event_id = ? 
+                WHERE t.attendee_email = ? COLLATE NOCASE AND t.event_id = ? 
                 AND t.purchase_date > datetime('now', '-' || ? || ' minutes') 
                 ORDER BY t.id DESC";
         return $this->query($sql, [$email, $eventId, $minutes]);
     }
 
-    public function getRecentTicketsByPhone($phone, $eventId, $minutes = 30) {
+    public function getRecentTicketsByPhone($phone, $eventId, $minutes = 60) {
         $sql = "SELECT t.*, tt.name as type_name FROM tickets t 
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id 
                 WHERE t.attendee_phone = ? AND t.event_id = ? 
