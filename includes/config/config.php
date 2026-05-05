@@ -166,14 +166,23 @@ date_default_timezone_set('Europe/Madrid');
 // Entorno (development / production)
 // ──────────────────────────────────────────────────────────────────────
 
-if (!defined('APP_ENV')) define('APP_ENV', 'production');
+if (!defined('APP_ENV')) define('APP_ENV', 'development');
 
 if (APP_ENV === 'development') {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
 } else {
-    error_reporting(0);
-    ini_set('display_errors', 0);
+    error_reporting(E_ALL); // Cambiamos temporalmente para auditar
+    ini_set('display_errors', 1);
+}
+
+/**
+ * Función de log personalizada para auditoría de tickets
+ */
+function qLog($message) {
+    $logFile = ROOT_PATH . '/logs_compra.txt';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
 }
 
 // ──────────────────────────────────────────────────────────────────────

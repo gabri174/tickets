@@ -89,15 +89,16 @@ class Database {
 
         $data = json_decode($response, true);
         if ($httpCode !== 200) {
-            error_log("D1 Proxy Error: HTTP " . $httpCode . " - " . ($data['message'] ?? 'Sin mensaje'));
+            $errorMsg = $data['message'] ?? 'Sin mensaje';
+            if (function_exists('qLog')) qLog("[DATABASE ERROR] HTTP $httpCode: $errorMsg | SQL: $sql");
+            error_log("D1 Proxy Error: HTTP " . $httpCode . " - " . $errorMsg);
             return null;
         }
 
         if (!$data || !isset($data['success']) || !$data['success']) {
             $msg = $data['message'] ?? ($data['error'] ?? 'Fallo desconocido');
+            if (function_exists('qLog')) qLog("[DATABASE ERROR] SQL: $sql | Error: $msg");
             error_log("D1 API Error: " . $msg . " | SQL: " . substr($sql, 0, 50));
-            // Log local para auditoría si qLog existe
-            if (function_exists('qLog')) qLog("D1 API Error: " . $msg);
             return null;
         }
 
@@ -215,6 +216,10 @@ class Database {
     // ─────────────────────────────────────────────
 
     public function createTicket($eventId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $ticketTypeId = null, $referral = null, $zipCode = null) {
+        // Asegurar que los IDs sean NULL si vienen vacíos o como 0 (evita fallos de FK en D1)
+        $ticketTypeId = (!empty($ticketTypeId)) ? $ticketTypeId : null;
+        $eventId = (!empty($eventId)) ? $eventId : null;
+
         $sql = "INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path, referral, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $res = $this->callD1($sql, [$eventId, $ticketTypeId, $ticketCode, $attendeeName, $attendeeEmail, $attendeePhone, $qrPath, $referral, $zipCode], 'run');
         return $res !== null;
