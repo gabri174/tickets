@@ -22,49 +22,6 @@ if (!defined('APP_ENV') || APP_ENV !== 'production') {
 // Ocultar versión de PHP
 ini_set('expose_php', 'off');
 
-// Configuración de Sesión (Debe ser lo primero)
-if (session_status() === PHP_SESSION_NONE) {
-    // Detectar si estamos en HTTPS (añadimos más checks para proxies comunes)
-    $isSecure = (
-        (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1)) ||
-        (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
-        (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') ||
-        (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
-        (strpos(SITE_URL, 'https://') === 0) // Si SITE_URL es https, forzamos
-    );
-    
-    // Configurar cookies seguras
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'domain' => '',
-        'secure' => $isSecure,
-        'httponly' => true,
-        'samesite' => 'Lax' // Volvemos a Lax (estándar) para máxima compatibilidad interna
-    ]);
-
-
-
-    // Iniciar sesión con configuración de seguridad
-    session_start();
-
-    // Regenerar ID de sesión periódicamente para prevenir session fixation
-    if (!isset($_SESSION['_created'])) {
-        $_SESSION['_created'] = time();
-    } elseif (time() - $_SESSION['_created'] > 1800) { // 30 minutos
-        session_regenerate_id(true);
-        $_SESSION['_created'] = time();
-    }
-
-    // Timeout de sesión después de 2 horas de inactividad
-    if (isset($_SESSION['_last_activity']) && (time() - $_SESSION['_last_activity'] > 7200)) {
-        session_unset();
-        session_destroy();
-        session_start();
-    }
-    $_SESSION['_last_activity'] = time();
-}
-
 // ──────────────────────────────────────────────────────────────────────
 // Carga de variables de entorno desde .env
 // ──────────────────────────────────────────────────────────────────────
@@ -97,7 +54,7 @@ function loadEnv($path) {
     return true;
 }
 
-// Cargar .env desde la raíz del proyecto (probando varias rutas comunes)
+// Cargar .env desde la raíz del proyecto
 $possiblePaths = [
     dirname(__DIR__, 2) . '/.env',
     $_SERVER['DOCUMENT_ROOT'] . '/.env',
@@ -111,6 +68,53 @@ foreach ($possiblePaths as $path) {
         break;
     }
 }
+
+// Valores por defecto críticos
+if (!defined('SITE_URL')) define('SITE_URL', 'http://localhost');
+if (!defined('APP_ENV')) define('APP_ENV', 'development');
+
+// Configuración de Sesión (Debe ser lo primero después de cargar el entorno)
+if (session_status() === PHP_SESSION_NONE) {
+    // Detectar si estamos en HTTPS (añadimos más checks para proxies comunes)
+    $isSecure = (
+        (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1)) ||
+        (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+        (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') ||
+        (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
+        (defined('SITE_URL') && strpos(SITE_URL, 'https://') === 0)
+    );
+    
+    // Configurar cookies seguras
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $isSecure,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+
+    // Iniciar sesión con configuración de seguridad
+    session_start();
+
+    // Regenerar ID de sesión periódicamente para prevenir session fixation
+    if (!isset($_SESSION['_created'])) {
+        $_SESSION['_created'] = time();
+    } elseif (time() - $_SESSION['_created'] > 1800) { // 30 minutos
+        session_regenerate_id(true);
+        $_SESSION['_created'] = time();
+    }
+
+    // Timeout de sesión después de 2 horas de inactividad
+    if (isset($_SESSION['_last_activity']) && (time() - $_SESSION['_last_activity'] > 7200)) {
+        session_unset();
+        session_destroy();
+        session_start();
+    }
+    $_SESSION['_last_activity'] = time();
+}
+
+// El entorno y SITE_URL ya han sido cargados al inicio del archivo
 
 // ──────────────────────────────────────────────────────────────────────
 // Cloudflare D1 (Proxy API)
@@ -126,7 +130,6 @@ $pdo = null;
 // Configuración del sitio
 // ──────────────────────────────────────────────────────────────────────
 
-if (!defined('SITE_URL')) define('SITE_URL', 'http://localhost');
 if (!defined('SITE_NAME')) define('SITE_NAME', 'Tickets - Sistema de Ventas');
 if (!defined('ADMIN_EMAIL')) define('ADMIN_EMAIL', 'admin@tickets.com');
 
@@ -162,11 +165,7 @@ define('SALT_LENGTH', 32);
 
 date_default_timezone_set('Europe/Madrid');
 
-// ──────────────────────────────────────────────────────────────────────
-// Entorno (development / production)
-// ──────────────────────────────────────────────────────────────────────
-
-if (!defined('APP_ENV')) define('APP_ENV', 'development');
+// APP_ENV ya ha sido cargado/definido al inicio del archivo
 
 if (APP_ENV === 'development') {
     error_reporting(E_ALL);

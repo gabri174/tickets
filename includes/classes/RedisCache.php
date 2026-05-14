@@ -59,7 +59,7 @@ class RedisCache {
             CURLOPT_TIMEOUT        => 1, // 1 segundo max para no bloquear
         ]);
         $raw = curl_exec($ch);
-        curl_close($ch);
+        @curl_close($ch);
         if (!$raw) return null;
         $data = json_decode($raw, true);
         return $data['result'] ?? null;
@@ -81,7 +81,7 @@ class RedisCache {
             CURLOPT_TIMEOUT       => 1,
         ]);
         curl_exec($ch);
-        curl_close($ch);
+        @curl_close($ch);
         return true;
     }
 
@@ -101,7 +101,7 @@ class RedisCache {
             CURLOPT_TIMEOUT => 2,
         ]);
         $raw = curl_exec($ch);
-        curl_close($ch);
+        @curl_close($ch);
         $data = json_decode($raw, true);
         return $data['result'] ?? null;
     }

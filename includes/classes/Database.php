@@ -86,9 +86,10 @@ class Database {
         }
 
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        @curl_close($ch);
 
         $data = json_decode($response, true);
+        
         if ($httpCode !== 200) {
             $errorMsg = $data['message'] ?? 'Sin mensaje';
             if (function_exists('qLog')) qLog("[DATABASE ERROR] HTTP $httpCode: $errorMsg | SQL: $sql");

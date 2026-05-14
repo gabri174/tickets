@@ -59,7 +59,7 @@ class QueueService {
         ]);
         $raw      = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        @curl_close($ch);
 
         if ($httpCode >= 200 && $httpCode < 300) {
             $response = json_decode($raw, true);

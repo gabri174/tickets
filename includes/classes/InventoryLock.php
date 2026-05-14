@@ -69,7 +69,7 @@ LUA;
             CURLOPT_TIMEOUT => 2,
         ]);
         $raw = curl_exec($ch);
-        curl_close($ch);
+        @curl_close($ch);
         $data = json_decode($raw, true);
         return (int)($data['result'] ?? 0);
     }
@@ -91,7 +91,7 @@ LUA;
                     CURLOPT_TIMEOUT        => 2,
                 ]);
                 curl_exec($ch);
-                curl_close($ch);
+                @curl_close($ch);
             } else {
                 $client = $this->cache->getClient();
                 if ($client) $client->incrby($key, $quantity);
