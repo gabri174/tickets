@@ -8,6 +8,7 @@ logs/
 *.log
 error.log
 access.log
+logs_compra.txt
 
 # Archivos temporales
 tmp/
