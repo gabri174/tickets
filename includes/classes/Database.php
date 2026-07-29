@@ -99,8 +99,10 @@ class Database
 
         if ($response === false) {
             $this->lastError = 'Error de conexión con D1';
-            if (function_exists('qLog')) qLog('[DATABASE ERROR] Error de conexión con D1');
-            error_log('D1 Proxy Error: Error de conexión');
+            if (function_exists('qLog')) {
+                qLog('[DATABASE ERROR] Error de conexión con D1');
+            }
+            error_log('D1 Proxy Error: ' . $curlError);
             return null;
         }
 
@@ -149,6 +151,10 @@ class Database
             return $res['results'] ?? [];
         }
 
+        if ($method === 'first') {
+            return $res['results'][0] ?? $res;
+        }
+
         return $res;
     }
 
@@ -156,6 +162,15 @@ class Database
     {
         $res = $this->callD1($sql, $params, 'run');
         return $res !== null;
+    }
+
+    private function runWithChanges($sql, $params = [])
+    {
+        $res = $this->callD1($sql, $params, 'run');
+        if ($res === null) {
+            return 0;
+        }
+        return (int) ($res['meta']['changes'] ?? 0);
     }
 
     private function changedRows($runResult)
@@ -214,14 +229,14 @@ class Database
                 return null;
             }
 
-            return $this->callD1(
-                "SELECT * FROM events WHERE id = ? AND status = 'active' AND admin_id = ?",
+            return $this->query(
+                "SELECT * FROM events WHERE id = ? AND admin_id = ?",
                 [$id, $adminId],
                 'first'
             );
         }
 
-        return $this->callD1("SELECT * FROM events WHERE id = ?", [$id], 'first');
+        return $this->query("SELECT * FROM events WHERE id = ?", [$id], 'first');
     }
 
     public function createEvent($title, $description, $dateEvent, $location, $price, $maxTickets, $imageUrl = null, $adminId = 1, $category = 'otros', $seoTitle = null, $seoDescription = null, $seoKeywords = null)
@@ -230,7 +245,8 @@ class Database
         $maxTickets = $this->normalizePositiveInt($maxTickets, 1);
         $price = (float) $price;
 
-        $sql = "INSERT INTO events (title, description, date_event, location, price, max_tickets, available_tickets, image_url, admin_id, category, seo_title, seo_description, seo_keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO events (title, description, date_event, location, price, max_tickets, available_tickets, image_url, admin_id, category, seo_title, seo_description, seo_keywords)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $res = $this->callD1($sql, [
             $this->normalizeString($title, 255),
             $this->normalizeString($description),
@@ -266,7 +282,9 @@ class Database
                 return false;
             }
 
-            $sql = "UPDATE events SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=? WHERE id=? AND admin_id=?";
+            $sql = "UPDATE events
+                    SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=?
+                    WHERE id=? AND admin_id=?";
             $params = [
                 $this->normalizeString($title, 255),
                 $this->normalizeString($description),
@@ -283,7 +301,9 @@ class Database
                 $adminId,
             ];
         } else {
-            $sql = "UPDATE events SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=? WHERE id=?";
+            $sql = "UPDATE events
+                    SET title=?, description=?, date_event=?, location=?, price=?, max_tickets=?, image_url=?, category=?, seo_title=?, seo_description=?, seo_keywords=?
+                    WHERE id=?";
             $params = [
                 $this->normalizeString($title, 255),
                 $this->normalizeString($description),
@@ -374,7 +394,7 @@ class Database
             return null;
         }
 
-        return $this->callD1("SELECT * FROM ticket_types WHERE id = ?", [$id], 'first');
+        return $this->query("SELECT * FROM ticket_types WHERE id = ?", [$id], 'first');
     }
 
     public function createTicketType($eventId, $name, $description, $price, $maxTickets, $sortOrder = 0)
@@ -384,14 +404,17 @@ class Database
             return false;
         }
 
-        $sql = "INSERT INTO ticket_types (event_id, name, description, price, max_tickets, available_tickets, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $maxTickets = $this->normalizePositiveInt($maxTickets, 1);
+
+        $sql = "INSERT INTO ticket_types (event_id, name, description, price, max_tickets, available_tickets, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
         return $this->run($sql, [
             $eventId,
             $this->normalizeString($name, 255),
             $this->normalizeString($description),
             (float) $price,
-            $this->normalizePositiveInt($maxTickets, 1),
-            $this->normalizePositiveInt($maxTickets, 1),
+            $maxTickets,
+            $maxTickets,
             (int) $sortOrder,
         ]);
     }
@@ -403,12 +426,27 @@ class Database
             return false;
         }
 
-        $sql = "UPDATE ticket_types SET name=?, description=?, price=?, max_tickets=?, sort_order=? WHERE id=?";
+        $current = $this->getTicketTypeById($id);
+        if (!$current) {
+            return false;
+        }
+
+        $newMax = $this->normalizePositiveInt($maxTickets, 1);
+        $oldMax = (int) ($current['max_tickets'] ?? 0);
+        $oldAvailable = (int) ($current['available_tickets'] ?? 0);
+        $sold = max(0, $oldMax - $oldAvailable);
+        $newAvailable = max(0, $newMax - $sold);
+
+        $sql = "UPDATE ticket_types
+                SET name=?, description=?, price=?, max_tickets=?, available_tickets=?, sort_order=?
+                WHERE id=?";
+
         return $this->run($sql, [
             $this->normalizeString($name, 255),
             $this->normalizeString($description),
             (float) $price,
-            $this->normalizePositiveInt($maxTickets, 1),
+            $newMax,
+            $newAvailable,
             (int) $sortOrder,
             $id,
         ]);
@@ -434,7 +472,9 @@ class Database
         }
 
         $res = $this->callD1(
-            "UPDATE ticket_types SET available_tickets = available_tickets - ? WHERE id = ? AND available_tickets >= ?",
+            "UPDATE ticket_types
+             SET available_tickets = available_tickets - ?
+             WHERE id = ? AND available_tickets >= ?",
             [$quantity, $typeId, $quantity],
             'run'
         );
@@ -454,7 +494,8 @@ class Database
             return false;
         }
 
-        $sql = "INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path, referral, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO tickets (event_id, ticket_type_id, ticket_code, attendee_name, attendee_email, attendee_phone, qr_code_path, referral, zip_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $res = $this->callD1($sql, [
             $eventId,
             $ticketTypeId,
@@ -480,7 +521,9 @@ class Database
         }
 
         $res = $this->callD1(
-            "UPDATE events SET available_tickets = available_tickets - ? WHERE id = ? AND available_tickets >= ?",
+            "UPDATE events
+             SET available_tickets = available_tickets - ?
+             WHERE id = ? AND available_tickets >= ?",
             [$quantity, $eventId, $quantity],
             'run'
         );
@@ -495,7 +538,12 @@ class Database
             return [];
         }
 
-        $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE t.event_id = ? ORDER BY t.purchase_date DESC";
+        $sql = "SELECT t.*, e.title as event_title
+                FROM tickets t
+                JOIN events e ON t.event_id = e.id
+                WHERE t.event_id = ?
+                ORDER BY t.purchase_date DESC";
+
         return $this->query($sql, [$eventId]);
     }
 
@@ -506,8 +554,13 @@ class Database
             return null;
         }
 
-        $sql = "SELECT t.*, e.title as event_title, e.date_event, e.location, e.image_url, tt.name as ticket_type_name FROM tickets t JOIN events e ON t.event_id = e.id LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id WHERE t.ticket_code = ?";
-        return $this->callD1($sql, [$code], 'first');
+        $sql = "SELECT t.*, e.title as event_title, e.date_event, e.location, e.image_url, tt.name as ticket_type_name
+                FROM tickets t
+                JOIN events e ON t.event_id = e.id
+                LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id
+                WHERE t.ticket_code = ?";
+
+        return $this->query($sql, [$code], 'first');
     }
 
     public function getRecentTicketsByEmail($email, $eventId, $minutes = 60)
@@ -520,11 +573,13 @@ class Database
             return [];
         }
 
-        $sql = "SELECT t.*, tt.name as type_name, e.title as event_title FROM tickets t
+        $sql = "SELECT t.*, tt.name as type_name, e.title as event_title
+                FROM tickets t
                 JOIN events e ON t.event_id = e.id
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id
-                WHERE t.attendee_email = ? COLLATE NOCASE AND t.event_id = ?
-                AND t.purchase_date > datetime('now', '-' || ? || ' minutes')
+                WHERE t.attendee_email = ? COLLATE NOCASE
+                  AND t.event_id = ?
+                  AND t.purchase_date > datetime('now', '-' || ? || ' minutes')
                 ORDER BY t.id DESC";
 
         return $this->query($sql, [$email, $eventId, $minutes]);
@@ -540,14 +595,16 @@ class Database
             return [];
         }
 
-        $sql = "SELECT t.*, tt.name as type_name, e.title as event_title FROM tickets t
+        $sql = "SELECT t.*, tt.name as type_name, e.title as event_title
+                FROM tickets t
                 JOIN events e ON t.event_id = e.id
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id
-                WHERE (t.attendee_phone = ? OR t.attendee_phone = ?) AND t.event_id = ?
-                AND t.purchase_date > datetime('now', '-' || ? || ' minutes')
+                WHERE t.attendee_phone = ?
+                  AND t.event_id = ?
+                  AND t.purchase_date > datetime('now', '-' || ? || ' minutes')
                 ORDER BY t.id DESC";
 
-        return $this->query($sql, [$phone, $phone, $eventId, $minutes]);
+        return $this->query($sql, [$phone, $eventId, $minutes]);
     }
 
     // ============================================================
@@ -560,17 +617,27 @@ class Database
             return false;
         }
 
-        $admin = $this->callD1(
+        $admin = $this->query(
             "SELECT * FROM admins WHERE username = ? OR email = ?",
             [$login, $this->normalizeEmail($login)],
             'first'
         );
 
-        if ($admin && isset($admin['password']) && password_verify($password, $admin['password'])) {
-            return $admin;
+        if (!$admin || empty($admin['password'])) {
+            return false;
         }
 
-        return false;
+        if (!password_verify($password, $admin['password'])) {
+            return false;
+        }
+
+        if (password_needs_rehash($admin['password'], PASSWORD_DEFAULT)) {
+            $newHash = password_hash($password, PASSWORD_DEFAULT);
+            $this->run("UPDATE admins SET password = ? WHERE id = ?", [$newHash, (int) $admin['id']]);
+            $admin['password'] = $newHash;
+        }
+
+        return $admin;
     }
 
     public function getLoginAttempts($login)
@@ -580,7 +647,7 @@ class Database
             return null;
         }
 
-        return $this->callD1(
+        return $this->query(
             "SELECT login_attempts, last_login_attempt FROM admins WHERE username = ? OR email = ?",
             [$login, $this->normalizeEmail($login)],
             'first'
@@ -594,7 +661,11 @@ class Database
             return false;
         }
 
-        $sql = "UPDATE admins SET login_attempts = login_attempts + 1, last_login_attempt = datetime('now') WHERE username = ? OR email = ?";
+        $sql = "UPDATE admins
+                SET login_attempts = login_attempts + 1,
+                    last_login_attempt = datetime('now')
+                WHERE username = ? OR email = ?";
+
         return $this->run($sql, [$login, $this->normalizeEmail($login)]);
     }
 
@@ -605,7 +676,11 @@ class Database
             return false;
         }
 
-        $sql = "UPDATE admins SET login_attempts = 0, last_login_attempt = NULL WHERE username = ? OR email = ?";
+        $sql = "UPDATE admins
+                SET login_attempts = 0,
+                    last_login_attempt = NULL
+                WHERE username = ? OR email = ?";
+
         return $this->run($sql, [$login, $this->normalizeEmail($login)]);
     }
 
@@ -619,7 +694,7 @@ class Database
             return false;
         }
 
-        $existing = $this->callD1(
+        $existing = $this->query(
             "SELECT id FROM admins WHERE username = ? OR email = ?",
             [$username, $email],
             'first'
@@ -643,7 +718,7 @@ class Database
             return null;
         }
 
-        return $this->callD1("SELECT * FROM admins WHERE id = ?", [$id], 'first');
+        return $this->query("SELECT * FROM admins WHERE id = ?", [$id], 'first');
     }
 
     public function getAdminByEmail($email)
@@ -653,7 +728,7 @@ class Database
             return null;
         }
 
-        return $this->callD1("SELECT * FROM admins WHERE email = ?", [$email], 'first');
+        return $this->query("SELECT * FROM admins WHERE email = ?", [$email], 'first');
     }
 
     public function updateAdminProfile($id, $data)
@@ -672,6 +747,7 @@ class Database
             'avatar',
             'bio',
             'verification_code',
+            'verification_code_created_at',
             'is_verified',
             'login_attempts',
             'last_login_attempt',
@@ -712,6 +788,7 @@ class Database
                     break;
 
                 case 'last_login_attempt':
+                case 'verification_code_created_at':
                     $value = $value ? $this->normalizeString($value, 50) : null;
                     break;
 
@@ -753,9 +830,12 @@ class Database
             return false;
         }
 
+        $tokenHash = hash('sha256', $token);
+
         $this->callD1("DELETE FROM password_resets WHERE email = ?", [$email], 'run');
-        $sql = "INSERT INTO password_resets (email, token) VALUES (?, ?)";
-        return $this->run($sql, [$email, $token]);
+
+        $sql = "INSERT INTO password_resets (email, token, created_at) VALUES (?, ?, datetime('now'))";
+        return $this->run($sql, [$email, $tokenHash]);
     }
 
     public function getPasswordReset($token)
@@ -765,8 +845,15 @@ class Database
             return null;
         }
 
-        $sql = "SELECT * FROM password_resets WHERE token = ? AND created_at > datetime('now', '-1 hour')";
-        return $this->callD1($sql, [$token], 'first');
+        $tokenHash = hash('sha256', $token);
+
+        $sql = "SELECT *
+                FROM password_resets
+                WHERE token = ?
+                  AND created_at > datetime('now', '-1 hour')
+                LIMIT 1";
+
+        return $this->query($sql, [$tokenHash], 'first');
     }
 
     public function deletePasswordReset($email)
@@ -796,11 +883,14 @@ class Database
         $adminId = $this->normalizeId($adminId);
         $code = $this->normalizeString($code, 64);
 
-        if ($adminId === null || $code === '') {
+        if ($adminId === null || !preg_match('/^\d{6}$/', $code)) {
             return false;
         }
 
-        $sql = "UPDATE admins SET verification_code = ?, is_verified = 0 WHERE id = ?";
+        $sql = "UPDATE admins
+                SET verification_code = ?, verification_code_created_at = datetime('now'), is_verified = 0
+                WHERE id = ?";
+
         return $this->run($sql, [$code, $adminId]);
     }
 
@@ -809,12 +899,19 @@ class Database
         $adminId = $this->normalizeId($adminId);
         $code = $this->normalizeString($code, 64);
 
-        if ($adminId === null || $code === '') {
+        if ($adminId === null || !preg_match('/^\d{6}$/', $code)) {
             return false;
         }
 
         $res = $this->callD1(
-            "UPDATE admins SET is_verified = 1, verification_code = NULL WHERE id = ? AND verification_code = ?",
+            "UPDATE admins
+             SET is_verified = 1,
+                 verification_code = NULL,
+                 verification_code_created_at = NULL
+             WHERE id = ?
+               AND verification_code = ?
+               AND verification_code_created_at > datetime('now', '-15 minutes')
+               AND is_verified = 0",
             [$adminId, $code],
             'run'
         );
@@ -833,11 +930,20 @@ class Database
                 return [];
             }
 
-            $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ? ORDER BY t.purchase_date DESC";
+            $sql = "SELECT t.*, e.title as event_title
+                    FROM tickets t
+                    JOIN events e ON t.event_id = e.id
+                    WHERE e.admin_id = ?
+                    ORDER BY t.purchase_date DESC";
+
             return $this->query($sql, [$adminId]);
         }
 
-        $sql = "SELECT t.*, e.title as event_title FROM tickets t JOIN events e ON t.event_id = e.id ORDER BY t.purchase_date DESC";
+        $sql = "SELECT t.*, e.title as event_title
+                FROM tickets t
+                JOIN events e ON t.event_id = e.id
+                ORDER BY t.purchase_date DESC";
+
         return $this->query($sql);
     }
 
@@ -849,7 +955,11 @@ class Database
                 return 0;
             }
 
-            $sql = "SELECT COUNT(t.id) as total FROM tickets t JOIN events e ON t.event_id = e.id WHERE e.admin_id = ?";
+            $sql = "SELECT COUNT(t.id) as total
+                    FROM tickets t
+                    JOIN events e ON t.event_id = e.id
+                    WHERE e.admin_id = ?";
+
             $res = $this->query($sql, [$adminId], 'first');
         } else {
             $sql = "SELECT COUNT(*) as total FROM tickets";
@@ -886,7 +996,7 @@ class Database
             return false;
         }
 
-        $allowedStatuses = ['active', 'used', 'cancelled', 'refunded', 'pending'];
+        $allowedStatuses = ['valid', 'used', 'cancelled'];
         if (!in_array($status, $allowedStatuses, true)) {
             return false;
         }
@@ -897,7 +1007,11 @@ class Database
                 return false;
             }
 
-            $sql = "UPDATE tickets SET status = ? WHERE id = ? AND event_id IN (SELECT id FROM events WHERE admin_id = ?)";
+            $sql = "UPDATE tickets
+                    SET status = ?
+                    WHERE id = ?
+                      AND event_id IN (SELECT id FROM events WHERE admin_id = ?)";
+
             $res = $this->callD1($sql, [$status, $id, $adminId], 'run');
             return $res !== null && $this->changedRows($res) > 0;
         }
@@ -919,7 +1033,7 @@ class Database
                 LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id
                 WHERE t.id = ?";
 
-        return $this->callD1($sql, [$id], 'first');
+        return $this->query($sql, [$id], 'first');
     }
 
     public function updateTicketData($id, $name, $email, $phone, $adminId = null)
@@ -939,8 +1053,11 @@ class Database
                 return false;
             }
 
-            $sql = "UPDATE tickets SET attendee_name = ?, attendee_email = ?, attendee_phone = ?
-                    WHERE id = ? AND event_id IN (SELECT id FROM events WHERE admin_id = ?)";
+            $sql = "UPDATE tickets
+                    SET attendee_name = ?, attendee_email = ?, attendee_phone = ?
+                    WHERE id = ?
+                      AND event_id IN (SELECT id FROM events WHERE admin_id = ?)";
+
             $res = $this->callD1($sql, [$name, $email, $phone, $id, $adminId], 'run');
             return $res !== null && $this->changedRows($res) > 0;
         }
