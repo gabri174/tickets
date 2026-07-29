@@ -26,6 +26,10 @@ if ($eventId <= 0) {
     exit();
 }
 
+if (empty($_SESSION['purchase_token'])) {
+    $_SESSION['purchase_token'] = bin2hex(random_bytes(16));
+}
+
 // Evento desde caché
 $event = $cache->getEvent($eventId);
 if (!$event) {
@@ -52,7 +56,9 @@ try {
     $ipHash = hash('sha256', $rawIp);
     $db->trackVisit($eventId, $sessionId, $ipHash);
 } catch (Throwable $e) {
-    if (function_exists('qLog')) qLog('[WARNING] trackVisit falló: ' . $e->getMessage());
+    if (function_exists('qLog')) {
+        qLog('[WARNING] trackVisit falló: ' . $e->getMessage());
+    }
 }
 
 $ticketTypes = $cache->getTicketTypes($eventId);
@@ -71,6 +77,15 @@ $attendeesValue = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_valid_csrf('buy_ticket', 'csrf_token', true);
+
+    $purchaseToken = trim((string) ($_POST['purchase_token'] ?? ''));
+    if (
+        $purchaseToken === '' ||
+        !isset($_SESSION['purchase_token']) ||
+        !hash_equals($_SESSION['purchase_token'], $purchaseToken)
+    ) {
+        $errors[] = 'La solicitud de compra no es válida o ya ha sido procesada.';
+    }
 
     if (!checkRateLimit('buy_ticket', 10, 300)) {
         $errors[] = 'Has realizado demasiados intentos. Espera unos minutos antes de volver a intentarlo.';
@@ -200,6 +215,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$inventoryBlocked && empty($errors)) {
             try {
+                if ($db->purchaseRequestExists($purchaseToken)) {
+                    $fallbackEmail = urlencode($attendeesValue[0]['email'] ?? '');
+                    header('Location: success.php?event_id=' . $eventId . '&email=' . $fallbackEmail . '&phone=' . urlencode($phone) . '&duplicate=1');
+                    exit();
+                }
+
+                $registeredRequest = $db->createPurchaseRequest(
+                    $purchaseToken,
+                    $eventId,
+                    $attendeesValue[0]['email'] ?? null
+                );
+
+                if (!$registeredRequest) {
+                    $fallbackEmail = urlencode($attendeesValue[0]['email'] ?? '');
+                    header('Location: success.php?event_id=' . $eventId . '&email=' . $fallbackEmail . '&phone=' . urlencode($phone) . '&duplicate=1');
+                    exit();
+                }
+
                 $purchaseData = [
                     'event_id'       => $eventId,
                     'ticket_type_id' => $ticketTypeId,
@@ -209,6 +242,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'zip_code'       => $zipCode,
                     'total_price'    => $totalPrice,
                     'referral'       => $_SESSION['referral'] ?? null,
+                    'purchase_token' => $purchaseToken,
+                    'ticket_type_name' => $ticketTypeName,
                 ];
 
                 // De momento solo compra directa / gratuita
@@ -233,6 +268,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $_SESSION['purchase_success'] = $result;
                     }
+
+                    unset($_SESSION['purchase_token']);
+                    $_SESSION['purchase_token'] = bin2hex(random_bytes(16));
 
                     $fallbackEmail = urlencode($attendeesValue[0]['email'] ?? '');
                     header('Location: success.php?event_id=' . $eventId . '&email=' . $fallbackEmail . '&phone=' . urlencode($phone));
@@ -353,6 +391,7 @@ require_once '../includes/partials/header.php';
     <div class="lg:col-span-2">
         <form method="POST" action="" id="purchaseForm" class="space-y-6" novalidate>
             <?php echo csrf_field('buy_ticket'); ?>
+            <input type="hidden" name="purchase_token" value="<?php echo htmlspecialchars($_SESSION['purchase_token'], ENT_QUOTES, 'UTF-8'); ?>">
 
             <?php if (!empty($errors)): ?>
                 <div class="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm mb-6">
@@ -457,9 +496,9 @@ require_once '../includes/partials/header.php';
                         <span class="text-4xl font-black text-white" id="totalPrice"><?php echo htmlspecialchars(formatCurrency($event['price']), ENT_QUOTES, 'UTF-8'); ?></span>
                     </div>
 
-                    <button type="submit" class="btn-modern btn-lime w-full text-lg py-5 shadow-lg shadow-lime-400/10">
+                    <button type="submit" id="submitButton" class="btn-modern btn-lime w-full text-lg py-5 shadow-lg shadow-lime-400/10">
                         <i class="fas <?php echo ((float) ($event['price'] ?? 0) > 0) ? 'fa-credit-card' : 'fa-check-circle'; ?> mr-3"></i>
-                        <?php echo ((float) ($event['price'] ?? 0) > 0) ? 'Proceder al pago' : 'Confirmar mi plaza'; ?>
+                        <span class="btn-text"><?php echo ((float) ($event['price'] ?? 0) > 0) ? 'Proceder al pago' : 'Confirmar mi plaza'; ?></span>
                     </button>
 
                     <p class="text-center text-[10px] text-gray-500 mt-6 flex items-center justify-center gap-2">
@@ -482,6 +521,8 @@ const attendeesContainer = document.getElementById('attendeesContainer');
 const totalPriceElement = document.getElementById('totalPrice');
 const unitPriceDisplay = document.getElementById('unitPriceDisplay');
 const typeRadios = document.querySelectorAll('.ticket-type-radio');
+const purchaseForm = document.getElementById('purchaseForm');
+const submitButton = document.getElementById('submitButton');
 
 const attendeesValue = <?php echo json_encode($attendeesValue, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 let currentUnitPrice = <?php echo json_encode((float) ($event['price'] ?? 0)); ?>;
@@ -565,6 +606,19 @@ function escapeHtml(value) {
 
 quantityInput.addEventListener('input', updateAttendeeFields);
 typeRadios.forEach(radio => radio.addEventListener('change', updatePrices));
+
+if (purchaseForm && submitButton) {
+    purchaseForm.addEventListener('submit', function () {
+        submitButton.disabled = true;
+        submitButton.classList.add('opacity-60', 'cursor-not-allowed');
+
+        const text = submitButton.querySelector('.btn-text');
+        if (text) {
+            text.textContent = 'Procesando...';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     updateAttendeeFields();
     updatePrices();
