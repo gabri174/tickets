@@ -15,9 +15,15 @@ $pageTitle = 'Compra completada - ' . SITE_NAME;
 $purchase = $_SESSION['purchase_success'] ?? null;
 $emailError = $_SESSION['email_error'] ?? null;
 
+unset($_SESSION['purchase_success']);
+unset($_SESSION['email_error']);
+unset($_SESSION['smtp_log']);
+unset($_SESSION['debug_email']);
+unset($_SESSION['pending_purchase']);
+
 $hasError = false;
 $errorMsg = '';
-$isAsync = false;
+$isQueued = !empty($purchase['queued']);
 
 if (!$purchase || empty($purchase['event_id'])) {
     $hasError = true;
@@ -27,7 +33,8 @@ if (!$purchase || empty($purchase['event_id'])) {
         'event_title' => 'Compra',
         'tickets' => [],
         'email' => '',
-        'phone' => ''
+        'phone' => '',
+        'queued' => false,
     ];
 }
 
@@ -94,17 +101,26 @@ require_once '../includes/partials/header.php';
                 <i class="fas fa-check text-4xl"></i>
             </div>
             <div class="text-center md:text-left">
-                <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">¡Compra completada!</h2>
+                <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">
+                    <?php echo $isQueued ? '¡Reserva en proceso!' : '¡Compra completada!'; ?>
+                </h2>
                 <p class="text-gray-400 font-medium text-lg">
-                    Tus tickets están listos. Hemos enviado un correo a
-                    <span class="text-white"><?php echo htmlspecialchars((string) ($purchase['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php if ($isQueued): ?>
+                        Estamos terminando de procesar tu reserva. Te enviaremos la confirmación a
+                        <span class="text-white"><?php echo htmlspecialchars((string) ($purchase['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php else: ?>
+                        Tus tickets están listos. Hemos enviado un correo a
+                        <span class="text-white"><?php echo htmlspecialchars((string) ($purchase['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php endif; ?>
                 </p>
             </div>
-            <div class="md:ml-auto flex flex-col items-center gap-2">
-                <button onclick="shareOnWhatsApp()" class="text-[10px] text-lime-400 uppercase font-black tracking-widest hover:underline" type="button">
-                    Compartir por WhatsApp
-                </button>
-            </div>
+            <?php if (!$isQueued && !empty($purchase['tickets'])): ?>
+                <div class="md:ml-auto flex flex-col items-center gap-2">
+                    <button onclick="shareOnWhatsApp()" class="text-[10px] text-lime-400 uppercase font-black tracking-widest hover:underline" type="button">
+                        Compartir por WhatsApp
+                    </button>
+                </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 
@@ -114,7 +130,14 @@ require_once '../includes/partials/header.php';
         </div>
     <?php endif; ?>
 
-    <?php if (!$hasError && !empty($purchase['tickets'])): ?>
+    <?php if (!$hasError && $isQueued): ?>
+        <div class="glass-card mb-10 p-6 text-center">
+            <p class="text-white text-lg font-bold mb-2">Tu solicitud ya entró en cola correctamente.</p>
+            <p class="text-gray-400 text-sm">No necesitas volver a enviar el formulario. En cuanto termine el proceso, recibirás la confirmación en tu correo.</p>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!$hasError && !$isQueued && !empty($purchase['tickets'])): ?>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             <?php foreach ($purchase['tickets'] as $ticket): ?>
                 <?php
@@ -204,14 +227,6 @@ require_once '../includes/partials/header.php';
 
     <div class="h-12"></div>
 </div>
-
-<?php
-unset($_SESSION['purchase_success']);
-unset($_SESSION['email_error']);
-unset($_SESSION['smtp_log']);
-unset($_SESSION['debug_email']);
-unset($_SESSION['pending_purchase']);
-?>
 
 <?php require_once '../includes/partials/footer.php'; ?>
 
