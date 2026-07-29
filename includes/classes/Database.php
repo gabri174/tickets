@@ -1071,3 +1071,32 @@ class Database
         return $res !== null && $this->changedRows($res) > 0;
     }
 }
+public function createPurchaseRequest($requestToken, $eventId, $email = null)
+{
+    $requestToken = $this->normalizeString($requestToken, 100);
+    $eventId = $this->normalizeId($eventId);
+    $email = $email !== null ? $this->normalizeEmail($email) : null;
+
+    if ($requestToken === '' || $eventId === null) {
+        return false;
+    }
+
+    $sql = "INSERT INTO purchase_requests (request_token, event_id, email, status)
+            VALUES (?, ?, ?, 'completed')";
+
+    $res = $this->callD1($sql, [$requestToken, $eventId, $email], 'run');
+    return $res !== null;
+}
+
+public function purchaseRequestExists($requestToken)
+{
+    $requestToken = $this->normalizeString($requestToken, 100);
+    if ($requestToken === '') {
+        return false;
+    }
+
+    $sql = "SELECT id, status FROM purchase_requests WHERE request_token = ? LIMIT 1";
+    $row = $this->query($sql, [$requestToken], 'first');
+
+    return !empty($row);
+}
