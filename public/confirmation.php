@@ -1,38 +1,107 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 require_once '../includes/config/config.php';
 require_once '../includes/classes/Database.php';
 
-session_start();
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
 
-// Debug temporal
-if (!isset($_SESSION['purchase_success']) || !isset($_SESSION['purchase_result'])) {
-    die('Error: No hay datos de compra en sesión. <a href="../">Volver al inicio</a>');
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
 }
 
-$result = $_SESSION['purchase_result'];
-$eventId = $result['event_id'];
-$tickets = $result['tickets'];
-$totalPrice = $result['total_price'];
-$email = $result['email'];
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
+header('Expires: 0');
+header('X-Robots-Tag: noindex, nofollow, noarchive', true);
 
-// Limpiar sesión
+$purchaseResult = $_SESSION['purchase_result'] ?? null;
+
 unset($_SESSION['purchase_success']);
 unset($_SESSION['purchase_result']);
+unset($_SESSION['email_error']);
+unset($_SESSION['smtp_log']);
+unset($_SESSION['debug_email']);
+unset($_SESSION['pending_purchase']);
 
-// Obtener datos del evento
+if (!$purchaseResult || empty($purchaseResult['event_id'])) {
+    http_response_code(400);
+    ?>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Compra no disponible</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            body {
+                background-color: #0A0E14;
+                color: white;
+                font-family: 'Outfit', sans-serif;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .glass-card {
+                background: rgba(255, 255, 255, 0.03);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="max-w-xl mx-auto px-4 text-center">
+            <div class="glass-card rounded-[2.5rem] p-10">
+                <div class="w-20 h-20 mx-auto mb-6 bg-red-500/10 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-red-400 text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-black mb-4">Compra no disponible</h1>
+                <p class="text-gray-400 mb-8">
+                    No hay datos válidos de compra en tu sesión. Por seguridad, vuelve al inicio y accede otra vez desde el flujo de compra.
+                </p>
+                <a href="../"
+                   class="inline-flex items-center gap-2 px-8 py-4 bg-lime-400 text-black rounded-2xl font-black hover:shadow-[0_0_30px_rgba(218,251,113,0.3)] transition-all">
+                    <i class="fas fa-home"></i>
+                    Volver al inicio
+                </a>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
+}
+
+$eventId = (int) ($purchaseResult['event_id'] ?? 0);
+$tickets = is_array($purchaseResult['tickets'] ?? null) ? $purchaseResult['tickets'] : [];
+$totalPrice = (float) ($purchaseResult['total_price'] ?? 0);
+$email = (string) ($purchaseResult['email'] ?? '');
+$pdfPath = (string) ($purchaseResult['pdf_path'] ?? '');
+
 $db = new Database();
 $event = $db->getEventById($eventId);
-?>
 
+if (!$event) {
+    $event = [
+        'title' => 'Evento',
+        'date_event' => date('Y-m-d H:i:s'),
+        'location' => 'Ubicación no disponible',
+        'admin_id' => 0,
+    ];
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Compra Confirmada! - <?php echo htmlspecialchars($event['title']); ?></title>
+    <title>¡Compra Confirmada! - <?php echo htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8'); ?></title>
+    <meta name="robots" content="noindex, nofollow, noarchive">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -104,15 +173,13 @@ $event = $db->getEventById($eventId);
 </head>
 <body>
     <div class="max-w-2xl mx-auto px-4 text-center">
-        <!-- Checkmark Animation -->
         <div class="mb-8">
-            <svg class="checkmark mx-auto" xmlns="http://www.w3.org/2000/svg">
-                <circle class="checkmark__circle" cx="50%" cy="50%" r="40%" />
+            <svg class="checkmark mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
+                <circle class="checkmark__circle" cx="50" cy="50" r="40" />
                 <path class="checkmark__check" fill="none" d="M28 48 L42 62 L72 30" />
             </svg>
         </div>
 
-        <!-- Success Message -->
         <h1 class="text-4xl md:text-5xl font-black mb-4">
             ¡Compra <span class="text-gradient">Confirmada!</span>
         </h1>
@@ -121,54 +188,61 @@ $event = $db->getEventById($eventId);
             Gracias por tu compra. Hemos enviado los tickets a tu correo electrónico.
         </p>
 
-        <!-- Event Info -->
         <div class="glass-card rounded-[2.5rem] p-8 mb-8">
-            <h2 class="text-2xl font-bold mb-6"><?php echo htmlspecialchars($event['title']); ?></h2>
+            <h2 class="text-2xl font-bold mb-6"><?php echo htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8'); ?></h2>
 
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="text-left">
                     <p class="text-xs text-gray-500 uppercase font-bold mb-1">Fecha</p>
-                    <p class="font-bold"><?php echo date('d/m/Y', strtotime($event['date_event'])); ?></p>
+                    <p class="font-bold"><?php echo htmlspecialchars(date('d/m/Y', strtotime((string) $event['date_event'])), ENT_QUOTES, 'UTF-8'); ?></p>
                 </div>
                 <div class="text-left">
                     <p class="text-xs text-gray-500 uppercase font-bold mb-1">Hora</p>
-                    <p class="font-bold"><?php echo date('H:i', strtotime($event['date_event'])); ?></p>
+                    <p class="font-bold"><?php echo htmlspecialchars(date('H:i', strtotime((string) $event['date_event'])), ENT_QUOTES, 'UTF-8'); ?></p>
                 </div>
                 <div class="text-left col-span-2">
                     <p class="text-xs text-gray-500 uppercase font-bold mb-1">Ubicación</p>
-                    <p class="font-bold"><?php echo htmlspecialchars($event['location']); ?></p>
+                    <p class="font-bold"><?php echo htmlspecialchars((string) $event['location'], ENT_QUOTES, 'UTF-8'); ?></p>
                 </div>
             </div>
 
-            <!-- Tickets Summary -->
             <div class="border-t border-white/10 pt-6">
                 <p class="text-xs text-gray-500 uppercase font-bold mb-4">Tickets Comprados</p>
                 <div class="space-y-3">
                     <?php foreach ($tickets as $ticket): ?>
+                        <?php
+                            $ticketName = (string) ($ticket['name'] ?? '');
+                            $ticketEmail = (string) ($ticket['email'] ?? '');
+                            $ticketCode = (string) ($ticket['code'] ?? '');
+                        ?>
                         <div class="glass-card rounded-xl p-4 flex items-center justify-between">
-                            <div>
-                                <p class="font-bold"><?php echo htmlspecialchars($ticket['name']); ?></p>
-                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($ticket['email']); ?></p>
+                            <div class="text-left">
+                                <p class="font-bold"><?php echo htmlspecialchars($ticketName, ENT_QUOTES, 'UTF-8'); ?></p>
+                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($ticketEmail, ENT_QUOTES, 'UTF-8'); ?></p>
                             </div>
                             <div class="text-right">
                                 <p class="text-xs text-gray-500">Código</p>
-                                <p class="font-mono text-sm text-lime-400"><?php echo htmlspecialchars(substr($ticket['code'], -8)); ?></p>
+                                <p class="font-mono text-sm text-lime-400"><?php echo htmlspecialchars(substr($ticketCode, -8), ENT_QUOTES, 'UTF-8'); ?></p>
                             </div>
                         </div>
                     <?php endforeach; ?>
+
+                    <?php if (empty($tickets)): ?>
+                        <div class="glass-card rounded-xl p-4">
+                            <p class="text-gray-400 text-sm">La compra se registró, pero no hay tickets disponibles para mostrar en esta vista.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
-            <!-- Total -->
             <div class="border-t border-white/10 pt-6 mt-6">
                 <div class="flex items-center justify-between">
                     <p class="text-lg font-bold">Total Pagado</p>
-                    <p class="text-3xl font-black text-lime-400"><?php echo number_format($totalPrice, 2); ?>€</p>
+                    <p class="text-3xl font-black text-lime-400"><?php echo htmlspecialchars(number_format($totalPrice, 2), ENT_QUOTES, 'UTF-8'); ?>€</p>
                 </div>
             </div>
         </div>
 
-        <!-- Email Info -->
         <div class="glass-card rounded-2xl p-6 mb-8">
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 bg-lime-400/10 rounded-full flex items-center justify-center">
@@ -176,18 +250,20 @@ $event = $db->getEventById($eventId);
                 </div>
                 <div class="text-left">
                     <p class="text-sm font-bold">Hemos enviado los tickets a</p>
-                    <p class="text-lime-400"><?php echo htmlspecialchars($email); ?></p>
+                    <p class="text-lime-400"><?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?></p>
                 </div>
             </div>
         </div>
 
-        <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="store.php?id=<?php echo $event['admin_id']; ?>"
-               class="px-8 py-4 bg-lime-400 text-black rounded-2xl font-black hover:shadow-[0_0_30px_rgba(218,251,113,0.3)] transition-all flex items-center justify-center gap-2">
-                <i class="fas fa-calendar-alt"></i>
-                Ver más eventos
-            </a>
+            <?php if (!empty($event['admin_id'])): ?>
+                <a href="store.php?id=<?php echo (int) $event['admin_id']; ?>"
+                   class="px-8 py-4 bg-lime-400 text-black rounded-2xl font-black hover:shadow-[0_0_30px_rgba(218,251,113,0.3)] transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-calendar-alt"></i>
+                    Ver más eventos
+                </a>
+            <?php endif; ?>
+
             <a href="../"
                class="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2">
                 <i class="fas fa-home"></i>
@@ -195,10 +271,9 @@ $event = $db->getEventById($eventId);
             </a>
         </div>
 
-        <!-- Download Tickets -->
-        <?php if (isset($_SESSION['purchase_result']['pdf_path'])): ?>
+        <?php if ($pdfPath !== ''): ?>
             <div class="mt-8">
-                <a href="<?php echo htmlspecialchars($_SESSION['purchase_result']['pdf_path']); ?>"
+                <a href="<?php echo htmlspecialchars($pdfPath, ENT_QUOTES, 'UTF-8'); ?>"
                    download
                    class="inline-flex items-center gap-2 text-lime-400 hover:text-lime-300 transition font-bold">
                     <i class="fas fa-download"></i>
