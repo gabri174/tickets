@@ -1,142 +1,104 @@
 <?php
 // =================================================================
-// SEGURIDAD - Configuración Blindada (v2.0)
+// SEGURIDAD - Configuración Blindada (v3.0)
 // =================================================================
 
-// Prevenir acceso directo al archivo config (bloquea si se abre directamente por URL)
+// Prevenir acceso directo al archivo config
 if (isset($_SERVER['SCRIPT_FILENAME']) && basename($_SERVER['SCRIPT_FILENAME']) === 'config.php') {
-    die('Acceso directo denegado');
+    http_response_code(403);
+    exit('Acceso directo denegado');
 }
 
-// =================================================================
-// PROTECCIÓN CONTRA FUGAS DE INFORMACIÓN
-// =================================================================
-
-// Nunca mostrar errores en producción
-if (!defined('APP_ENV') || APP_ENV !== 'production') {
-    error_reporting(0);
-    ini_set('display_errors', 0);
-    ini_set('display_startup_errors', 0);
-}
-
-// Ocultar versión de PHP
-ini_set('expose_php', 'off');
-
-// ──────────────────────────────────────────────────────────────────────
-// Carga de variables de entorno desde .env
-// ──────────────────────────────────────────────────────────────────────
-
-function loadEnv($path) {
-    if (!file_exists($path)) {
-        return false;
-    }
-
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
-    foreach ($lines as $line) {
-        // Ignorar comentarios
-        if (strpos(trim($line), '#') === 0) {
-            continue;
+// -----------------------------------------------------------------
+// Helpers básicos
+// -----------------------------------------------------------------
+if (!function_exists('loadEnv')) {
+    function loadEnv($path) {
+        if (!is_string($path) || !file_exists($path) || !is_readable($path)) {
+            return false;
         }
 
-        // Parsear KEY=VALUE
-        if (strpos($line, '=') !== false) {
-            list($key, $value) = explode('=', $line, 2);
-            $key = trim($key);
-            $value = trim($value, '"\'');
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false) {
+            return false;
+        }
 
-            if (!empty($key) && !defined($key)) {
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if ($line === '' || strpos($line, '#') === 0) {
+                continue;
+            }
+
+            if (strpos($line, '=') === false) {
+                continue;
+            }
+
+            [$key, $value] = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            if ($key === '') {
+                continue;
+            }
+
+            if (
+                (substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+                (substr($value, 0, 1) === "'" && substr($value, -1) === "'")
+            ) {
+                $value = substr($value, 1, -1);
+            }
+
+            if (!defined($key)) {
                 define($key, $value);
             }
         }
-    }
 
-    return true;
+        return true;
+    }
 }
 
-// Cargar .env desde la raíz del proyecto
+if (!function_exists('isHttpsRequest')) {
+    function isHttpsRequest() {
+        return (
+            (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+            (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443) ||
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
+            (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) === 'on')
+        );
+    }
+}
+
+// -----------------------------------------------------------------
+// Carga de entorno
+// -----------------------------------------------------------------
 $possiblePaths = [
     dirname(__DIR__, 2) . '/.env',
-    $_SERVER['DOCUMENT_ROOT'] . '/.env',
-    '../../.env',
-    './.env'
+    (isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . '/.env' : null),
+    __DIR__ . '/../../.env',
+    getcwd() . '/.env',
 ];
 
 foreach ($possiblePaths as $path) {
-    if (file_exists($path)) {
+    if ($path && file_exists($path)) {
         loadEnv($path);
         break;
     }
 }
 
-// Valores por defecto críticos
-if (!defined('SITE_URL')) define('SITE_URL', 'http://localhost');
+// -----------------------------------------------------------------
+// Defaults seguros
+// -----------------------------------------------------------------
 if (!defined('APP_ENV')) define('APP_ENV', 'development');
-
-// Configuración de Sesión (Debe ser lo primero después de cargar el entorno)
-if (session_status() === PHP_SESSION_NONE) {
-    // Detectar si estamos en HTTPS (añadimos más checks para proxies comunes)
-    $isSecure = (
-        (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1)) ||
-        (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
-        (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') ||
-        (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
-        (defined('SITE_URL') && strpos(SITE_URL, 'https://') === 0)
-    );
-    
-    // Configurar cookies seguras
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'domain' => '',
-        'secure' => $isSecure,
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-
-    // Iniciar sesión con configuración de seguridad
-    session_start();
-
-    // Regenerar ID de sesión periódicamente para prevenir session fixation
-    if (!isset($_SESSION['_created'])) {
-        $_SESSION['_created'] = time();
-    } elseif (time() - $_SESSION['_created'] > 1800) { // 30 minutos
-        session_regenerate_id(true);
-        $_SESSION['_created'] = time();
-    }
-
-    // Timeout de sesión después de 2 horas de inactividad
-    if (isset($_SESSION['_last_activity']) && (time() - $_SESSION['_last_activity'] > 7200)) {
-        session_unset();
-        session_destroy();
-        session_start();
-    }
-    $_SESSION['_last_activity'] = time();
-}
-
-// El entorno y SITE_URL ya han sido cargados al inicio del archivo
-
-// ──────────────────────────────────────────────────────────────────────
-// Cloudflare D1 (Proxy API)
-// ──────────────────────────────────────────────────────────────────────
-
-if (!defined('D1_API_URL')) define('D1_API_URL', 'https://tickets-api.crtv-technologies.workers.dev');
-if (!defined('D1_API_TOKEN')) define('D1_API_TOKEN', '');
-
-// Eliminamos la conexión PDO directa a MySQL
-$pdo = null;
-
-// ──────────────────────────────────────────────────────────────────────
-// Configuración del sitio
-// ──────────────────────────────────────────────────────────────────────
-
+if (!defined('SITE_URL')) define('SITE_URL', 'http://localhost');
 if (!defined('SITE_NAME')) define('SITE_NAME', 'Tickets - Sistema de Ventas');
 if (!defined('ADMIN_EMAIL')) define('ADMIN_EMAIL', 'admin@tickets.com');
 
-// ──────────────────────────────────────────────────────────────────────
-// Configuración de correo (PHPMailer)
-// ──────────────────────────────────────────────────────────────────────
+// Cloudflare D1
+if (!defined('D1_API_URL')) define('D1_API_URL', 'https://tickets-api.crtv-technologies.workers.dev');
+if (!defined('D1_API_TOKEN')) define('D1_API_TOKEN', '');
 
+// Mail
 if (!defined('SMTP_HOST')) define('SMTP_HOST', 'localhost');
 if (!defined('SMTP_PORT')) define('SMTP_PORT', 587);
 if (!defined('SMTP_USERNAME')) define('SMTP_USERNAME', '');
@@ -144,60 +106,139 @@ if (!defined('SMTP_PASSWORD')) define('SMTP_PASSWORD', '');
 if (!defined('SMTP_FROM_EMAIL')) define('SMTP_FROM_EMAIL', 'no-reply@localhost');
 if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', 'Tickets');
 
-// ──────────────────────────────────────────────────────────────────────
-// Rutas del sistema
-// ──────────────────────────────────────────────────────────────────────
-
-define('ROOT_PATH', dirname(__DIR__, 2));
-define('UPLOADS_PATH', ROOT_PATH . '/public/uploads');
-define('QRCODES_PATH', ROOT_PATH . '/public/qrcodes');
-
-// ──────────────────────────────────────────────────────────────────────
-// Configuración de seguridad
-// ──────────────────────────────────────────────────────────────────────
-
-define('HASH_ALGO', 'sha256');
-define('SALT_LENGTH', 32);
-
-// ──────────────────────────────────────────────────────────────────────
-// Zona horaria
-// ──────────────────────────────────────────────────────────────────────
-
-date_default_timezone_set('Europe/Madrid');
-
-// APP_ENV ya ha sido cargado/definido al inicio del archivo
-
-if (APP_ENV === 'development') {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-} else {
-    error_reporting(E_ALL); // Cambiamos temporalmente para auditar
-    ini_set('display_errors', 1);
-}
-
-/**
- * Función de log personalizada para auditoría de tickets
- */
-function qLog($message) {
-    $logFile = ROOT_PATH . '/logs_compra.txt';
-    $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// 🚀 SRE - CAPA 1: REDIS CACHE (Upstash o local)
-// ──────────────────────────────────────────────────────────────────────
-
+// Redis / QStash
 if (!defined('REDIS_REST_URL')) define('REDIS_REST_URL', '');
 if (!defined('REDIS_REST_TOKEN')) define('REDIS_REST_TOKEN', '');
 if (!defined('REDIS_URL')) define('REDIS_URL', '');
-
-// ──────────────────────────────────────────────────────────────────────
-// Upstash QStash (Cola de Escritura)
-// ──────────────────────────────────────────────────────────────────────
 
 if (!defined('UPSTASH_QSTASH_TOKEN')) define('UPSTASH_QSTASH_TOKEN', '');
 if (!defined('QSTASH_URL')) define('QSTASH_URL', 'https://qstash.upstash.io');
 if (!defined('QSTASH_CURRENT_SIGNING_KEY')) define('QSTASH_CURRENT_SIGNING_KEY', '');
 if (!defined('QSTASH_NEXT_SIGNING_KEY')) define('QSTASH_NEXT_SIGNING_KEY', '');
-if (!defined('QUEUE_WORKER_URL'))    define('QUEUE_WORKER_URL', SITE_URL . '/queue_worker.php');
+if (!defined('QUEUE_WORKER_URL')) define('QUEUE_WORKER_URL', rtrim(SITE_URL, '/') . '/queue_worker.php');
+
+// Seguridad base
+if (!defined('HASH_ALGO')) define('HASH_ALGO', 'sha256');
+if (!defined('SALT_LENGTH')) define('SALT_LENGTH', 32);
+
+// -----------------------------------------------------------------
+// Rutas
+// -----------------------------------------------------------------
+defined('ROOT_PATH') || define('ROOT_PATH', dirname(__DIR__, 2));
+defined('UPLOADS_PATH') || define('UPLOADS_PATH', ROOT_PATH . '/public/uploads');
+defined('QRCODES_PATH') || define('QRCODES_PATH', ROOT_PATH . '/public/qrcodes');
+
+// Directorio de logs fuera del webroot si existe posibilidad
+$preferredLogDir = dirname(ROOT_PATH) . '/var/log';
+$fallbackLogDir  = ROOT_PATH . '/storage/logs';
+$legacyLogDir    = ROOT_PATH;
+
+if (!is_dir($preferredLogDir)) {
+    @mkdir($preferredLogDir, 0750, true);
+}
+if (!is_dir($fallbackLogDir)) {
+    @mkdir($fallbackLogDir, 0750, true);
+}
+
+if (is_dir($preferredLogDir) && is_writable($preferredLogDir)) {
+    defined('APP_LOG_PATH') || define('APP_LOG_PATH', $preferredLogDir . '/tickets-app.log');
+} elseif (is_dir($fallbackLogDir) && is_writable($fallbackLogDir)) {
+    defined('APP_LOG_PATH') || define('APP_LOG_PATH', $fallbackLogDir . '/tickets-app.log');
+} else {
+    defined('APP_LOG_PATH') || define('APP_LOG_PATH', $legacyLogDir . '/logs_compra.txt');
+}
+
+// -----------------------------------------------------------------
+// Errores y logging
+// -----------------------------------------------------------------
+$isProduction = (APP_ENV === 'production');
+
+ini_set('expose_php', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', APP_LOG_PATH);
+
+if ($isProduction) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+} else {
+    error_reporting(E_ALL);
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+}
+
+// -----------------------------------------------------------------
+// Zona horaria
+// -----------------------------------------------------------------
+date_default_timezone_set('Europe/Madrid');
+
+// -----------------------------------------------------------------
+// Sesión segura
+// -----------------------------------------------------------------
+if (session_status() === PHP_SESSION_NONE) {
+    $isSecure = isHttpsRequest() || strpos(SITE_URL, 'https://') === 0;
+
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_secure', $isSecure ? '1' : '0');
+
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $isSecure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+
+    session_start();
+
+    if (!isset($_SESSION['_created'])) {
+        $_SESSION['_created'] = time();
+    } elseif ((time() - (int) $_SESSION['_created']) > 1800) {
+        session_regenerate_id(true);
+        $_SESSION['_created'] = time();
+    }
+
+    if (isset($_SESSION['_last_activity']) && (time() - (int) $_SESSION['_last_activity']) > 7200) {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        }
+        session_destroy();
+        session_start();
+        $_SESSION['_created'] = time();
+    }
+
+    $_SESSION['_last_activity'] = time();
+}
+
+// Compatibilidad con código legado
+$pdo = null;
+
+/**
+ * Log personalizado de la aplicación.
+ * No rompe ejecución si no puede escribir.
+ */
+if (!function_exists('qLog')) {
+    function qLog($message) {
+        $timestamp = date('Y-m-d H:i:s');
+        $line = '[' . $timestamp . '] ' . $message . PHP_EOL;
+
+        if (defined('APP_LOG_PATH')) {
+            @file_put_contents(APP_LOG_PATH, $line, FILE_APPEND | LOCK_EX);
+        } else {
+            error_log($message);
+        }
+    }
+}
