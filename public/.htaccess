@@ -1,52 +1,64 @@
 # =================================================================
-# SEGURIDAD - .htaccess para /public (BLINDADO)
+# SEGURIDAD - .htaccess para /public (v3.0)
 # =================================================================
 
-# Deshabilitar listado de directorios
 Options -Indexes
 
-# =================================================================
-# REWRITE RULES
-# =================================================================
+# -----------------------------------------------------------------
+# REWRITE / HTTPS
+# -----------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-RewriteEngine On
+    # Forzar HTTPS
+    RewriteCond %{HTTPS} !=on [OR]
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Redirigir todo a index.php excepto archivos existentes
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.+)$ index.php [L]
+    # No reescribir archivos o directorios existentes
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
 
-# =================================================================
+    # Front controller solo para rutas limpias
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# -----------------------------------------------------------------
 # HEADERS DE SEGURIDAD
-# =================================================================
-
+# -----------------------------------------------------------------
 <IfModule mod_headers.c>
-    # Prevenir clickjacking
-    Header always set X-Frame-Options "DENY"
-
-    # Prevenir MIME sniffing
     Header always set X-Content-Type-Options "nosniff"
-
-    # XSS Protection
-    Header always set X-XSS-Protection "1; mode=block"
-
-    # Referrer Policy
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; img-src 'self' https: data: blob:; font-src 'self' https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; connect-src 'self' https://tickets-api.crtv-technologies.workers.dev https://static.cloudflareinsights.com https://cloudflareinsights.com; object-src 'none'; upgrade-insecure-requests"
 
-    # Cache control para páginas dinámicas
-    <FilesMatch "\.(php)$">
-        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
-        Header set Pragma "no-cache"
-        Header set Expires 0
+    # HSTS solo sobre HTTPS
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+
+    # No cache para PHP
+    <FilesMatch "\.php$">
+        Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header always set Pragma "no-cache"
+        Header always set Expires "0"
     </FilesMatch>
 </IfModule>
 
-# =================================================================
-# PROTECCIÓN DE ARCHIVOS
-# =================================================================
+# -----------------------------------------------------------------
+# PROTECCIÓN DE ARCHIVOS SENSIBLES
+# -----------------------------------------------------------------
 
-# Prevenir acceso a archivos .htaccess
-<FilesMatch "\.htaccess$">
-    Order allow,deny
-    Deny from all
+# Bloquear dotfiles excepto .well-known
+<IfModule mod_rewrite.c>
+    RewriteRule "(^|/)\.(?!well-known/)" - [F,L]
+</IfModule>
+
+# Bloquear archivos sensibles comunes
+<FilesMatch "(^\.|composer\.(json|lock)|package(-lock)?\.json|yarn\.lock|pnpm-lock\.yaml|\.env|\.git|\.svn|\.hg|\.bzr|README|CHANGELOG|phpunit\.xml|.*\.(sql|bak|dist|log|ini))$">
+    Require all denied
+</FilesMatch>
+
+# Blindar el propio .htaccess y .htpasswd
+<FilesMatch "^\.ht">
+    Require all denied
 </FilesMatch>
