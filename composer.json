@@ -12,7 +12,7 @@
     ],
     "require": {
         "php": ">=7.4",
-        "ext-pdo": "*",
+        "ext-curl": "*",
         "ext-mbstring": "*",
         "phpmailer/phpmailer": "^6.8",
         "tecnickcom/tcpdf": "^6.6",
@@ -22,9 +22,6 @@
         "phpunit/phpunit": "^9.0"
     },
     "autoload": {
-        "psr-4": {
-            "Tickets\\": "src/"
-        },
         "files": [
             "includes/functions/functions.php"
         ]
@@ -32,11 +29,5 @@
     "config": {
         "optimize-autoloader": true,
         "sort-packages": true
-    },
-    "scripts": {
-        "post-install-cmd": [
-            "mkdir -p public/uploads public/qrcodes",
-            "chmod 777 public/uploads public/qrcodes"
-        ]
     }
 }
