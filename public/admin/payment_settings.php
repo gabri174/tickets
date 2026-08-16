@@ -1,185 +1,89 @@
 <?php
 require_once '../../includes/config/config.php';
 require_once '../../includes/functions/functions.php';
-require_once '../../includes/classes/Database.php';
+require_once '../../includes/classes/StripeConnectRepository.php';
 
 checkAdminSession();
 
-$db = new Database();
-$adminId = $_SESSION['admin_id'];
-$message = '';
-$error = '';
+$repo = new StripeConnectRepository();
+$adminId = (int) $_SESSION['admin_id'];
+$state = $repo->getStripeState($adminId) ?: [];
+$status = (string) ($_GET['stripe'] ?? ($state['stripe_onboarding_status'] ?? 'not_started'));
+$chargesEnabled = !empty($state['stripe_charges_enabled']);
+$payoutsEnabled = !empty($state['stripe_payouts_enabled']);
 
-// Obtener configuración actual del admin
-$admin = $db->query("SELECT preferred_payment_method, payment_config FROM admins WHERE id = ?", [$adminId], 'first');
-
-$paymentMethod = $admin['preferred_payment_method'] ?? 'none';
-$paymentConfig = json_decode($admin['payment_config'] ?? '{}', true);
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF Check
-    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
-        $error = 'Error de seguridad (CSRF). Por favor, intenta de nuevo.';
-    } else {
-        $paymentMethod = cleanInput($_POST['payment_method']);
-        $config = [];
-    
-    switch ($paymentMethod) {
-        case 'stripe':
-            $config['public_key'] = cleanInput($_POST['stripe_public_key']);
-            $config['secret_key'] = cleanInput($_POST['stripe_secret_key']);
-            break;
-        case 'paypal':
-            $config['email'] = cleanInput($_POST['paypal_email']);
-            $config['client_id'] = cleanInput($_POST['paypal_client_id']);
-            break;
-        case 'redsys':
-            $config['merchant_code'] = cleanInput($_POST['redsys_merchant_code']);
-            $config['terminal'] = cleanInput($_POST['redsys_terminal']);
-            $config['secret_key'] = cleanInput($_POST['redsys_secret_key']);
-            break;
-        case 'checkout':
-            $config['public_key'] = cleanInput($_POST['checkout_public_key']);
-            $config['secret_key'] = cleanInput($_POST['checkout_secret_key']);
-            break;
-    }
-    
-    $configJson = json_encode($config);
-    
-        try {
-            $sql = "UPDATE admins SET preferred_payment_method = ?, payment_config = ? WHERE id = ?";
-            $db->query($sql, [$paymentMethod, $configJson, $adminId], 'run');
-            $message = 'Configuración de pago actualizada correctamente.';
-            $paymentConfig = $config;
-        } catch (Exception $e) {
-            $error = 'Error en la base de datos: ' . $e->getMessage();
-        }
-    }
-}
+$labels = [
+    'not_started' => ['Sin conectar', 'Conecta tu cuenta Stripe para poder cobrar entradas de pago.'],
+    'pending' => ['Onboarding pendiente', 'Completa la información solicitada por Stripe.'],
+    'restricted' => ['Revisión pendiente', 'Stripe necesita completar o revisar algunos requisitos.'],
+    'active' => ['Conectado y listo', 'Tu cuenta puede recibir pagos y realizar payouts.'],
+    'error' => ['No se pudo conectar', 'Revisa la configuración de Stripe y vuelve a intentarlo.'],
+];
+$stateLabel = $labels[$status] ?? $labels['pending'];
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración de Pago - Admin <?php echo SITE_NAME; ?></title>
+    <title>Pagos - <?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { background-color: #0A0E14; color: white; font-family: 'Outfit', sans-serif; min-height: 100vh; }
-        .glass-sidebar { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.05); }
-        .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; }
-        .nav-link { transition: all 0.2s ease; position: relative; }
-        .nav-link.active { background: rgba(218, 251, 113, 0.1); color: #DAFB71; }
-        .nav-link.active::before { content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; background: #DAFB71; border-radius: 0 4px 4px 0; }
-        .text-gradient { background: linear-gradient(to right, #DAFB71, #60A5FA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        input, select { background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; color: white !important; }
-        input:focus, select:focus { border-color: rgba(218, 251, 113, 0.5) !important; box-shadow: 0 0 15px rgba(218, 251, 113, 0.1) !important; }
-    </style>
+    <style>body{background:#0A0E14;color:#fff;font-family:Arial,sans-serif}.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}</style>
 </head>
-<body class="flex flex-col lg:flex-row min-h-screen overflow-x-hidden">
-    <?php include '../../includes/templates/sidebar.php'; ?>
+<body class="min-h-screen">
+<?php include '../../includes/templates/sidebar.php'; ?>
+<main class="lg:ml-64 p-6 lg:p-10">
+    <div class="max-w-3xl mx-auto">
+        <header class="mb-10">
+            <p class="text-xs uppercase tracking-[.25em] text-gray-500">Cuenta de organizador</p>
+            <h1 class="text-4xl font-black mt-2">Cobros con <span class="text-lime-300">Stripe Connect</span></h1>
+            <p class="text-gray-400 mt-3">No guardamos claves secretas de Stripe de los organizadores. Cada organizador conecta su propia cuenta mediante el onboarding seguro de Stripe.</p>
+        </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto p-4 lg:p-8 relative">
-            <div class="max-w-4xl mx-auto">
-                <header class="mb-10">
-                    <h2 class="text-3xl font-black tracking-tighter">Configuración de <span class="text-gradient">Pagos</span></h2>
-                    <p class="text-gray-500 text-sm">Elige cómo quieres recibir los pagos de tus eventos</p>
-                </header>
+        <section class="card rounded-3xl p-8">
+            <div class="flex items-start justify-between gap-6">
+                <div>
+                    <div class="text-sm text-gray-500 uppercase tracking-widest">Estado</div>
+                    <h2 class="text-2xl font-bold mt-2"><?php echo htmlspecialchars($stateLabel[0], ENT_QUOTES, 'UTF-8'); ?></h2>
+                    <p class="text-gray-400 mt-2"><?php echo htmlspecialchars($stateLabel[1], ENT_QUOTES, 'UTF-8'); ?></p>
+                </div>
+                <div class="w-3 h-3 rounded-full <?php echo $status === 'active' ? 'bg-lime-300' : 'bg-yellow-400'; ?> mt-2"></div>
+            </div>
 
-                <?php if ($message): ?>
-                    <div class="bg-lime-500/10 border border-lime-500/20 text-lime-400 p-4 rounded-2xl mb-6 flex items-center gap-3">
-                        <i class="fas fa-check-circle"></i> <?php echo $message; ?>
-                    </div>
-                <?php endif; ?>
+            <div class="grid grid-cols-2 gap-4 mt-8">
+                <div class="bg-black/20 rounded-2xl p-5">
+                    <div class="text-xs text-gray-500 uppercase">Cobros</div>
+                    <div class="font-bold mt-1"><?php echo $chargesEnabled ? 'Habilitados' : 'Pendientes'; ?></div>
+                </div>
+                <div class="bg-black/20 rounded-2xl p-5">
+                    <div class="text-xs text-gray-500 uppercase">Payouts</div>
+                    <div class="font-bold mt-1"><?php echo $payoutsEnabled ? 'Habilitados' : 'Pendientes'; ?></div>
+                </div>
+            </div>
 
-                <?php if ($error): ?>
-                    <div class="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl mb-6 flex items-center gap-3">
-                        <i class="fas fa-exclamation-circle"></i> <?php echo $error; ?>
-                    </div>
-                <?php endif; ?>
-
-                <form method="POST" class="space-y-8">
-                    <?php echo csrf_field(); ?>
-                    <div class="glass-card p-8 rounded-[2rem]">
-                        <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Método Preferido</label>
-                        <select name="payment_method" id="payment_method" class="w-full p-4 rounded-2xl outline-none" onchange="toggleConfig(this.value)">
-                            <option value="none" <?php echo $paymentMethod === 'none' ? 'selected' : ''; ?>>Ninguno (Entradas gratuitas o simulación)</option>
-                            <option value="stripe" <?php echo $paymentMethod === 'stripe' ? 'selected' : ''; ?>>Stripe</option>
-                            <option value="paypal" <?php echo $paymentMethod === 'paypal' ? 'selected' : ''; ?>>PayPal</option>
-                            <option value="checkout" <?php echo $paymentMethod === 'checkout' ? 'selected' : ''; ?>>Checkout.com</option>
-                            <option value="redsys" <?php echo $paymentMethod === 'redsys' ? 'selected' : ''; ?>>Redsys España</option>
-                        </select>
-                    </div>
-
-                    <!-- Stripe Config -->
-                    <div id="config_stripe" class="payment-config glass-card p-8 rounded-[2rem] <?php echo $paymentMethod !== 'stripe' ? 'hidden' : ''; ?>">
-                        <h3 class="font-bold mb-6 flex items-center gap-2"><i class="fab fa-stripe text-blue-400"></i> Configuración Stripe</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-xs text-gray-500 font-bold uppercase">Clave Pública (Publishable Key)</label>
-                                <input type="text" name="stripe_public_key" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['public_key'] ?? ''); ?>">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500 font-bold uppercase">Clave Secreta (Secret Key)</label>
-                                <input type="password" name="stripe_secret_key" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['secret_key'] ?? ''); ?>">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- PayPal Config -->
-                    <div id="config_paypal" class="payment-config glass-card p-8 rounded-[2rem] <?php echo $paymentMethod !== 'paypal' ? 'hidden' : ''; ?>">
-                        <h3 class="font-bold mb-6 flex items-center gap-2"><i class="fab fa-paypal text-blue-500"></i> Configuración PayPal</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-xs text-gray-500 font-bold uppercase">Email de Negocio</label>
-                                <input type="email" name="paypal_email" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['email'] ?? ''); ?>">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500 font-bold uppercase">Client ID</label>
-                                <input type="text" name="paypal_client_id" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['client_id'] ?? ''); ?>">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Redsys Config -->
-                    <div id="config_redsys" class="payment-config glass-card p-8 rounded-[2rem] <?php echo $paymentMethod !== 'redsys' ? 'hidden' : ''; ?>">
-                        <h3 class="font-bold mb-6 flex items-center gap-2"><i class="fas fa-credit-card text-red-400"></i> Configuración Redsys España</h3>
-                        <div class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-xs text-gray-500 font-bold uppercase">FUC (Comercio)</label>
-                                    <input type="text" name="redsys_merchant_code" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['merchant_code'] ?? ''); ?>">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-500 font-bold uppercase">Terminal</label>
-                                    <input type="text" name="redsys_terminal" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['terminal'] ?? '1'); ?>">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500 font-bold uppercase">Clave de Comercio (Secret)</label>
-                                <input type="password" name="redsys_secret_key" class="w-full p-4 mt-2 rounded-xl" value="<?php echo htmlspecialchars($paymentConfig['secret_key'] ?? ''); ?>">
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full py-5 bg-lime-400 text-black rounded-[1.5rem] font-black text-xs hover:shadow-[0_0_30px_rgba(218,251,113,0.3)] transition-all">
-                        GUARDAR CONFIGURACIÓN DE PAGO
+            <div class="mt-8 flex flex-col sm:flex-row gap-3">
+                <form method="POST" action="stripe-connect.php">
+                    <?php echo csrf_field('stripe_connect'); ?>
+                    <button type="submit" class="px-6 py-3 rounded-2xl bg-lime-300 text-black font-black hover:brightness-105 transition">
+                        <?php echo $status === 'active' ? 'Revisar cuenta Stripe' : 'Conectar con Stripe'; ?>
                     </button>
                 </form>
+                <?php if (!empty($state['stripe_account_id']) && $status === 'active'): ?>
+                    <a href="stripe-connect.php?action=dashboard" class="px-6 py-3 rounded-2xl border border-white/10 font-bold hover:bg-white/5 transition">Abrir Stripe Express</a>
+                <?php endif; ?>
             </div>
-        </main>
-    </div>
+        </section>
 
-    <script>
-        function toggleConfig(method) {
-            document.querySelectorAll('.payment-config').forEach(el => el.classList.add('hidden'));
-            const target = document.getElementById('config_' + method);
-            if (target) target.classList.remove('hidden');
-        }
-    </script>
+        <section class="card rounded-3xl p-8 mt-6">
+            <h3 class="font-bold text-lg">Cómo funciona</h3>
+            <ol class="mt-5 space-y-4 text-gray-400 text-sm">
+                <li><span class="text-lime-300 font-bold">1.</span> Conectas tu cuenta Stripe desde aquí.</li>
+                <li><span class="text-lime-300 font-bold">2.</span> Stripe realiza el onboarding y la verificación de identidad.</li>
+                <li><span class="text-lime-300 font-bold">3.</span> Cuando Stripe habilita cobros y payouts, podrás publicar eventos de pago.</li>
+                <li><span class="text-lime-300 font-bold">4.</span> Los pagos se procesarán mediante la cuenta conectada, no mediante una clave secreta guardada por el organizador.</li>
+            </ol>
+        </section>
+    </div>
+</main>
 </body>
 </html>
