@@ -27,7 +27,6 @@ public/qrcodes/*
 
 # Dependencias de Composer
 /vendor/
-composer.lock
 
 # Dependencias de Node.js
 node_modules/
@@ -44,7 +43,6 @@ yarn-error.log*
 
 # SO
 .DS_Store
-.DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
@@ -52,10 +50,10 @@ ehthumbs.db
 Thumbs.db
 
 # Backup y exportaciones
-*.sql
 *.backup
 *.bak
 exports/
+storage/exports/
 
 # Archivos generados
 *.pdf
@@ -72,7 +70,7 @@ exports/
 cache/
 *.cache
 
-# Sessiones
+# Sesiones
 /sessions/
 
 # Documentación generada
