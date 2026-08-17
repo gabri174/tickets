@@ -4,35 +4,23 @@ require_once '../../includes/functions/functions.php';
 require_once '../../includes/classes/StripeConnectService.php';
 require_once '../../includes/classes/PaymentOrderRepository.php';
 
-$payload=file_get_contents('php://input'); $signature=$_SERVER['HTTP_STRIPE_SIGNATURE']??'';
+$payload=file_get_contents('php://input');$signature=$_SERVER['HTTP_STRIPE_SIGNATURE']??'';
 try{
-    $stripe=new StripeConnectService(); $stripe->verifyWebhookSignature($payload,$signature,(string)STRIPE_WEBHOOK_SECRET);
-    $event=json_decode($payload,true); if(!is_array($event)||empty($event['type'])||!isset($event['data']['object']))throw new RuntimeException('Evento Stripe inválido.');
-    $supported=['checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','checkout.session.expired'];
-    if(!in_array($event['type'],$supported,true)){http_response_code(200);echo json_encode(['received'=>true]);exit;}
-
-    $session=$event['data']['object']; $orderId=(int)($session['metadata']['order_id']??$session['client_reference_id']??0); if($orderId<1)throw new RuntimeException('El webhook no contiene order_id.');
-    $orders=new PaymentOrderRepository(); $order=$orders->getOrderById($orderId); if(!$order)throw new RuntimeException('Pedido no encontrado: '.$orderId);
-
-    if(in_array($event['type'],['checkout.session.expired','checkout.session.async_payment_failed'],true)){
-        if(in_array(($order['status']??''),['fulfilled','cancelled'],true)){http_response_code(200);echo json_encode(['received'=>true]);exit;}
-        $items=$orders->getItems($orderId);
-        foreach($items as $item){$orders->releaseInventory($orderId,(int)$order['event_id'],$item['ticket_type_id']!==null?(int)$item['ticket_type_id']:null,(int)$item['quantity']);}
-        $orders->markCancelled($orderId);
-        http_response_code(200); echo json_encode(['received'=>true,'cancelled'=>true]); exit;
-    }
-
-    if(($order['status']??'')==='fulfilled'){http_response_code(200);echo json_encode(['received'=>true,'fulfilled'=>true]);exit;}
-    if((string)($session['payment_status']??'')!=='paid'){http_response_code(200);echo json_encode(['received'=>true,'payment_pending'=>true]);exit;}
-
-    $sessionId=(string)($session['id']??''); $paymentIntentId=(string)($session['payment_intent']??'');
-    $orders->markPaid($orderId,$sessionId,$paymentIntentId); $orders->markFulfilling($orderId);
-    $items=$orders->getItems($orderId); $fulfillToken=defined('PAYMENT_FULFILL_TOKEN')?(string)PAYMENT_FULFILL_TOKEN:''; $workerUrl=rtrim((string)(defined('D1_API_URL')?D1_API_URL:''),'/').'/api/payment/fulfill';
-    if($fulfillToken===''||$workerUrl==='/api/payment/fulfill')throw new RuntimeException('Fulfillment interno no configurado.');
-    $workerPayload=json_encode(['order_id'=>$orderId,'event_id'=>(int)$order['event_id'],'attendee_name'=>(string)$order['attendee_name'],'attendee_email'=>(string)$order['attendee_email'],'attendee_phone'=>(string)($order['attendee_phone']??''),'items'=>array_map(static function($item){return['ticket_type_id'=>$item['ticket_type_id']!==null?(int)$item['ticket_type_id']:null,'quantity'=>(int)$item['quantity']];},$items)]);
-    $ch=curl_init($workerUrl); curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$workerPayload,CURLOPT_HTTPHEADER=>['Content-Type: application/json','Accept: application/json','Authorization: Bearer '.$fulfillToken],CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>20,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2]);
-    $raw=curl_exec($ch); $curlError=curl_error($ch); $httpCode=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
-    if($raw===false||$httpCode<200||$httpCode>=300){$message=$raw?:$curlError?:('Worker HTTP '.$httpCode);$orders->markFailed($orderId,$message);if($paymentIntentId!==''){try{$stripe->refundPaymentIntent($paymentIntentId,(string)$order['stripe_account_id']);}catch(Throwable $refundError){qLog('[ERROR] Stripe refund failed: '.$refundError->getMessage());}}throw new RuntimeException('No se pudo completar la emisión. El pago será reembolsado.');}
-    $result=json_decode($raw,true); if(!is_array($result)||empty($result['success'])){$message=is_array($result)?($result['message']??'Fulfillment rechazado'):'Respuesta inválida del Worker';$orders->markFailed($orderId,$message);if($paymentIntentId!==''){try{$stripe->refundPaymentIntent($paymentIntentId,(string)$order['stripe_account_id']);}catch(Throwable $refundError){qLog('[ERROR] Stripe refund failed: '.$refundError->getMessage());}}throw new RuntimeException('No se pudo completar la emisión. El pago será reembolsado.');}
-    $orders->markFulfilled($orderId); http_response_code(200); echo json_encode(['received'=>true,'fulfilled'=>true]);
+ $stripe=new StripeConnectService();$stripe->verifyWebhookSignature($payload,$signature,(string)STRIPE_WEBHOOK_SECRET);$event=json_decode($payload,true);
+ if(!is_array($event)||empty($event['type'])||!isset($event['data']['object']))throw new RuntimeException('Evento Stripe inválido.');
+ $supported=['checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','checkout.session.expired'];if(!in_array($event['type'],$supported,true)){http_response_code(200);echo json_encode(['received'=>true]);exit;}
+ $session=$event['data']['object'];$orderId=(int)($session['metadata']['order_id']??$session['client_reference_id']??0);if($orderId<1)throw new RuntimeException('El webhook no contiene order_id.');$orders=new PaymentOrderRepository();$order=$orders->getOrderById($orderId);if(!$order)throw new RuntimeException('Pedido no encontrado: '.$orderId);
+ if(in_array($event['type'],['checkout.session.expired','checkout.session.async_payment_failed'],true)){
+  if(in_array(($order['status']??''),['fulfilled','cancelled'],true)){http_response_code(200);echo json_encode(['received'=>true]);exit;}
+  $orders->releaseInventoryForOrder($orderId);$orders->markCancelled($orderId);http_response_code(200);echo json_encode(['received'=>true,'cancelled'=>true]);exit;
+ }
+ if(($order['status']??'')==='fulfilled'){http_response_code(200);echo json_encode(['received'=>true,'fulfilled'=>true]);exit;}
+ if((string)($session['payment_status']??'')!=='paid'){http_response_code(200);echo json_encode(['received'=>true,'payment_pending'=>true]);exit;}
+ $sessionId=(string)($session['id']??'');$paymentIntentId=(string)($session['payment_intent']??'');$orders->markPaid($orderId,$sessionId,$paymentIntentId);$orders->markFulfilling($orderId);$items=$orders->getItems($orderId);
+ $fulfillToken=defined('PAYMENT_FULFILL_TOKEN')?(string)PAYMENT_FULFILL_TOKEN:'';$workerUrl=rtrim((string)(defined('D1_API_URL')?D1_API_URL:''),'/').'/api/payment/fulfill';if($fulfillToken===''||$workerUrl==='/api/payment/fulfill')throw new RuntimeException('Fulfillment interno no configurado.');
+ $workerPayload=json_encode(['order_id'=>$orderId,'event_id'=>(int)$order['event_id'],'attendee_name'=>(string)$order['attendee_name'],'attendee_email'=>(string)$order['attendee_email'],'attendee_phone'=>(string)($order['attendee_phone']??''),'items'=>array_map(static function($item){return['ticket_type_id'=>$item['ticket_type_id']!==null?(int)$item['ticket_type_id']:null,'quantity'=>(int)$item['quantity']];},$items)]);
+ $ch=curl_init($workerUrl);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$workerPayload,CURLOPT_HTTPHEADER=>['Content-Type: application/json','Accept: application/json','Authorization: Bearer '.$fulfillToken],CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>20,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2]);$raw=curl_exec($ch);$curlError=curl_error($ch);$httpCode=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);
+ if($raw===false||$httpCode<200||$httpCode>=300){$message=$raw?:$curlError?:('Worker HTTP '.$httpCode);$orders->markFailed($orderId,$message);if($paymentIntentId!==''){try{$stripe->refundPaymentIntent($paymentIntentId,(string)$order['stripe_account_id']);}catch(Throwable $refundError){qLog('[ERROR] Stripe refund failed: '.$refundError->getMessage());}}throw new RuntimeException('No se pudo completar la emisión. El pago será reembolsado.');}
+ $result=json_decode($raw,true);if(!is_array($result)||empty($result['success'])){$message=is_array($result)?($result['message']??'Fulfillment rechazado'):'Respuesta inválida del Worker';$orders->markFailed($orderId,$message);if($paymentIntentId!==''){try{$stripe->refundPaymentIntent($paymentIntentId,(string)$order['stripe_account_id']);}catch(Throwable $refundError){qLog('[ERROR] Stripe refund failed: '.$refundError->getMessage());}}throw new RuntimeException('No se pudo completar la emisión. El pago será reembolsado.');}
+ $orders->markFulfilled($orderId);http_response_code(200);echo json_encode(['received'=>true,'fulfilled'=>true]);
 }catch(Throwable $e){qLog('[ERROR] Stripe webhook: '.$e->getMessage());http_response_code(500);echo json_encode(['received'=>false]);}
