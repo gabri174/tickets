@@ -12,24 +12,28 @@ class StripeConnectService
         }
     }
 
-    private function request($method, $path, array $params = [])
+    private function request($method, $path, array $params = [], $connectedAccount = null)
     {
         $ch = curl_init('https://api.stripe.com/v1' . $path);
         $headers = [
             'Authorization: Bearer ' . $this->secretKey,
             'Content-Type: application/x-www-form-urlencoded',
         ];
+        if ($connectedAccount) {
+            $headers[] = 'Stripe-Account: ' . (string) $connectedAccount;
+        }
+
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => strtoupper($method),
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_TIMEOUT => 15,
+            CURLOPT_TIMEOUT => 20,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
         ]);
 
-        if ($method !== 'GET') {
+        if (strtoupper($method) !== 'GET') {
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params, '', '&'));
         }
 
@@ -84,5 +88,77 @@ class StripeConnectService
     public function createExpressLoginLink($accountId)
     {
         return $this->request('POST', '/accounts/' . rawurlencode((string) $accountId) . '/login_links');
+    }
+
+    public function createCheckoutSession($connectedAccount, $orderId, $successUrl, $cancelUrl, array $lineItems, $customerEmail = null)
+    {
+        if (!$connectedAccount) {
+            throw new RuntimeException('La cuenta Stripe del organizador no está disponible.');
+        }
+        if (!$lineItems) {
+            throw new RuntimeException('No hay artículos para pagar.');
+        }
+
+        $params = [
+            'mode' => 'payment',
+            'success_url' => (string) $successUrl,
+            'cancel_url' => (string) $cancelUrl,
+            'client_reference_id' => (string) $orderId,
+            'metadata[order_id]' => (string) $orderId,
+        ];
+
+        if ($customerEmail) {
+            $params['customer_email'] = (string) $customerEmail;
+        }
+
+        foreach ($lineItems as $index => $item) {
+            $prefix = 'line_items[' . $index . ']';
+            $params[$prefix . '[quantity]'] = (int) $item['quantity'];
+            $params[$prefix . '[price_data][currency]'] = strtolower((string) ($item['currency'] ?? 'eur'));
+            $params[$prefix . '[price_data][unit_amount]'] = (int) $item['unit_amount'];
+            $params[$prefix . '[price_data][product_data][name]'] = (string) $item['name'];
+        }
+
+        return $this->request('POST', '/checkout/sessions', $params, $connectedAccount);
+    }
+
+    public function retrieveCheckoutSession($sessionId)
+    {
+        return $this->request('GET', '/checkout/sessions/' . rawurlencode((string) $sessionId));
+    }
+
+    public function verifyWebhookSignature($payload, $signature, $secret, $tolerance = 300)
+    {
+        if (!$signature || !$secret) {
+            throw new RuntimeException('Firma webhook no configurada.');
+        }
+
+        $timestamp = null;
+        $signatures = [];
+        foreach (explode(',', $signature) as $part) {
+            $parts = explode('=', trim($part), 2);
+            if (count($parts) !== 2) continue;
+            if ($parts[0] === 't') $timestamp = (int) $parts[1];
+            if ($parts[0] === 'v1') $signatures[] = $parts[1];
+        }
+
+        if (!$timestamp || !$signatures || abs(time() - $timestamp) > (int) $tolerance) {
+            throw new RuntimeException('Firma webhook de Stripe inválida o caducada.');
+        }
+
+        $expected = hash_hmac('sha256', $timestamp . '.' . $payload, $secret);
+        $valid = false;
+        foreach ($signatures as $candidate) {
+            if (hash_equals($expected, $candidate)) {
+                $valid = true;
+                break;
+            }
+        }
+
+        if (!$valid) {
+            throw new RuntimeException('Firma webhook de Stripe no válida.');
+        }
+
+        return true;
     }
 }
